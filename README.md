@@ -4,7 +4,7 @@ Feature rich syntax highlighting for Zsh.
 
 <div style="width:100%;background-color:black;border:3px solid black;border-radius:6px;margin:5px 0;padding:2px 5px">
   <img
-    src="https://raw.githubusercontent.com/zdharma-continuum/fast-syntax-highlighting/master/images/highlight-much.png"
+    src="https://raw.githubusercontent.com/z-shell/fast-syntax-highlighting/master/images/highlight-much.png"
     alt="image could not be loaded"
     style="color:red;background-color:black;font-weight:bold"
   />
@@ -20,10 +20,10 @@ Feature rich syntax highlighting for Zsh.
 
 ### Other Contents
 
-- [License](https://github.com/zdharma-continuum/fast-syntax-highlighting/blob/master/LICENSE)
-- [Changelog](https://github.com/zdharma-continuum/fast-syntax-highlighting/blob/master/CHANGELOG.md)
-- [Theme Guide](https://github.com/zdharma-continuum/fast-syntax-highlighting/blob/master/THEME_GUIDE.md)
-- [Chroma Guide](https://github.com/zdharma-continuum/fast-syntax-highlighting/blob/master/CHROMA_GUIDE.adoc)
+- [License](https://github.com/z-shell/fast-syntax-highlighting/blob/master/LICENSE)
+- [Changelog](https://github.com/z-shell/fast-syntax-highlighting/blob/master/CHANGELOG.md)
+- [Theme Guide](https://github.com/z-shell/fast-syntax-highlighting/blob/master/THEME_GUIDE.md)
+- [Chroma Guide](https://github.com/z-shell/fast-syntax-highlighting/blob/master/CHROMA_GUIDE.adoc)
 
 # News
 
@@ -41,7 +41,7 @@ Feature rich syntax highlighting for Zsh.
 Clone the Repository.
 
 ```zsh
-git clone https://github.com/zdharma-continuum/fast-syntax-highlighting ~/path/to/fsh
+git clone https://github.com/z-shell/fast-syntax-highlighting ~/path/to/fsh
 ```
 
 And add the following to your `zshrc` file.
@@ -55,19 +55,19 @@ source ~/path/to/fsh/fast-syntax-highlighting.plugin.zsh
 Add the following to your `zshrc` file.
 
 ```zsh
-zinit light zdharma-continuum/fast-syntax-highlighting
+zinit light z-shell/fast-syntax-highlighting
 ```
 
 Here's an example of how to load the plugin together with a few other popular
 ones with the use of
-[Turbo](https://zdharma-continuum.org/zinit/wiki/INTRODUCTION/#turbo_mode_zsh_62_53),
+[Turbo](https://z-shell.github.io/zinit/wiki/INTRODUCTION/#turbo_mode_zsh_62_53),
 i.e.: speeding up the Zsh startup by loading the plugin right after the first
 prompt, in background:
 
 ```zsh
 zinit wait lucid for \
  atinit"ZINIT[COMPINIT_OPTS]=-C; zicompinit; zicdreplay" \
-    zdharma-continuum/fast-syntax-highlighting \
+    z-shell/fast-syntax-highlighting \
  blockf \
     zsh-users/zsh-completions \
  atload"!_zsh_autosuggest_start" \
@@ -79,7 +79,7 @@ zinit wait lucid for \
 Add the following to your `zshrc` file.
 
 ```zsh
-antigen bundle zdharma-continuum/fast-syntax-highlighting
+antigen bundle z-shell/fast-syntax-highlighting
 ```
 
 ### Zgen
@@ -88,7 +88,7 @@ Add the following to your `.zshrc` file in the same place you're doing
 your other `zgen load` calls in.
 
 ```zsh
-zgen load zdharma-continuum/fast-syntax-highlighting
+zgen load z-shell/fast-syntax-highlighting
 ```
 
 ### Oh-My-Zsh
@@ -96,7 +96,7 @@ zgen load zdharma-continuum/fast-syntax-highlighting
 Clone the Repository.
 
 ```zsh
-git clone https://github.com/zdharma-continuum/fast-syntax-highlighting.git \
+git clone https://github.com/z-shell/fast-syntax-highlighting.git \
   ${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/plugins/fast-syntax-highlighting
 ```
 
@@ -110,7 +110,7 @@ Switch themes via `fast-theme {theme-name}`.
 
 <div style="width:100%;background-color:black;border:3px solid black;border-radius:6px;margin:5px 0;padding:2px 5px">
   <img
-    src="https://raw.githubusercontent.com/zdharma-continuum/fast-syntax-highlighting/master/images/theme.png"
+    src="https://raw.githubusercontent.com/z-shell/fast-syntax-highlighting/main/images/theme.png"
     alt="image could not be loaded"
     style="color:red;background-color:black;font-weight:bold"
   />
@@ -126,7 +126,7 @@ Comparing to the project `zsh-users/zsh-syntax-highlighting` (the upper line):
 
 <div style="width:100%;background-color:black;border:3px solid black;border-radius:6px;margin:5px 0;padding:2px 5px">
   <img
-    src="https://raw.githubusercontent.com/zdharma-continuum/fast-syntax-highlighting/master/images/parameter.png"
+    src="https://raw.githubusercontent.com/z-shell/fast-syntax-highlighting/main/images/parameter.png"
     alt="image could not be loaded"
     style="color:red;background-color:black;font-weight:bold"
   />
@@ -134,7 +134,7 @@ Comparing to the project `zsh-users/zsh-syntax-highlighting` (the upper line):
 
 <div style="width:100%;background-color:black;border:3px solid black;border-radius:6px;margin:5px 0;padding:2px 5px">
   <img
-    src="https://raw.githubusercontent.com/zdharma-continuum/fast-syntax-highlighting/master/images/in_string.png"
+    src="https://raw.githubusercontent.com/z-shell/fast-syntax-highlighting/main/images/in_string.png"
     alt="image could not be loaded"
     style="color:red;background-color:black;font-weight:bold"
   />
@@ -144,7 +144,7 @@ Comparing to the project `zsh-users/zsh-syntax-highlighting` (the upper line):
 
 <div style="width:100%;background-color:black;border:3px solid black;border-radius:6px;margin:5px 0;padding:2px 5px">
   <img
-    src="https://raw.githubusercontent.com/zdharma-continuum/fast-syntax-highlighting/master/images/brackets.gif"
+    src="https://raw.githubusercontent.com/z-shell/fast-syntax-highlighting/main/images/brackets.gif"
     alt="image could not be loaded"
     style="color:red;background-color:black;font-weight:bold"
   />
@@ -156,7 +156,7 @@ Comparing to the project `zsh-users/zsh-syntax-highlighting` (the upper line):
 
 <div style="width:100%;background-color:black;border:3px solid black;border-radius:6px;margin:5px 0;padding:2px 5px">
   <img
-    src="https://raw.githubusercontent.com/zdharma-continuum/fast-syntax-highlighting/master/images/cplx_cond.png"
+    src="https://raw.githubusercontent.com/z-shell/fast-syntax-highlighting/main/images/cplx_cond.png"
     alt="image could not be loaded"
     style="color:red;background-color:black;font-weight:bold"
   />
@@ -168,7 +168,7 @@ Exact highlighting that recognizes quotings.
 
 <div style="width:100%;background-color:black;border:3px solid black;border-radius:6px;margin:5px 0;padding:2px 5px">
   <img
-    src="https://raw.githubusercontent.com/zdharma-continuum/fast-syntax-highlighting/master/images/ideal-string.png"
+    src="https://raw.githubusercontent.com/z-shell/fast-syntax-highlighting/main/images/ideal-string.png"
     alt="image could not be loaded"
     style="color:red;background-color:black;font-weight:bold"
   />
@@ -178,7 +178,7 @@ Exact highlighting that recognizes quotings.
 
 <div style="width:100%;background-color:black;border:3px solid black;border-radius:6px;margin:5px 0;padding:2px 5px">
   <img
-    src="https://raw.githubusercontent.com/zdharma-continuum/fast-syntax-highlighting/master/images/herestring.png"
+    src="https://raw.githubusercontent.com/z-shell/fast-syntax-highlighting/main/images/herestring.png"
     alt="image could not be loaded"
     style="color:red;background-color:black;font-weight:bold"
   />
@@ -190,7 +190,7 @@ Comparing to the project `zsh-users/zsh-syntax-highlighting` (the upper line):
 
 <div style="width:100%;background-color:black;border:3px solid black;border-radius:6px;margin:5px 0;padding:2px 5px">
   <img
-    src="https://raw.githubusercontent.com/zdharma-continuum/fast-syntax-highlighting/master/images/execfd_cmp.png"
+    src="https://raw.githubusercontent.com/z-shell/fast-syntax-highlighting/main/images/execfd_cmp.png"
     alt="image could not be loaded"
     style="color:red;background-color:black;font-weight:bold"
   />
@@ -200,7 +200,7 @@ Comparing to the project `zsh-users/zsh-syntax-highlighting` (the upper line):
 
 <div style="width:100%;background-color:black;border:3px solid black;border-radius:6px;margin:5px 0;padding:2px 5px">
   <img
-    src="https://raw.githubusercontent.com/zdharma-continuum/fast-syntax-highlighting/master/images/for-loop-cmp.png"
+    src="https://raw.githubusercontent.com/z-shell/fast-syntax-highlighting/main/images/for-loop-cmp.png"
     alt="image could not be loaded"
     style="color:red;background-color:black;font-weight:bold"
   />
@@ -212,7 +212,7 @@ Comparing to the project `zsh-users/zsh-syntax-highlighting` (the upper 2 lines)
 
 <div style="width:100%;background-color:black;border:3px solid black;border-radius:6px;margin:5px 0;padding:2px 5px">
   <img
-    src="https://raw.githubusercontent.com/zdharma-continuum/fast-syntax-highlighting/master/images/function.png"
+    src="https://raw.githubusercontent.com/z-shell/fast-syntax-highlighting/main/images/function.png"
     alt="image could not be loaded"
     style="color:red;background-color:black;font-weight:bold"
   />
@@ -224,7 +224,7 @@ Comparing to the project `zsh-users/zsh-syntax-highlighting` (the upper line):
 
 <div style="width:100%;background-color:black;border:3px solid black;border-radius:6px;margin:5px 0;padding:2px 5px">
   <img
-    src="https://raw.githubusercontent.com/zdharma-continuum/fast-syntax-highlighting/master/images/eval_cmp.png"
+    src="https://raw.githubusercontent.com/z-shell/fast-syntax-highlighting/main/images/eval_cmp.png"
     alt="image could not be loaded"
     style="color:red;background-color:black;font-weight:bold"
   />
@@ -236,21 +236,21 @@ Highlighting that is specific for a given command.
 
 <div style="width:100%;background-color:black;border:3px solid black;border-radius:6px;margin:5px 0;padding:2px 5px">
   <img
-    src="https://raw.githubusercontent.com/zdharma-continuum/fast-syntax-highlighting/master/images/git_chroma.png"
+    src="https://raw.githubusercontent.com/z-shell/fast-syntax-highlighting/main/images/git_chroma.png"
     alt="image could not be loaded"
     style="color:red;background-color:black;font-weight:bold"
   />
 </div>
 
-The [chromas](https://github.com/zdharma-continuum/fast-syntax-highlighting/tree/master/chroma)
+The [chromas](https://github.com/z-shell/fast-syntax-highlighting/tree/main/chroma)
 that are enabled by default can be found
-[here](https://github.com/zdharma-continuum/fast-syntax-highlighting/blob/master/fast-highlight#L166).
+[here](https://github.com/z-shell/fast-syntax-highlighting/blob/main/fast-highlight#L166).
 
 ### Math-mode highlighting
 
 <div style="width:100%;background-color:black;border:3px solid black;border-radius:6px;margin:5px 0;padding:2px 5px">
   <img
-    src="https://raw.githubusercontent.com/zdharma-continuum/fast-syntax-highlighting/master/images/math.gif"
+    src="https://raw.githubusercontent.com/z-shell/fast-syntax-highlighting/main/images/math.gif"
     alt="image could not be loaded"
     style="color:red;background-color:black;font-weight:bold"
   />
@@ -260,7 +260,7 @@ that are enabled by default can be found
 
 <div style="width:100%;background-color:black;border:3px solid black;border-radius:6px;margin:5px 0;padding:2px 5px">
   <img
-    src="https://raw.githubusercontent.com/zdharma-continuum/fast-syntax-highlighting/master/images/zcalc.png"
+    src="https://raw.githubusercontent.com/z-shell/fast-syntax-highlighting/main/images/zcalc.png"
     alt="image could not be loaded"
     style="color:red;background-color:black;font-weight:bold"
   />
@@ -275,11 +275,3 @@ Performance differences can be observed in this Asciinema recording, where a `10
     <img src="https://asciinema.org/a/112367.png" alt="asciicast">
   </a>
 </div>
-
-## IRC Channel
-
-Channel `#zinit@freenode` is a support place for all author's projects. Connect to:
-[chat.freenode.net:6697](ircs://chat.freenode.net:6697/%23zinit) (SSL) or [chat.freenode.net:6667](irc://chat.freenode.net:6667/%23zinit)
-and join #zinit.
-
-Following is a quick access via Webchat [![IRC](https://kiwiirc.com/buttons/chat.freenode.net/zinit.png)](https://kiwiirc.com/client/chat.freenode.net:+6697/#zinit)
