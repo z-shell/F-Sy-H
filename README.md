@@ -1,10 +1,13 @@
+# `FAST SYNTAX HIGHLIGHTING` (F-Sy-H)
+
+Feature rich syntax highlighting for Zsh.
+
+[![pre-commit](https://img.shields.io/badge/pre--commit-enabled-blue?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit)
+
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
-**Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
 
-- [`FAST SYNTAX HIGHLIGHTING` (F-Sy-H)](#fast-syntax-highlighting-f-sy-h)
-    - [Table of Contents](#table-of-contents)
-    - [Other Contents](#other-contents)
+- [Related](#related)
 - [News](#news)
 - [Installation](#installation)
     - [Manual](#manual)
@@ -30,12 +33,6 @@
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
-# `FAST SYNTAX HIGHLIGHTING` (F-Sy-H)
-
-[![pre-commit](https://img.shields.io/badge/pre--commit-enabled-blue?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit)
-
-Feature rich syntax highlighting for Zsh.
-
 <div style="width:100%;background-color:black;border:3px solid black;border-radius:6px;margin:5px 0;padding:2px 5px">
   <img
     src="https://raw.githubusercontent.com/z-shell/fast-syntax-highlighting/master/images/highlight-much.png"
@@ -44,15 +41,7 @@ Feature rich syntax highlighting for Zsh.
   />
 </div>
 
-### Table of Contents
-
-- [News](#news)
-- [Installation](#installation)
-- [Features](#features)
-- [Performance](#performance)
-- [IRC Channel](#irc-channel)
-
-### Other Contents
+# Related
 
 - [License](https://github.com/z-shell/fast-syntax-highlighting/blob/master/LICENSE)
 - [Changelog](https://github.com/z-shell/fast-syntax-highlighting/blob/master/CHANGELOG.md)
