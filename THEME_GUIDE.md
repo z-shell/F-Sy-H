@@ -1,8 +1,18 @@
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+**Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
+
+- [Theme Guide for F-Sy-H](#theme-guide-for-f-sy-h)
+  - [Secondary Theme](#secondary-theme)
+  - [Custom Working Directory](#custom-working-directory)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 # Theme Guide for F-Sy-H
 
 `fast-theme` tool is used to select a theme. There are 6 shipped themes, they can be listed with `fast-theme -l`.
-Themes are basic [INI files](https://github.com/zdharma/fast-syntax-highlighting/tree/master/themes) where each
-key is a *style*.
+Themes are basic [INI files](https://github.com/z-shell/fast-syntax-highlighting/tree/main/themes) where each
+key is a _style_.
 Besides shipped themes, user can point this tool to any other theme, by simple `fast-theme ~/mytheme.ini`. To
 obtain template to work on when creating own theme, issue `fast-theme --copy-shipped-theme {theme-name}`.
 
@@ -54,12 +64,12 @@ Secondary theme (`zdharma` in the example) will be used for highlighting of argu
 and of `$( ... )` interior (i.e. of interior of command substitution). Basically, recursive
 highlighting uses alternate theme to make the highlighted code distinct:
 
-![sshot](https://raw.githubusercontent.com/zdharma/fast-syntax-highlighting/master/images/cmdsubst.png)
+![sshot](https://raw.githubusercontent.com/z-shell/fast-syntax-highlighting/main/images/cmdsubst.png)
 
 In the above screen-shot the interior of `$( ... )` uses different colors than the rest of the
 code. Example for `eval`:
 
-![image](https://raw.githubusercontent.com/zdharma/fast-syntax-highlighting/master/images/eval_cmp.png)
+![image](https://raw.githubusercontent.com/z-shell/fast-syntax-highlighting/main/images/eval_cmp.png)
 
 First line doesn't use recursive highlighting, highlights `eval` argument as regular string.
 Second line switches theme to `zdharma` and does full recursive highlighting of eval argument.
