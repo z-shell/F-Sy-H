@@ -33,7 +33,8 @@
 # regardless of functionargzero and posixargzero,
 # and with an option for a plugin manager to alter
 # the plugin directory (i.e. set ZERO parameter)
-# http://zdharma.org/Zsh-100-Commits-Club/Zsh-Plugin-Standard.html
+# http://z-shell.github.io/Zsh-100-Commits-Club/Zsh-Plugin-Standard.html
+
 0="${${ZERO:-${0:#$ZSH_ARGZERO}}:-${(%):-%N}}"
 0="${${(M)0:#/*}:-$PWD/$0}"
 
@@ -269,7 +270,7 @@ _zsh_highlight_bind_widgets()
               zle -N -- $cur_widget _zsh_highlight_widget_$prefix-$cur_widget;;
 
       # Completion widget: override and rebind old one with prefix "orig-".
-      completion:*) zle -C $prefix-$cur_widget ${${(s.:.)widgets[$cur_widget]}[2,3]} 
+      completion:*) zle -C $prefix-$cur_widget ${${(s.:.)widgets[$cur_widget]}[2,3]}
                     eval "_zsh_highlight_widget_${(q)prefix}-${(q)cur_widget}() { _zsh_highlight_call_widget ${(q)prefix}-${(q)cur_widget} -- \"\$@\" }"
                     zle -N -- $cur_widget _zsh_highlight_widget_$prefix-$cur_widget;;
 
@@ -278,7 +279,7 @@ _zsh_highlight_bind_widgets()
                zle -N -- $cur_widget _zsh_highlight_widget_$prefix-$cur_widget;;
 
       # Incomplete or nonexistent widget: Bind to z-sy-h directly.
-      *) 
+      *)
          if [[ $cur_widget == zle-* ]] && [[ -z $widgets[$cur_widget] ]]; then
            _zsh_highlight_widget_${cur_widget}() { :; _zsh_highlight }
            zle -N -- $cur_widget _zsh_highlight_widget_$cur_widget

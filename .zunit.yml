@@ -1,6 +1,6 @@
 tap: false
 directories:
-  tests: tests
+  tests: test
   output: tests/_output
   support: tests/_support
 time_limit: 0

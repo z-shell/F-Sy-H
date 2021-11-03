@@ -84,7 +84,7 @@ done'
     elif [[ "$1" = "-git" ]]; then
         local in="git lp
 git push origin master
-  git commit
+git commit
 git add safari.ini zdharma.ini
 git st .
 git diff --cached
