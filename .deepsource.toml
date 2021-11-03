@@ -1,0 +1,10 @@
+version = 1
+
+test_patterns = [
+    "test/**",
+    "tests/**"
+]
+
+[[analyzers]]
+name = "shell"
+enabled = true
