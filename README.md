@@ -3,6 +3,7 @@
 Feature rich syntax highlighting for Zsh.
 
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-blue?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit)
+[![DeepSource](https://deepsource.io/gh/z-shell/fast-syntax-highlighting.svg/?label=active+issues&show_trend=true)](https://deepsource.io/gh/z-shell/fast-syntax-highlighting/?ref=repository-badge)
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
