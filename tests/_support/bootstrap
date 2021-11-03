@@ -1,3 +1,2 @@
-#!/usr/bin/env zunit
+#!/usr/bin/env zsh
 # Write your bootstrap code here
-# vim:ft=zsh:sw=4:sts=4:et
