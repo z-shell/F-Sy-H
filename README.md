@@ -1,4 +1,38 @@
-# Fast Syntax Highlighting (F-Sy-H)
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+**Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
+
+- [`FAST SYNTAX HIGHLIGHTING` (F-Sy-H)](#fast-syntax-highlighting-f-sy-h)
+    - [Table of Contents](#table-of-contents)
+    - [Other Contents](#other-contents)
+- [News](#news)
+- [Installation](#installation)
+    - [Manual](#manual)
+    - [Zinit](#zinit)
+    - [Antigen](#antigen)
+    - [Zgen](#zgen)
+    - [Oh-My-Zsh](#oh-my-zsh)
+- [Features](#features)
+    - [Themes](#themes)
+    - [Variables](#variables)
+    - [Brackets](#brackets)
+    - [Conditions](#conditions)
+    - [Strings](#strings)
+    - [here-strings](#here-strings)
+    - [`exec` descriptor-variables](#exec-descriptor-variables)
+    - [for-loops and alternate syntax (brace `{`/`}` blocks)](#for-loops-and-alternate-syntax-brace--blocks)
+    - [Function definitions](#function-definitions)
+    - [Recursive `eval` and `$( )` highlighting](#recursive-eval-and---highlighting)
+    - [Chroma functions](#chroma-functions)
+    - [Math-mode highlighting](#math-mode-highlighting)
+    - [Zcalc highlighting](#zcalc-highlighting)
+- [Performance](#performance)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
+# `FAST SYNTAX HIGHLIGHTING` (F-Sy-H)
+
+[![pre-commit](https://img.shields.io/badge/pre--commit-enabled-blue?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit)
 
 Feature rich syntax highlighting for Zsh.
 
