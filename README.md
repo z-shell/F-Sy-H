@@ -2,7 +2,6 @@
 
 Feature rich syntax highlighting for Zsh.
 
-[![pre-commit](https://img.shields.io/badge/pre--commit-enabled-blue?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit)
 [![CodeFactor](https://www.codefactor.io/repository/github/z-shell/fast-syntax-highlighting/badge)](https://www.codefactor.io/repository/github/z-shell/fast-syntax-highlighting)
 [![DeepSource](https://deepsource.io/gh/z-shell/fast-syntax-highlighting.svg/?label=active+issues&show_trend=true)](https://deepsource.io/gh/z-shell/fast-syntax-highlighting/?ref=repository-badge)
 
