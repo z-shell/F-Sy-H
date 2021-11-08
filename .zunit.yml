@@ -1,4 +1,4 @@
-tap: true
+tap: false
 directories:
   tests: tests
   output: tests/_output
@@ -6,4 +6,3 @@ directories:
 time_limit: 0
 fail_fast: false
 allow_risky: false
-verbose: false

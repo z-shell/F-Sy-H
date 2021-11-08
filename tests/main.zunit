@@ -9,7 +9,7 @@
 reply=()
     PREBUFFER=""
     BUFFER="ls /usr/bin"
-    evl -fast-highlight-process "$PREBUFFER" "$BUFFER" 0
+    -fast-highlight-process "$PREBUFFER" "$BUFFER" 0
 
     assert "$reply[1]" same_as "0 2 ${FAST_HIGHLIGHT_STYLES[${FAST_THEME_NAME}command]}"
     assert "$reply[2]" same_as "3 11 ${FAST_HIGHLIGHT_STYLES[${FAST_THEME_NAME}path-to-dir]}"
@@ -20,7 +20,7 @@ reply=()
     reply=()
     PREBUFFER=""
     BUFFER="ls /bin/df"
-    evl -fast-highlight-process "$PREBUFFER" "$BUFFER" 0
+    -fast-highlight-process "$PREBUFFER" "$BUFFER" 0
 
     assert "$reply[1]" same_as "0 2 ${FAST_HIGHLIGHT_STYLES[${FAST_THEME_NAME}command]}"
     assert "$reply[2]" same_as "3 10 ${FAST_HIGHLIGHT_STYLES[${FAST_THEME_NAME}path]}"
@@ -32,7 +32,7 @@ reply=()
     reply=()
     PREBUFFER=""
     BUFFER=$'ls /bin/df\n # a comment\nls /usr/bin'
-    evl -fast-highlight-process "$PREBUFFER" "$BUFFER" 0
+    -fast-highlight-process "$PREBUFFER" "$BUFFER" 0
 
     assert "$reply[1]" same_as "0 2 ${FAST_HIGHLIGHT_STYLES[${FAST_THEME_NAME}command]}"
     assert "$reply[2]" same_as "3 10 ${FAST_HIGHLIGHT_STYLES[${FAST_THEME_NAME}path]}"
@@ -47,7 +47,7 @@ reply=()
     reply=()
     PREBUFFER=""
     BUFFER=$'exec {FD}< <( ls /bin )'
-    evl -fast-highlight-process "$PREBUFFER" "$BUFFER" 0
+    -fast-highlight-process "$PREBUFFER" "$BUFFER" 0
 
     assert "$reply[1]" same_as "0 4 ${FAST_HIGHLIGHT_STYLES[${FAST_THEME_NAME}precommand]}"
     assert "$reply[2]" same_as "5 9 ${FAST_HIGHLIGHT_STYLES[${FAST_THEME_NAME}exec-descriptor]}"
@@ -59,7 +59,7 @@ reply=()
     reply=()
     PREBUFFER=""
     BUFFER=$'case x in\nx) a;;\n(y)\n;;\nesac'
-    evl -fast-highlight-process "$PREBUFFER" "$BUFFER" 0
+    -fast-highlight-process "$PREBUFFER" "$BUFFER" 0
 
     assert "$reply[1]" same_as "0 4 ${FAST_HIGHLIGHT_STYLES[${FAST_THEME_NAME}reserved-word]}"
     assert "$reply[2]" same_as "5 6 ${FAST_HIGHLIGHT_STYLES[${FAST_THEME_NAME}case-input]}"
@@ -78,7 +78,7 @@ reply=()
     reply=()
     PREBUFFER=""
     BUFFER='-fast-highlight-process "$PREBUFFER" "$BUFFER" 0'
-    evl -fast-highlight-process "\$PREBUFFER" "\$BUFFER" 0
+    -fast-highlight-process "$PREBUFFER" "$BUFFER" 0
 
     assert "$reply[1]" same_as "0 23 ${FAST_HIGHLIGHT_STYLES[${FAST_THEME_NAME}function]}"
     assert "$reply[2]" same_as "24 36 ${FAST_HIGHLIGHT_STYLES[${FAST_THEME_NAME}double-quoted-argument]}"
@@ -92,7 +92,7 @@ reply=()
     reply=()
     PREBUFFER=""
     BUFFER='command tr : \\n <<<test$PATH'
-    evl -fast-highlight-process "\$PREBUFFER" "\$BUFFER" 0
+    -fast-highlight-process "$PREBUFFER" "$BUFFER" 0
 
     assert "$reply[1]" same_as "0 7 ${FAST_HIGHLIGHT_STYLES[${FAST_THEME_NAME}precommand]}"
     assert "$reply[2]" same_as "8 10 ${FAST_HIGHLIGHT_STYLES[${FAST_THEME_NAME}command]}"
@@ -107,7 +107,7 @@ reply=()
     reply=()
     PREBUFFER=""
     BUFFER='local var1; (( var + var1 + $var + $var1 + 123 ))'
-    evl -fast-highlight-process "\$PREBUFFER" "\$BUFFER" 0
+    -fast-highlight-process "$PREBUFFER" "$BUFFER" 0
 
     # Should actually be `reserved-word', but the type -w call returns `builtin'…
     assert "$reply[1]" same_as "0 5 ${FAST_HIGHLIGHT_STYLES[${FAST_THEME_NAME}builtin]}"
