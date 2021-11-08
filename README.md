@@ -2,6 +2,7 @@
 
 Feature rich syntax highlighting for Zsh.
 
+[![Build Status](https://app.travis-ci.com/z-shell/fast-syntax-highlighting.svg?branch=main)](https://app.travis-ci.com/z-shell/fast-syntax-highlighting)
 [![CodeFactor](https://www.codefactor.io/repository/github/z-shell/fast-syntax-highlighting/badge)](https://www.codefactor.io/repository/github/z-shell/fast-syntax-highlighting)
 [![DeepSource](https://deepsource.io/gh/z-shell/fast-syntax-highlighting.svg/?label=active+issues&show_trend=true)](https://deepsource.io/gh/z-shell/fast-syntax-highlighting/?ref=repository-badge)
 
