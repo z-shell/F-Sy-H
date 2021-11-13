@@ -242,7 +242,7 @@ typeset -gA HSMW_HIGHLIGHT_STYLES
   # and :sudo_opt:.
   #
   # The tokens are always added with both leading and trailing colons to serve as
-  # word delimiters (an improvised array); [[ $x == *:foo:* ]] and x=${x//:foo:/} 
+  # word delimiters (an improvised array); [[ $x == *:foo:* ]] and x=${x//:foo:/}
   # will DTRT regardless of how many elements or repetitions $x has..
   #
   # Handling of redirections: upon seeing a redirection token, we must stall
@@ -448,7 +448,7 @@ typeset -gA HSMW_HIGHLIGHT_STYLES
         'suffix alias') style=suffix-alias;;
         alias)          () {
                           integer insane_alias
-                          case $arg in 
+                          case $arg in
                             # Issue #263: aliases with '=' on their LHS.
                             #
                             # There are three cases:

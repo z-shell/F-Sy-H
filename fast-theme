@@ -103,7 +103,7 @@ local MATCH; integer MBEGIN MEND
     print -r -- "\"XDG:\" shorthand (e.g.: \"XDG:mytheme\") that will point to ~/.config/fsh/<theme>.ini"
     print -r -- "(or \$XDG_CONFIG_HOME/fsh/<theme>.ini in general if the variable is set in the"
     print -r -- "environment). If the INI file pointed in the path is \"*overlay*\", then it is"
-    print -r -- "not a full theme, but an additional theme-snippet that overwrites only selected" 
+    print -r -- "not a full theme, but an additional theme-snippet that overwrites only selected"
     print -r -- "styles of the main theme."
     print -r -- ""
     print -r -- "Other path-shorthands:"
@@ -197,12 +197,12 @@ map=(
 
 # In which order to generate entries
 local -a order
-order=( 
-    default unknown-token reserved-word alias suffix-alias builtin function command precommand 
+order=(
+    default unknown-token reserved-word alias suffix-alias builtin function command precommand
     commandseparator hashed-command path path_pathseparator globbing globbing-ext history-expansion
-    single-hyphen-option double-hyphen-option back-quoted-argument single-quoted-argument 
-    double-quoted-argument dollar-quoted-argument back-or-dollar-double-quoted-argument 
-    back-dollar-quoted-argument assign redirection comment variable mathvar 
+    single-hyphen-option double-hyphen-option back-quoted-argument single-quoted-argument
+    double-quoted-argument dollar-quoted-argument back-or-dollar-double-quoted-argument
+    back-dollar-quoted-argument assign redirection comment variable mathvar
     mathnum matherr assign-array-bracket for-loop-variable for-loop-number for-loop-operator
     for-loop-separator exec-descriptor here-string-tri here-string-text here-string-var secondary
     case-input case-parentheses case-condition correct-subtle incorrect-subtle subtle-separator subtle-bg
