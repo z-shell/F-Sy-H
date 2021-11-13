@@ -1,12 +1,11 @@
 name: Zunit CI
 
 on:
-  repository_dispatch:
-    types: [test_trigger]
+  workflow_dispatch:
   push:
-    branches: [ test/ci ]
+    branches: [ 'main', 'test/ci' ]
   pull_request:
-    branches: [ test/ci ]
+    branches: [ 'main', 'test/ci' ]
 
 jobs:
   zunit:
