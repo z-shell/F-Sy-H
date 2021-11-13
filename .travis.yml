@@ -1,5 +1,9 @@
 dist: focal
 
+branches:
+  only:
+    - main
+    
 addons:
   apt:
     packages:
