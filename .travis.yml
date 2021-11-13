@@ -1,5 +1,10 @@
 dist: focal
 
+addons:
+  apt:
+    packages:
+      - zsh
+
 before_script:
   - sudo apt-get install -y zsh
   - zsh --version
