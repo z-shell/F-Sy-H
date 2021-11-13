@@ -33,7 +33,10 @@ typeset -g FAST_WORK_DIR
 : ${FAST_WORK_DIR:=$FAST_BASE_DIR}
 FAST_WORK_DIR=${~FAST_WORK_DIR}
 () {
-  emulate -L zsh -o extendedglob
+  # emulate -L zsh -o extendedglob
+  # Zsh < v5.0 do not support -o
+  emulate -L zsh
+  setopt extendedglob 
   local -A map
   map=( "XDG:"    "${XDG_CONFIG_HOME:-$HOME/.config}/fsh/"
         "LOCAL:"  "/usr/local/share/fsh/"
@@ -1459,5 +1462,3 @@ typeset -ga FSH_LIST
 }
 
 functions -M fsh_sy_h_append 2 2 -fsh_sy_h_shappend 2>/dev/null
-
-# vim:ft=zsh:sw=2:sts=2
