@@ -1,7 +1,10 @@
-addons:
-  apt:
-    packages:
-      - zsh
+dist: focal
+
+before_script:
+  - sudo apt-get install -y zsh
+  - zsh --version
+  - 'zsh -c ''print -rl -- "ZSH_VERSION: $ZSH_VERSION" "ZSH_PATCHLEVEL: $ZSH_PATCHLEVEL" "OSTYPE: $OSTYPE" "CPUTYPE: $CPUTYPE" "MACHTYPE: $MACHTYPE"'''
+  
 install:
   - mkdir .bin
   - curl -L https://github.com/zunit-zsh/zunit/releases/download/v0.8.2/zunit > .bin/zunit
