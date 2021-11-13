@@ -15,7 +15,6 @@ install:
   - curl -L https://raw.githubusercontent.com/molovo/color/master/color.zsh > .bin/color
 before_script:
   - zsh --version
-  - 'zsh -c ''print -rl -- "ZSH_VERSION: $ZSH_VERSION" "ZSH_PATCHLEVEL: $ZSH_PATCHLEVEL" "OSTYPE: $OSTYPE" "CPUTYPE: $CPUTYPE" "MACHTYPE: $MACHTYPE"'''
   - chmod u+x .bin/{color,revolver,zunit}
   - export PATH="$PWD/.bin:$PATH"
 script: zunit
