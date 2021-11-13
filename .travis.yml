@@ -4,7 +4,7 @@ branches:
     - test
 
 before_install:
-  - sudo apt-get -y zsh 
+  - sudo apt-get install -y zsh 
 addons:
   apt:
     update: true
