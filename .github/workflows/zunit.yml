@@ -4,9 +4,9 @@ on:
   repository_dispatch:
     types: [test_trigger]
   push:
-    branches: [ main ]
+    branches: [ test/ci ]
   pull_request:
-    branches: [ main ]
+    branches: [ test/ci ]
 
 jobs:
   zunit:
