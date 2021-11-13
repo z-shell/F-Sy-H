@@ -1,7 +1,7 @@
 dist: focal
 branches:
   only:
-    - main
+    - disabled
 
 before_install:
   - sudo apt-get install -y zsh 
