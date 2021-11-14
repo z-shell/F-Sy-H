@@ -18,7 +18,7 @@ jobs:
       - name: Run APT
         run: |
           sudo apt update
-          sudo apt-get install zsh=5.8 -yq
+          sudo apt-get install zsh=5.8-3ubuntu1 -yq
         # 📚 Molovo zunit
       - name: Setup zunit
         run: |
