@@ -55,7 +55,7 @@ integer __idx1 __idx2
 
             (( __start=__start_pos-${#PREBUFFER}, __end=__end_pos-${#PREBUFFER}, __start >= 0 )) && \
                 reply+=("$__start $__end ${FAST_HIGHLIGHT_STYLES[$__style2]}")
-            
+
             # Highlight keywords
             FSH_LIST=()
             : "${__wrd//(#m)(BEGIN|END|FIELDWIDTHS|RS|ARGC|ARGV|ENVIRON|NF|NR|IGNORECASE|FILENAME|if|then|else|while|toupper|tolower|function|print|sub)/$(( fsh_sy_h_append($MBEGIN, $MEND) ))}";

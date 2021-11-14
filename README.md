@@ -1,13 +1,20 @@
-# `FAST SYNTAX HIGHLIGHTING` (F-Sy-H)
+<h1 align="center"> (F-Sy-H) </h1>
 
+<h2 align="center">
 Feature rich syntax highlighting for Zsh.
+</h2>
 
-[![Build Status](https://app.travis-ci.com/z-shell/fast-syntax-highlighting.svg?branch=main)](https://app.travis-ci.com/z-shell/fast-syntax-highlighting)
-[![CodeFactor](https://www.codefactor.io/repository/github/z-shell/fast-syntax-highlighting/badge)](https://www.codefactor.io/repository/github/z-shell/fast-syntax-highlighting)
-[![DeepSource](https://deepsource.io/gh/z-shell/fast-syntax-highlighting.svg/?label=active+issues&show_trend=true)](https://deepsource.io/gh/z-shell/fast-syntax-highlighting/?ref=repository-badge)
+<div align="center" style="width:100%;background-color:black;border:3px solid black border-radius:6px;margin:5px 0;padding:2px 5px">
+  <img src="https://raw.githubusercontent.com/z-shell/fast-syntax-highlighting/master/images/highlight-much.png" alt="image could not be loaded" style="color:red;background-color:black font-weight:bold"/>
 
-<!-- START doctoc generated TOC please keep comment here to allow auto update -->
-<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+[![Zunit CI](https://github.com/z-shell/fast-syntax-highlighting/actions/workflows/zunit.yml/badge.svg)](https://github.com/z-shell/fast-syntax-highlighting/actions/workflows/zunit.yml)
+
+</div>
+
+---
+
+<details open="open">
+<summary>Table of Contents</summary>
 
 - [Related](#related)
 - [News](#news)
@@ -33,15 +40,7 @@ Feature rich syntax highlighting for Zsh.
     - [Zcalc highlighting](#zcalc-highlighting)
 - [Performance](#performance)
 
-<!-- END doctoc generated TOC please keep comment here to allow auto update -->
-
-<div style="width:100%;background-color:black;border:3px solid black;border-radius:6px;margin:5px 0;padding:2px 5px">
-  <img
-    src="https://raw.githubusercontent.com/z-shell/fast-syntax-highlighting/master/images/highlight-much.png"
-    alt="image could not be loaded"
-    style="color:red;background-color:black;font-weight:bold"
-  />
-</div>
+</details>
 
 # Related
 

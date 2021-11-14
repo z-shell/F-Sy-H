@@ -338,7 +338,7 @@ else
                     fi
                 else
                     case "${FAST_HIGHLIGHT[chroma-git-option-with-argument-active]}" in
-                        (1) 
+                        (1)
                             __style=${FAST_THEME_NAME}optarg-string
                             ;;
                         (2)

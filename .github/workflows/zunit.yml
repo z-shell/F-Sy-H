@@ -1,0 +1,38 @@
+name: Zunit CI
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ 'main', 'test/ci' ]
+  pull_request:
+    branches: [ 'main', 'test/ci' ]
+
+jobs:
+  zunit:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        # ℹ️ Setup dependencies and run zunit
+      - name: Run APT
+        run: |
+          sudo apt update
+          sudo apt-get install zsh -yq
+        # 📚 Molovo zunit
+      - name: Setup zunit
+        run: |
+          mkdir bin
+          curl -L https://raw.githubusercontent.com/molovo/revolver/master/revolver > bin/revolver
+          curl -L https://raw.githubusercontent.com/molovo/color/master/color.zsh > bin/color
+          git clone https://github.com/zunit-zsh/zunit.git zunit.git
+          cd zunit.git
+          ./build.zsh
+          cd ..
+          mv ./zunit.git/zunit bin
+          chmod u+x bin/{color,revolver,zunit}
+        # ✏️ Let's see the test
+      - name: Run test
+        run: |
+          export PATH="$PWD/bin:$PATH"
+          zunit

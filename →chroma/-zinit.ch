@@ -72,7 +72,7 @@ fsh__zinit__chroma__def=(
     ## `compile|uncompile|stress|edit|glance|recall|status|cd|changes`
     ##
     ## {{{
-    
+
     "subcmd:(compile|uncompile|stress|edit|glance|recall|status|cd|changes)"
         "PLGSNP_1_arg // PLGSNP_2_arg // NO_MATCH_#_opt // NO_MATCH_#_arg"
 
