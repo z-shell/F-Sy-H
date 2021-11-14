@@ -18,7 +18,7 @@ jobs:
       - name: Run APT
         run: |
           sudo apt update
-          sudo apt-get install zsh -yq
+          sudo apt-get install zsh=5.8-3ubuntu1 -yq
         # 📚 Molovo zunit
       - name: Setup zunit
         run: |
@@ -34,5 +34,6 @@ jobs:
         # ✏️ Let's see the test
       - name: Run test
         run: |
+          export TERM="xterm-256color"
           export PATH="$PWD/bin:$PATH"
           zunit
