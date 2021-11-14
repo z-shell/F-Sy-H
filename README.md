@@ -7,7 +7,7 @@ Feature rich syntax highlighting for Zsh.
 <div align="center" style="width:100%;background-color:black;border:3px solid black border-radius:6px;margin:5px 0;padding:2px 5px">
   <img src="https://raw.githubusercontent.com/z-shell/fast-syntax-highlighting/master/images/highlight-much.png" alt="image could not be loaded" style="color:red;background-color:black font-weight:bold"/>
 
-[![Zunit CI](https://github.com/z-shell/fast-syntax-highlighting/actions/workflows/zunit.yml/badge.svg)](https://github.com/z-shell/fast-syntax-highlighting/actions/workflows/zunit.yml)
+[![Zsh 5.8](https://github.com/z-shell/fast-syntax-highlighting/actions/workflows/zunit.yml/badge.svg)](https://github.com/z-shell/fast-syntax-highlighting/actions/workflows/zunit.yml)
 
 </div>
 
