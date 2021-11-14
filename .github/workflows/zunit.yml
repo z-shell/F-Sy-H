@@ -34,5 +34,6 @@ jobs:
         # ✏️ Let's see the test
       - name: Run test
         run: |
+          export TERM="xterm-256color"
           export PATH="$PWD/bin:$PATH"
           zunit
