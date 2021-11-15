@@ -39,7 +39,7 @@ jobs:
 
   build-linux:
     name: Linux Zunit CI
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         os: [ubuntu-latest]
