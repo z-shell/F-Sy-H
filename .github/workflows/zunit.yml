@@ -8,21 +8,55 @@ on:
     branches: [ 'main', 'test/ci' ]
 
 jobs:
-  zunit:
-    runs-on: ubuntu-latest
-
+  build-macos:
+    name: Zunit CI
+    runs-on: macos-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v2
-        # ℹ️ Setup dependencies and run zunit
+      - name: ℹ️ Setup macos dependencies and run zunit
+        run: |
+         echo $ZSH_NAME $ZSH_VERSION
+         shell: zsh {0}
+      - name: 📚 Molovo zunit
+        run: |
+          mkdir bin
+          curl -fsSL https://raw.githubusercontent.com/molovo/revolver/v0.2.4/revolver > bin/revolver
+          curl -fsSL https://raw.githubusercontent.com/molovo/color/d8f91ab5fcfceb623ae45d3333ad0e543775549c/color.zsh > bin/color
+          curl -L https://raw.githubusercontent.com/molovo/revolver/master/revolver > bin/revolver
+          curl -L https://raw.githubusercontent.com/molovo/color/master/color.zsh > bin/color
+          git clone https://github.com/zunit-zsh/zunit.git zunit.git
+          cd zunit.git
+          ./build.zsh
+          cd ..
+          mv ./zunit.git/zunit bin
+          chmod u+x bin/{color,revolver,zunit}
+        # ✏️ Let's see the test
+      - name: Run test
+        run: |
+          export TERM="xterm-256color"
+          export PATH="$PWD/bin:$PATH"
+          zunit
+
+  build-linux:
+    name: Linux Zunit CI
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, ubuntu-focal]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: ℹ️ Setup linux dependencies and run zunit
       - name: Run APT
         run: |
           sudo apt update
-          sudo apt-get install zsh=5.8-3ubuntu1 -yq
-        # 📚 Molovo zunit
-      - name: Setup zunit
+          sudo apt-get install zsh -yq
+      - name: 📚 Molovo zunit
         run: |
           mkdir bin
+          curl -fsSL https://raw.githubusercontent.com/molovo/revolver/v0.2.4/revolver > bin/revolver
+          curl -fsSL https://raw.githubusercontent.com/molovo/color/d8f91ab5fcfceb623ae45d3333ad0e543775549c/color.zsh > bin/color
           curl -L https://raw.githubusercontent.com/molovo/revolver/master/revolver > bin/revolver
           curl -L https://raw.githubusercontent.com/molovo/color/master/color.zsh > bin/color
           git clone https://github.com/zunit-zsh/zunit.git zunit.git
