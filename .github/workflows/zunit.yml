@@ -31,8 +31,7 @@ jobs:
           cd ..
           mv ./zunit.git/zunit bin
           chmod u+x bin/{color,revolver,zunit}
-        # ✏️ Let's see the test
-      - name: Run test
+      - name: ✏️ Run the test
         run: |
           export TERM="xterm-256color"
           export PATH="$PWD/bin:$PATH"
@@ -65,7 +64,7 @@ jobs:
           cd ..
           mv ./zunit.git/zunit bin
           chmod u+x bin/{color,revolver,zunit}
-      - name: ✏️ Do the test
+      - name: ✏️ Run the test
         run: |
           export TERM="xterm-256color"
           export PATH="$PWD/bin:$PATH"
