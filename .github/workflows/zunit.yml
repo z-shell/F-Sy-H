@@ -3,9 +3,9 @@ name: Zunit CI
 on:
   workflow_dispatch:
   push:
-    branches: [ 'main', 'test/ci' ]
+    branches: [ 'main', 'devminor' ]
   pull_request:
-    branches: [ 'main', 'test/ci' ]
+    branches: [ 'main', 'devminor' ]
 
 jobs:
   build-macos:
