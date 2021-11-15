@@ -16,8 +16,8 @@ jobs:
         uses: actions/checkout@v2
       - name: ℹ️ Setup macos dependencies and run zunit
         run: |
-         echo $ZSH_NAME $ZSH_VERSION
-         shell: zsh {0}
+          /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+          brew install zsh
       - name: 📚 Molovo zunit
         run: |
           mkdir bin
