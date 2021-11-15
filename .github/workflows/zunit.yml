@@ -47,7 +47,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
       - name: ℹ️ Setup linux dependencies and run zunit
-      - name: Run APT
         run: |
           sudo apt update
           sudo apt-get install zsh -yq
