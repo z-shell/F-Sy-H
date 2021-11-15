@@ -9,12 +9,12 @@ on:
 
 jobs:
   build-macos:
-    name: Zunit CI
+    name: Mac zunit CI
     runs-on: macos-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v2
-      - name: ℹ️ Setup macos dependencies and run zunit
+      - name: ℹ️ Setup macos macos-10.15 dependencies
         run: |
           /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
           brew install zsh
@@ -46,7 +46,7 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
-      - name: ℹ️ Setup linux dependencies and run zunit
+      - name: ℹ️ Setup linux dependencies
         run: |
           sudo apt update
           sudo apt-get install zsh -yq
