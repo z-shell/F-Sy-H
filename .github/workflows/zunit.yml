@@ -3,26 +3,26 @@ name: Zunit CI
 on:
   workflow_dispatch:
   push:
-    branches: [ 'main', 'test/ci' ]
+    branches: [ 'main', 'devminor' ]
   pull_request:
-    branches: [ 'main', 'test/ci' ]
+    branches: [ 'main', 'devminor' ]
 
 jobs:
-  zunit:
-    runs-on: ubuntu-latest
-
+  build-macos:
+    name: Mac zunit CI
+    runs-on: macos-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v2
-        # ℹ️ Setup dependencies and run zunit
-      - name: Run APT
+      - name: ℹ️ Setup macos macos-10.15 dependencies
         run: |
-          sudo apt update
-          sudo apt-get install zsh=5.8-3ubuntu1 -yq
-        # 📚 Molovo zunit
-      - name: Setup zunit
+          /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+          brew install zsh
+      - name: 📚 Molovo zunit
         run: |
           mkdir bin
+          curl -fsSL https://raw.githubusercontent.com/molovo/revolver/v0.2.4/revolver > bin/revolver
+          curl -fsSL https://raw.githubusercontent.com/molovo/color/d8f91ab5fcfceb623ae45d3333ad0e543775549c/color.zsh > bin/color
           curl -L https://raw.githubusercontent.com/molovo/revolver/master/revolver > bin/revolver
           curl -L https://raw.githubusercontent.com/molovo/color/master/color.zsh > bin/color
           git clone https://github.com/zunit-zsh/zunit.git zunit.git
@@ -31,8 +31,39 @@ jobs:
           cd ..
           mv ./zunit.git/zunit bin
           chmod u+x bin/{color,revolver,zunit}
-        # ✏️ Let's see the test
-      - name: Run test
+      - name: ✏️ Run the test
+        run: |
+          export TERM="xterm-256color"
+          export PATH="$PWD/bin:$PATH"
+          zunit
+
+  build-linux:
+    name: Linux Zunit CI
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: ℹ️ Setup linux dependencies
+        run: |
+          sudo apt update
+          sudo apt-get install zsh -yq
+      - name: 📚 Molovo zunit
+        run: |
+          mkdir bin
+          curl -fsSL https://raw.githubusercontent.com/molovo/revolver/v0.2.4/revolver > bin/revolver
+          curl -fsSL https://raw.githubusercontent.com/molovo/color/d8f91ab5fcfceb623ae45d3333ad0e543775549c/color.zsh > bin/color
+          curl -L https://raw.githubusercontent.com/molovo/revolver/master/revolver > bin/revolver
+          curl -L https://raw.githubusercontent.com/molovo/color/master/color.zsh > bin/color
+          git clone https://github.com/zunit-zsh/zunit.git zunit.git
+          cd zunit.git
+          ./build.zsh
+          cd ..
+          mv ./zunit.git/zunit bin
+          chmod u+x bin/{color,revolver,zunit}
+      - name: ✏️ Run the test
         run: |
           export TERM="xterm-256color"
           export PATH="$PWD/bin:$PATH"
