@@ -1,24 +1,20 @@
-name: Zunit CI
+---
+name: 🛡️ ZUnit
 
 on:
   workflow_dispatch:
   push:
-    branches: [ 'main', 'devminor' ]
-  pull_request:
-    branches: [ 'main', 'devminor' ]
+    branches: [ main, develop ]
+  pull_request_target:
+    branches: [ main, develop ]
 
 jobs:
   build-macos:
-    name: Mac zunit CI
+    name: 🧪 ZUnit Mac
     runs-on: macos-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-      - name: ℹ️ Setup macos macos-10.15 dependencies
-        run: |
-          /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
-          brew install zsh
-      - name: 📚 Molovo zunit
+      - uses: actions/checkout@v2
+      - name: 📚 Get ZUnit
         run: |
           mkdir bin
           curl -fsSL https://raw.githubusercontent.com/molovo/revolver/v0.2.4/revolver > bin/revolver
@@ -31,26 +27,22 @@ jobs:
           cd ..
           mv ./zunit.git/zunit bin
           chmod u+x bin/{color,revolver,zunit}
-      - name: ✏️ Run the test
+      - name: ✏️ Run
         run: |
           export TERM="xterm-256color"
           export PATH="$PWD/bin:$PATH"
           zunit
-
+  
   build-linux:
-    name: Linux Zunit CI
+    name: 🧪 ZUnit Linux
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        os: [ubuntu-latest]
     steps:
-      - name: Checkout
-        uses: actions/checkout@v2
+      - uses: actions/checkout@v2
       - name: ℹ️ Setup linux dependencies
         run: |
           sudo apt update
           sudo apt-get install zsh -yq
-      - name: 📚 Molovo zunit
+      - name: 📚 Get ZUnit
         run: |
           mkdir bin
           curl -fsSL https://raw.githubusercontent.com/molovo/revolver/v0.2.4/revolver > bin/revolver
@@ -63,7 +55,7 @@ jobs:
           cd ..
           mv ./zunit.git/zunit bin
           chmod u+x bin/{color,revolver,zunit}
-      - name: ✏️ Run the test
+      - name: ✏️ Run
         run: |
           export TERM="xterm-256color"
           export PATH="$PWD/bin:$PATH"
