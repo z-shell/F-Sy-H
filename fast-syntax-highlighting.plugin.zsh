@@ -33,7 +33,6 @@
 # regardless of functionargzero and posixargzero,
 # and with an option for a plugin manager to alter
 # the plugin directory (i.e. set ZERO parameter)
-# http://z-shell.github.io/Zsh-100-Commits-Club/Zsh-Plugin-Standard.html
 
 0="${${ZERO:-${0:#$ZSH_ARGZERO}}:-${(%):-%N}}"
 0="${${(M)0:#/*}:-$PWD/$0}"
@@ -335,7 +334,7 @@ autoload -Uz -- →chroma/-git.ch →chroma/-hub.ch →chroma/-lab.ch →chroma/
                 →chroma/-subcommand.ch →chroma/-autorandr.ch →chroma/-nmcli.ch \
                 →chroma/-fast-theme.ch →chroma/-node.ch →chroma/-fpath_peq.ch \
                 →chroma/-precommand.ch →chroma/-subversion.ch →chroma/-ionice.ch \
-                →chroma/-nice.ch →chroma/main-chroma.ch →chroma/-ogit.ch →chroma/-zinit.ch
+                →chroma/-nice.ch →chroma/main-chroma.ch →chroma/-ogit.ch →chroma/-zinit.ch →chroma/-zi.ch
 
 source "${0:h}/fast-highlight"
 source "${0:h}/fast-string-highlight"
@@ -363,7 +362,7 @@ unset __fsyh_theme
 alias fsh-alias=fast-theme
 
 -fast-highlight-fill-option-variables
-
+# TODO: #9 API update
 if [[ ! -e $FAST_WORK_DIR/secondary_theme.zsh ]] {
     if { type curl &>/dev/null } {
         curl -fsSL -o "$FAST_WORK_DIR/secondary_theme.zsh" \

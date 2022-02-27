@@ -36,7 +36,7 @@ FAST_WORK_DIR=${~FAST_WORK_DIR}
   # emulate -L zsh -o extendedglob
   # Zsh < v5.0 do not support -o
   emulate -L zsh
-  setopt extendedglob 
+  setopt extendedglob
   local -A map
   map=( "XDG:"    "${XDG_CONFIG_HOME:-$HOME/.config}/fsh/"
         "LOCAL:"  "/usr/local/share/fsh/"
@@ -166,7 +166,7 @@ typeset -gA FAST_HIGHLIGHT
 
 # Brackets highlighter active by default
 : ${FAST_HIGHLIGHT[use_brackets]:=1}
-
+# TODO: #13 map-outdates e.g: pnpm
 FAST_HIGHLIGHT+=(
   chroma-fast-theme    →chroma/-fast-theme.ch
   chroma-alias         →chroma/-alias.ch
@@ -227,6 +227,7 @@ FAST_HIGHLIGHT+=(
   chroma-yard          →chroma/-subcommand.ch
   chroma-cabal         →chroma/-subcommand.ch
   chroma-npm           →chroma/-subcommand.ch
+  chroma-pnpm          →chroma/-subcommand.ch
   chroma-nvm           →chroma/-subcommand.ch
   chroma-yarn          →chroma/-subcommand.ch
   chroma-brew          →chroma/-subcommand.ch
@@ -244,7 +245,8 @@ FAST_HIGHLIGHT+=(
   chroma-systemctl     →chroma/-subcommand.ch
   chroma-asciinema     →chroma/-subcommand.ch
   chroma-ipfs          →chroma/-subcommand.ch
-  chroma-zinit       →chroma/main-chroma.ch%zinit
+  chroma-zi            chroma/main-chroma.ch%zi
+  chroma-zinit         chroma/main-chroma.ch%zinit
   chroma-aspell        →chroma/-subcommand.ch
   chroma-bspc          →chroma/-subcommand.ch
   chroma-cryptsetup    →chroma/-subcommand.ch
@@ -443,9 +445,9 @@ typeset -ga ZLAST_COMMANDS
   FAST_HIGHLIGHT[chroma-autoload-elements]=""
   # Restart FPATH elements gathering
   FAST_HIGHLIGHT[chroma-fpath_peq-elements]=""
-  # Restart svn zinit's ICE gathering
-  FAST_HIGHLIGHT[chroma-zinit-ice-elements-svn]=0
-  FAST_HIGHLIGHT[chroma-zinit-ice-elements-id-as]=""
+  # Restart svn zi's ICE gathering
+  FAST_HIGHLIGHT[chroma-zi-ice-elements-svn]=0
+  FAST_HIGHLIGHT[chroma-zi-ice-elements-id-as]=""
 
   [[ -n $ZCALC_ACTIVE ]] && {
     _start_pos=0; _end_pos=__len; __arg=$__buf
@@ -1148,7 +1150,7 @@ typeset -ga ZLAST_COMMANDS
         fi
       fi
     fi
-    if [[ $__arg = (#b)*'#'(([0-9a-fA-F][0-9a-fA-F])([0-9a-fA-F][0-9a-fA-F])([0-9a-fA-F][0-9a-fA-F])|([0-9a-fA-F])([0-9a-fA-F])([0-9a-fA-F]))* || $__arg = (#b)*'rgb('(([0-9a-fA-F][0-9a-fA-F](#c0,1)),([0-9a-fA-F][0-9a-fA-F](#c0,1)),([0-9a-fA-F][0-9a-fA-F](#c0,1)))* ]]; then
+    if [[ $__arg = (#b)*'#'(([0-9a-fA-F][0-9a-fA-F])([0-9a-fA-F][0-9a-fA-F])([0-9a-fA-F][0-9a-fA-F])|([0-9a-fA-F])([0-9a-fA-F])([0-9a-fA-F]))(|[^[:alnum:]]*) || $__arg = (#b)*'rgb('(([0-9a-fA-F][0-9a-fA-F](#c0,1)),([0-9a-fA-F][0-9a-fA-F](#c0,1)),([0-9a-fA-F][0-9a-fA-F](#c0,1)))* ]]; then
       if [[ -n $match[2] ]]; then
         if [[ $match[2] = ?? || $match[3] = ?? || $match[4] = ?? ]]; then
           (( __start=_start_pos-__PBUFLEN, __end=_end_pos-__PBUFLEN, __start >= 0 )) && reply+=("$__start $__end bg=#${(l:2::0:)match[2]}${(l:2::0:)match[3]}${(l:2::0:)match[4]}")

@@ -254,7 +254,7 @@ fsh__git__chroma__def=(
     ##
     ## DIFF
     ##
-    ##  TODO: When a second argument is also a path and it points to a directory, then
+    ##  TODO: #10 When a second argument is also a path and it points to a directory, then
     ##        git appends the previous file name to it – good to implement this too
     ## {{{
 
