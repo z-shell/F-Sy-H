@@ -245,8 +245,8 @@ FAST_HIGHLIGHT+=(
   chroma-systemctl     →chroma/-subcommand.ch
   chroma-asciinema     →chroma/-subcommand.ch
   chroma-ipfs          →chroma/-subcommand.ch
-  chroma-zi            chroma/main-chroma.ch%zi
-  chroma-zinit         chroma/main-chroma.ch%zinit
+  chroma-zi            →chroma/main-chroma.ch%zi
+  chroma-zinit         →chroma/-zinit.ch
   chroma-aspell        →chroma/-subcommand.ch
   chroma-bspc          →chroma/-subcommand.ch
   chroma-cryptsetup    →chroma/-subcommand.ch
