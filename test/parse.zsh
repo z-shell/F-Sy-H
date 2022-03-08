@@ -83,7 +83,7 @@ done'
         input+=( "$in" )
     elif [[ "$1" = "-git" ]]; then
         local in="git lp
-git push origin master
+git push origin main
 git commit
 git add safari.ini zdharma.ini
 git st .

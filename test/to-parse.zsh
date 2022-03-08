@@ -548,7 +548,7 @@ typeset -gA HSMW_HIGHLIGHT_STYLES
                    -hsmw-highlight-stack-pop 'R' style=reserved-word
                  fi;;
         $'\x28\x29') # possibly a function definition
-                 if (( multi_func_def )) || false # TODO: or if the previous word was a command word
+                 if (( multi_func_def )) || false # TODO: #15 or if the previous word was a command word
                  then
                    next_word+=':start:'
                  fi
