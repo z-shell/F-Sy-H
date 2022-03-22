@@ -13,7 +13,7 @@ jobs:
     name: 🧪 ZUnit Mac
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: 📚 Get ZUnit
         run: |
           mkdir bin
@@ -35,7 +35,7 @@ jobs:
     name: 🧪 ZUnit Linux
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: ℹ️ Setup linux dependencies
         run: |
           sudo apt update
