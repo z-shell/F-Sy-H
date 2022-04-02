@@ -1,15 +1,12 @@
 <h1 align="center">
   <a href="https://github.com/z-shell/zi">
-    <img src="https://github.com/z-shell/zi/raw/main/docs/images/logo.svg" alt="Logo" width="80" height="80" />
+    <img src="https://github.com/z-shell/zi/raw/main/docs/images/logo.svg" alt="Logo" width="60" height="60" />
   </a>
-❮ ZI - F-Sy-H ❯
+❮ ZI ❯ - F-Sy-H
 </h1>
-<div align="center">
-<h3>Feature-rich Syntax Highlighting for Zsh</h3>
-<a href="https://github.com/z-shell/fast-syntax-highlighting/actions/workflows/zunit.yml"><img src="https://github.com/z-shell/fast-syntax-highlighting/actions/workflows/zunit.yml/badge.svg"></a>
-</div>
-
----
+<h2 align="center">Feature-rich Syntax Highlighting for Zsh</h2>
+<p align="center"><a href="https://github.com/z-shell/f-sy-h/actions/workflows/zunit.yml">
+<img src="https://github.com/z-shell/f-sy-h/actions/workflows/zunit.yml/badge.svg"></a></p>
 
 <details open="open">
 <summary>Table of Contents</summary>
