@@ -17,9 +17,9 @@ jobs:
       - name: 📚 Get ZUnit
         run: |
           mkdir bin
-          curl -fsSL https://raw.githubusercontent.com/molovo/revolver/13e7af7ee037b6db0a598a4e54242dd9c63a4c45/revolver > bin/revolver
-          curl -fsSL https://raw.githubusercontent.com/molovo/color/d8f91ab5fcfceb623ae45d3333ad0e543775549c/color.zsh > bin/color
-          git clone https://github.com/z-shell/zunit.git zunit.git
+          curl -fsSL https://raw.githubusercontent.com/zdharma/revolver/13e7af7ee037b6db0a598a4e54242dd9c63a4c45/revolver > bin/revolver
+          curl -fsSL https://raw.githubusercontent.com/zdharma/color/d8f91ab5fcfceb623ae45d3333ad0e543775549c/color.zsh > bin/color
+          git clone https://github.com/zdharma/zunit.git zunit.git
           cd zunit.git
           ./build.zsh
           cd ..
@@ -43,9 +43,9 @@ jobs:
       - name: 📚 Get ZUnit
         run: |
           mkdir bin
-          curl -fsSL https://raw.githubusercontent.com/molovo/revolver/13e7af7ee037b6db0a598a4e54242dd9c63a4c45/revolver > bin/revolver
-          curl -fsSL https://raw.githubusercontent.com/molovo/color/d8f91ab5fcfceb623ae45d3333ad0e543775549c/color.zsh > bin/color
-          git clone https://github.com/z-shell/zunit.git zunit.git
+          curl -fsSL https://raw.githubusercontent.com/zdharma/revolver/13e7af7ee037b6db0a598a4e54242dd9c63a4c45/revolver > bin/revolver
+          curl -fsSL https://raw.githubusercontent.com/zdharma/color/d8f91ab5fcfceb623ae45d3333ad0e543775549c/color.zsh > bin/color
+          git clone https://github.com/zdharma/zunit.git zunit.git
           cd zunit.git
           ./build.zsh
           cd ..
