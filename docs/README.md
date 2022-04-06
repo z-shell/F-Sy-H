@@ -56,30 +56,30 @@
 <details open="open">
 <summary>Table of Contents</summary>
 
-- [Related](#related)
-- [News](#news)
-- [Installation](#installation)
-  - [Manual](#manual)
-  - [ZI](#zi)
-  - [Zinit](#zinit)
-  - [Antigen](#antigen)
-  - [Zgen](#zgen)
-  - [Oh-My-Zsh](#oh-my-zsh)
-- [Features](#features)
-  - [Themes](#themes)
-  - [Variables](#variables)
-  - [Brackets](#brackets)
-  - [Conditions](#conditions)
-  - [Strings](#strings)
-  - [here-strings](#here-strings)
-  - [`exec` descriptor-variables](#exec-descriptor-variables)
-  - [for-loops and alternate syntax (brace `{`/`}` blocks)](#for-loops-and-alternate-syntax-brace--blocks)
-  - [Function definitions](#function-definitions)
-  - [Recursive `eval` and `$( )` highlighting](#recursive-eval-and---highlighting)
-  - [Chroma functions](#chroma-functions)
-  - [Math-mode highlighting](#math-mode-highlighting)
-  - [Zcalc highlighting](#zcalc-highlighting)
-- [Performance](#performance)
+- <a href="#related">Related</a>
+- <a href="#news">News</a>
+ - <a href="#installation">Installation</a>
+   - <a href="#manual">Manual</a>
+   - <a href="#zi">ZI</a>
+   - <a href="#zinit">Zinit</a>
+   - <a href="#antigen">Antigen</a>
+   - <a href="#zgen">Zgen</a>
+   - <a href="#oh-my-zsh">Oh-My-Zsh</a>
+- <a href="#features">Features</a>
+  - <a href="#themes">Themes</a>
+  - <a href="#variables">Variables</a>
+  - <a href="#brackets">Brackets</a>
+  - <a href="#conditions">Conditions</a>
+  - <a href="#strings">Strings</a>
+  - <a href="#here-strings">Here Strings</a>
+  - <a href="#exec-descriptor-variables">`exec` descriptor variables</a>
+  - <a href="#for-loops-and-alternate-syntax-brace--blocks">for-loops and alternate syntax (brace `{`/`}` blocks)</a>
+  - <a href="#function-definitions">Function definitions</a>
+  - <a href="#recursive-eval-and---highlighting">Recursive `eval` and `$( )` highlighting</a>
+  - <a href="#chroma-functions">Chroma functions</a>
+  - <a href="#math-mode-highlighting">Math mode highlighting</a>
+  - <a href="#zcalc-highlighting">Zcalc highlighting</a>
+- <a href="#performance">Performance</a>
 
 </details>
 </td></tr><tr><td>
