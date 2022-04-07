@@ -33,8 +33,10 @@
 # regardless of functionargzero and posixargzero,
 # and with an option for a plugin manager to alter
 # the plugin directory (i.e. set ZERO parameter)
-
-0="${${ZERO:-${0:#$ZSH_ARGZERO}}:-${(%):-%N}}"
+#
+# Standardized $0 Handling
+# https://z.digitalclouds.dev/community/zsh_plugin_standard#zero-handling
+0="${ZERO:-${${0:#$ZSH_ARGZERO}:-${(%):-%N}}}"
 0="${${(M)0:#/*}:-$PWD/$0}"
 
 typeset -g FAST_HIGHLIGHT_VERSION=1.55
@@ -44,17 +46,16 @@ typeset -ga _FAST_MAIN_CACHE
 # are complex, i.e. e.g. part of "[[" in [[ ... ]]
 typeset -ga _FAST_COMPLEX_BRACKETS
 
-typeset -g FAST_WORK_DIR=${FAST_WORK_DIR:-${XDG_CACHE_HOME:-~/.cache}/fast-syntax-highlighting}
+# Functions Directory
+# https://z.digitalclouds.dev/community/zsh_plugin_standard#funtions-directory
+if [[ $PMSPEC != *f* ]]; then
+  fpath+=( "${0:h}/functions" )
+fi
+
+typeset -g FAST_WORK_DIR=${FAST_WORK_DIR:-${XDG_CACHE_HOME:-~/.cache}/fsh}
 : ${FAST_WORK_DIR:=$FAST_BASE_DIR}
 # Expand any tilde in the (supposed) path.
 FAST_WORK_DIR=${~FAST_WORK_DIR}
-
-# Last (currently, possibly) loaded plugin isn't "fast-syntax-highlighting"?
-# And FPATH isn't containing plugin dir?
-if [[ ${zsh_loaded_plugins[-1]} != */fast-syntax-highlighting && -z ${fpath[(r)${0:h}]} ]]
-then
-    fpath+=( "${0:h}" )
-fi
 
 if [[ ! -w $FAST_WORK_DIR ]]; then
     FAST_WORK_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/fsh"
@@ -254,38 +255,38 @@ _zsh_highlight_bind_widgets()
   for cur_widget in $widgets_to_bind; do
     case $widgets[$cur_widget] in
 
-      # Already rebound event: do nothing.
-      user:_zsh_highlight_widget_*);;
+    # Already rebound event: do nothing.
+    user:_zsh_highlight_widget_*);;
 
-      # The "eval"'s are required to make $cur_widget a closure: the value of the parameter at function
-      # definition time is used.
-      #
-      # We can't use ${0/_zsh_highlight_widget_} because these widgets are always invoked with
-      # NO_function_argzero, regardless of the option's setting here.
+    # The "eval"'s are required to make $cur_widget a closure: the value of the parameter at function
+    # definition time is used.
+    #
+    # We can't use ${0/_zsh_highlight_widget_} because these widgets are always invoked with
+    # NO_function_argzero, regardless of the option's setting here.
 
-      # User defined widget: override and rebind old one with prefix "orig-".
-      user:*) zle -N -- $prefix-$cur_widget ${widgets[$cur_widget]#*:}
-              eval "_zsh_highlight_widget_${(q)prefix}-${(q)cur_widget}() { _zsh_highlight_call_widget ${(q)prefix}-${(q)cur_widget} -- \"\$@\" }"
-              zle -N -- $cur_widget _zsh_highlight_widget_$prefix-$cur_widget;;
+    # User defined widget: override and rebind old one with prefix "orig-".
+    user:*) zle -N -- $prefix-$cur_widget ${widgets[$cur_widget]#*:}
+      eval "_zsh_highlight_widget_${(q)prefix}-${(q)cur_widget}() { _zsh_highlight_call_widget ${(q)prefix}-${(q)cur_widget} -- \"\$@\" }"
+      zle -N -- $cur_widget _zsh_highlight_widget_$prefix-$cur_widget;;
 
-      # Completion widget: override and rebind old one with prefix "orig-".
-      completion:*) zle -C $prefix-$cur_widget ${${(s.:.)widgets[$cur_widget]}[2,3]}
-                    eval "_zsh_highlight_widget_${(q)prefix}-${(q)cur_widget}() { _zsh_highlight_call_widget ${(q)prefix}-${(q)cur_widget} -- \"\$@\" }"
-                    zle -N -- $cur_widget _zsh_highlight_widget_$prefix-$cur_widget;;
+    # Completion widget: override and rebind old one with prefix "orig-".
+    completion:*) zle -C $prefix-$cur_widget ${${(s.:.)widgets[$cur_widget]}[2,3]}
+      eval "_zsh_highlight_widget_${(q)prefix}-${(q)cur_widget}() { _zsh_highlight_call_widget ${(q)prefix}-${(q)cur_widget} -- \"\$@\" }"
+      zle -N -- $cur_widget _zsh_highlight_widget_$prefix-$cur_widget;;
 
-      # Builtin widget: override and make it call the builtin ".widget".
-      builtin) eval "_zsh_highlight_widget_${(q)prefix}-${(q)cur_widget}() { _zsh_highlight_call_widget .${(q)cur_widget} -- \"\$@\" }"
-               zle -N -- $cur_widget _zsh_highlight_widget_$prefix-$cur_widget;;
+    # Builtin widget: override and make it call the builtin ".widget".
+    builtin) eval "_zsh_highlight_widget_${(q)prefix}-${(q)cur_widget}() { _zsh_highlight_call_widget .${(q)cur_widget} -- \"\$@\" }"
+      zle -N -- $cur_widget _zsh_highlight_widget_$prefix-$cur_widget;;
 
-      # Incomplete or nonexistent widget: Bind to z-sy-h directly.
-      *)
-         if [[ $cur_widget == zle-* ]] && [[ -z $widgets[$cur_widget] ]]; then
-           _zsh_highlight_widget_${cur_widget}() { :; _zsh_highlight }
-           zle -N -- $cur_widget _zsh_highlight_widget_$cur_widget
-         else
-      # Default: unhandled case.
-           print -r -- >&2 "zsh-syntax-highlighting: unhandled ZLE widget ${(qq)cur_widget}"
-         fi
+    # Incomplete or nonexistent widget: Bind to z-sy-h directly.
+    *)
+      if [[ $cur_widget == zle-* ]] && [[ -z $widgets[$cur_widget] ]]; then
+        _zsh_highlight_widget_${cur_widget}() { :; _zsh_highlight }
+        zle -N -- $cur_widget _zsh_highlight_widget_$cur_widget
+      else
+        # Default: unhandled case.
+        print -r -- >&2 "zsh-syntax-highlighting: unhandled ZLE widget ${(qq)cur_widget}"
+      fi
     esac
   done
 }
@@ -311,11 +312,11 @@ _zsh_highlight_preexec_hook()
 
 autoload -Uz add-zsh-hook
 add-zsh-hook preexec _zsh_highlight_preexec_hook 2>/dev/null || {
-    print -r -- >&2 'zsh-syntax-highlighting: failed loading add-zsh-hook.'
+  print -r -- >&2 'zsh-syntax-highlighting: failed loading add-zsh-hook.'
 }
 
 /fshdbg() {
-    print -r -- "$@" >>! /tmp/reply
+  print -r -- "$@" >>! /tmp/reply
 }
 
 ZSH_HIGHLIGHT_MAXLENGTH=10000
@@ -324,17 +325,19 @@ ZSH_HIGHLIGHT_MAXLENGTH=10000
 zmodload zsh/parameter 2>/dev/null
 zmodload zsh/system 2>/dev/null
 
-autoload -Uz -- is-at-least fast-theme .fast-read-ini-file .fast-run-git-command \
-                .fast-make-targets .fast-run-command .fast-zts-read-all
+autoload -Uz -- is-at-least fast-theme \
+  .fast-read-ini-file .fast-run-git-command \
+  .fast-make-targets .fast-run-command .fast-zts-read-all
+
 autoload -Uz -- →chroma/-git.ch →chroma/-hub.ch →chroma/-lab.ch →chroma/-example.ch \
-                →chroma/-grep.ch →chroma/-perl.ch →chroma/-make.ch →chroma/-awk.ch \
-                →chroma/-vim.ch →chroma/-source.ch →chroma/-sh.ch →chroma/-docker.ch \
-                →chroma/-autoload.ch →chroma/-ssh.ch →chroma/-scp.ch →chroma/-which.ch \
-                →chroma/-printf.ch →chroma/-ruby.ch →chroma/-whatis.ch →chroma/-alias.ch \
-                →chroma/-subcommand.ch →chroma/-autorandr.ch →chroma/-nmcli.ch \
-                →chroma/-fast-theme.ch →chroma/-node.ch →chroma/-fpath_peq.ch \
-                →chroma/-precommand.ch →chroma/-subversion.ch →chroma/-ionice.ch \
-                →chroma/-nice.ch →chroma/main-chroma.ch →chroma/-ogit.ch →chroma/-zinit.ch →chroma/-zi.ch
+  →chroma/-grep.ch →chroma/-perl.ch →chroma/-make.ch →chroma/-awk.ch \
+  →chroma/-vim.ch →chroma/-source.ch →chroma/-sh.ch →chroma/-docker.ch \
+  →chroma/-autoload.ch →chroma/-ssh.ch →chroma/-scp.ch →chroma/-which.ch \
+  →chroma/-printf.ch →chroma/-ruby.ch →chroma/-whatis.ch →chroma/-alias.ch \
+  →chroma/-subcommand.ch →chroma/-autorandr.ch →chroma/-nmcli.ch \
+  →chroma/-fast-theme.ch →chroma/-node.ch →chroma/-fpath_peq.ch \
+  →chroma/-precommand.ch →chroma/-subversion.ch →chroma/-ionice.ch \
+  →chroma/-nice.ch →chroma/main-chroma.ch →chroma/-ogit.ch →chroma/-zi.ch
 
 source "${0:h}/fast-highlight"
 source "${0:h}/fast-string-highlight"
@@ -343,18 +346,18 @@ local __fsyh_theme
 zstyle -s :plugin:fast-syntax-highlighting theme __fsyh_theme
 
 [[ ( "${+termcap}" != 1 || "${termcap[Co]}" != <-> || "${termcap[Co]}" -lt "256" ) && "$__fsyh_theme" = (default|) ]] && {
-    FAST_HIGHLIGHT_STYLES[defaultvariable]="none"
-    FAST_HIGHLIGHT_STYLES[defaultglobbing-ext]="fg=blue,bold"
-    FAST_HIGHLIGHT_STYLES[defaulthere-string-text]="bg=blue"
-    FAST_HIGHLIGHT_STYLES[defaulthere-string-var]="fg=cyan,bg=blue"
-    FAST_HIGHLIGHT_STYLES[defaultcorrect-subtle]="bg=blue"
-    FAST_HIGHLIGHT_STYLES[defaultsubtle-bg]="bg=blue"
-    [[ "${FAST_HIGHLIGHT_STYLES[variable]}" = "fg=113" ]] && FAST_HIGHLIGHT_STYLES[variable]="none"
-    [[ "${FAST_HIGHLIGHT_STYLES[globbing-ext]}" = "fg=13" ]] && FAST_HIGHLIGHT_STYLES[globbing-ext]="fg=blue,bold"
-    [[ "${FAST_HIGHLIGHT_STYLES[here-string-text]}" = "bg=18" ]] && FAST_HIGHLIGHT_STYLES[here-string-text]="bg=blue"
-    [[ "${FAST_HIGHLIGHT_STYLES[here-string-var]}" = "fg=cyan,bg=18" ]] && FAST_HIGHLIGHT_STYLES[here-string-var]="fg=cyan,bg=blue"
-    [[ "${FAST_HIGHLIGHT_STYLES[correct-subtle]}" = "fg=12" ]] && FAST_HIGHLIGHT_STYLES[correct-subtle]="bg=blue"
-    [[ "${FAST_HIGHLIGHT_STYLES[subtle-bg]}" = "bg=18" ]] && FAST_HIGHLIGHT_STYLES[subtle-bg]="bg=blue"
+  FAST_HIGHLIGHT_STYLES[defaultvariable]="none"
+  FAST_HIGHLIGHT_STYLES[defaultglobbing-ext]="fg=blue,bold"
+  FAST_HIGHLIGHT_STYLES[defaulthere-string-text]="bg=blue"
+  FAST_HIGHLIGHT_STYLES[defaulthere-string-var]="fg=cyan,bg=blue"
+  FAST_HIGHLIGHT_STYLES[defaultcorrect-subtle]="bg=blue"
+  FAST_HIGHLIGHT_STYLES[defaultsubtle-bg]="bg=blue"
+  [[ "${FAST_HIGHLIGHT_STYLES[variable]}" = "fg=113" ]] && FAST_HIGHLIGHT_STYLES[variable]="none"
+  [[ "${FAST_HIGHLIGHT_STYLES[globbing-ext]}" = "fg=13" ]] && FAST_HIGHLIGHT_STYLES[globbing-ext]="fg=blue,bold"
+  [[ "${FAST_HIGHLIGHT_STYLES[here-string-text]}" = "bg=18" ]] && FAST_HIGHLIGHT_STYLES[here-string-text]="bg=blue"
+  [[ "${FAST_HIGHLIGHT_STYLES[here-string-var]}" = "fg=cyan,bg=18" ]] && FAST_HIGHLIGHT_STYLES[here-string-var]="fg=cyan,bg=blue"
+  [[ "${FAST_HIGHLIGHT_STYLES[correct-subtle]}" = "fg=12" ]] && FAST_HIGHLIGHT_STYLES[correct-subtle]="bg=blue"
+  [[ "${FAST_HIGHLIGHT_STYLES[subtle-bg]}" = "bg=18" ]] && FAST_HIGHLIGHT_STYLES[subtle-bg]="bg=blue"
 }
 
 unset __fsyh_theme
@@ -364,21 +367,21 @@ alias fsh-alias=fast-theme
 -fast-highlight-fill-option-variables
 # TODO: #9 API update
 if [[ ! -e $FAST_WORK_DIR/secondary_theme.zsh ]] {
-    if { type curl &>/dev/null } {
-        curl -fsSL -o "$FAST_WORK_DIR/secondary_theme.zsh" \
-            https://raw.githubusercontent.com/z-shell/fast-syntax-highlighting/main/share/free_theme.zsh \
-            &>/dev/null
-    } elif { type wget &>/dev/null } {
-        wget -O "$FAST_WORK_DIR/secondary_theme.zsh" \
-            https://raw.githubusercontent.com/z-shell/fast-syntax-highlighting/main/share/free_theme.zsh \
-            &>/dev/null
-    }
-    touch "$FAST_WORK_DIR/secondary_theme.zsh"
+  if { type curl &>/dev/null } {
+    curl -fsSL -o "$FAST_WORK_DIR/secondary_theme.zsh" \
+      https://raw.githubusercontent.com/z-shell/F-Sy-H/main/share/free_theme.zsh \
+      &>/dev/null
+  } elif { type wget &>/dev/null } {
+    wget -O "$FAST_WORK_DIR/secondary_theme.zsh" \
+      https://raw.githubusercontent.com/z-shell/F-Sy-H/main/share/free_theme.zsh \
+      &>/dev/null
+  }
+  touch "$FAST_WORK_DIR/secondary_theme.zsh"
 }
 
 if [[ $(uname -a) = (#i)*darwin* ]] {
-    typeset -gA FAST_HIGHLIGHT
-    FAST_HIGHLIGHT[chroma-man]=
+  typeset -gA FAST_HIGHLIGHT
+  FAST_HIGHLIGHT[chroma-man]=
 }
 
 [[ $COLORTERM == (24bit|truecolor) || ${terminfo[colors]} -eq 16777216 ]] || zmodload zsh/nearcolor &>/dev/null || true
