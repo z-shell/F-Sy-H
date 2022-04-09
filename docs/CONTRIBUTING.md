@@ -25,4 +25,5 @@ Familiarity with project organization, roles, policies, procedures, conventions,
 Role-specific expectations, responsibilities.
 
 ---
+
 Licensed under the [CC-BY 4.0 License](https://creativecommons.org/licenses/by-sa/4.0/).

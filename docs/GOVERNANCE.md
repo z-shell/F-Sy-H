@@ -41,4 +41,5 @@ Any names, trademarks, logos, or goodwill developed by and associated with the P
 Amendments to this governance policy may be made by affirmative vote of 2/3 of all Maintainers, with approval by the Organization's Steering Committee.
 
 ---
+
 Licensed under the [CC-BY 4.0 License](https://creativecommons.org/licenses/by-sa/4.0/).
