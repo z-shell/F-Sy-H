@@ -1,6 +1,5 @@
-# -------------------------------------------------------------------------------------------------
 # Copyright (c) 2010-2016 zsh-syntax-highlighting contributors
-# Copyright (c) 2017-2019 Sebastian Gniazdowski (modifications)
+#
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification, are permitted
@@ -58,8 +57,8 @@ typeset -g FAST_WORK_DIR=${FAST_WORK_DIR:-${XDG_CACHE_HOME:-~/.cache}/fsh}
 FAST_WORK_DIR=${~FAST_WORK_DIR}
 
 if [[ ! -w $FAST_WORK_DIR ]]; then
-    FAST_WORK_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/fsh"
-    command mkdir -p "$FAST_WORK_DIR"
+  FAST_WORK_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/fsh"
+  command mkdir -p "$FAST_WORK_DIR"
 fi
 
 # Invokes each highlighter that needs updating.
@@ -92,23 +91,23 @@ _zsh_highlight()
   # Reset region highlight to build it from scratch
   # may need to remove path_prefix highlighting when the line ends
   if [[ $WIDGET == zle-line-finish ]] || _zsh_highlight_buffer_modified; then
-      -fast-highlight-init
-      -fast-highlight-process "$PREBUFFER" "$BUFFER" 0
-      (( FAST_HIGHLIGHT[use_brackets] )) && {
-          _FAST_MAIN_CACHE=( $reply )
-          -fast-highlight-string-process "$PREBUFFER" "$BUFFER"
-      }
-      region_highlight=( $reply )
+    -fast-highlight-init
+    -fast-highlight-process "$PREBUFFER" "$BUFFER" 0
+    (( FAST_HIGHLIGHT[use_brackets] )) && {
+      _FAST_MAIN_CACHE=( $reply )
+      -fast-highlight-string-process "$PREBUFFER" "$BUFFER"
+    }
+    region_highlight=( $reply )
   else
-      local char="${BUFFER[CURSOR+1]}"
-      if [[ "$char" = ["{([])}"] || "${FAST_HIGHLIGHT[prev_char]}" = ["{([])}"] ]]; then
-          FAST_HIGHLIGHT[prev_char]="$char"
-          (( FAST_HIGHLIGHT[use_brackets] )) && {
-              reply=( $_FAST_MAIN_CACHE )
-              -fast-highlight-string-process "$PREBUFFER" "$BUFFER"
-              region_highlight=( $reply )
-          }
-      fi
+    local char="${BUFFER[CURSOR+1]}"
+    if [[ "$char" = ["{([])}"] || "${FAST_HIGHLIGHT[prev_char]}" = ["{([])}"] ]]; then
+      FAST_HIGHLIGHT[prev_char]="$char"
+      (( FAST_HIGHLIGHT[use_brackets] )) && {
+        reply=( $_FAST_MAIN_CACHE )
+        -fast-highlight-string-process "$PREBUFFER" "$BUFFER"
+        region_highlight=( $reply )
+      }
+    fi
   fi
 
   {

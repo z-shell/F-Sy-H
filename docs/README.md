@@ -58,13 +58,13 @@
 
 - <a href="#related">Related</a>
 - <a href="#news">News</a>
- - <a href="#installation">Installation</a>
-   - <a href="#manual">Manual</a>
-   - <a href="#zi">ZI</a>
-   - <a href="#zinit">Zinit</a>
-   - <a href="#antigen">Antigen</a>
-   - <a href="#zgen">Zgen</a>
-   - <a href="#oh-my-zsh">Oh-My-Zsh</a>
+- <a href="#installation">Installation</a>
+  - <a href="#manual">Manual</a>
+  - <a href="#zi">ZI</a>
+  - <a href="#zinit">Zinit</a>
+  - <a href="#antigen">Antigen</a>
+  - <a href="#zgen">Zgen</a>
+  - <a href="#oh-my-zsh">Oh-My-Zsh</a>
 - <a href="#features">Features</a>
   - <a href="#themes">Themes</a>
   - <a href="#variables">Variables</a>

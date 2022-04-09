@@ -1,6 +1,5 @@
-# -*- mode: sh; sh-indentation: 4; indent-tabs-mode: nil; sh-basic-offset: 4; -*-
-# Copyright (c) 2018-2019 Sebastian Gniazdowski
-
+# -*- mode: zsh; sh-indentation: 2; indent-tabs-mode: nil; sh-basic-offset: 2; -*-
+#
 (( next_word = 2 | 8192 ))
 local THEFD check __first_call="$1" __wrd="$2" __start_pos="$3" __end_pos="$4"
 local __style
@@ -135,4 +134,4 @@ _start_pos=$_end_pos
 
 return 0
 
-# vim:ft=zsh:et:sw=4:sts=4
+# vim: ft=zsh sw=2 ts=2 et

@@ -5,6 +5,7 @@
   },
   "conventionalCommits.scopes": [
     "repository_maintenance",
-    "plugin_maintenance"
+    "plugin_maintenance",
+    "chroma"
   ]
 }

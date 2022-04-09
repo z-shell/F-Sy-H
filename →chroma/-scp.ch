@@ -1,5 +1,4 @@
-# -*- mode: sh; sh-indentation: 4; indent-tabs-mode: nil; sh-basic-offset: 4; -*-
-# Copyright (c) 2018 Sebastian Gniazdowski
+# -*- mode: zsh; sh-indentation: 2; indent-tabs-mode: nil; sh-basic-offset: 2; -*-
 #
 # Tracks scp command and emits message when one tries to pass port to hostspec.
 #
@@ -84,4 +83,4 @@ _start_pos=$_end_pos
 
 return 0
 
-# vim:ft=zsh:et:sw=4
+# vim: ft=zsh sw=2 ts=2 et

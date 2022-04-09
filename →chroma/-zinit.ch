@@ -1,5 +1,4 @@
-# -*- mode: sh; sh-indentation: 4; indent-tabs-mode: nil; sh-basic-offset: 4; -*-
-# Copyright (c) 2018-2019 Sebastian Gniazdowski
+# -*- mode: zsh; sh-indentation: 2; indent-tabs-mode: nil; sh-basic-offset: 2; -*-
 #
 # Chroma function for command `git'. It colorizes the part of command
 # line that holds `git' invocation.
@@ -375,4 +374,4 @@ fsh__zinit__chroma__def=(
 
 return 0
 
-# vim:ft=zsh:et:sw=4
+# vim: ft=zsh sw=2 ts=2 et
