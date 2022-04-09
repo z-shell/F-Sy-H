@@ -4,8 +4,8 @@
     "MD033": false
   },
   "conventionalCommits.scopes": [
-    "chroma"
     "repository_maintenance",
-    "plugin_maintenance"
+    "plugin_maintenance",
+    "chroma"
   ]
 }

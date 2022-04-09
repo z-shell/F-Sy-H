@@ -1,5 +1,8 @@
-# -*- mode: sh; sh-indentation: 4; indent-tabs-mode: nil; sh-basic-offset: 4; -*-
-# Copyright (c) 2018 Sebastian Gniazdowski
+#----------------------------------------------------------------------------------------------------------------------
+# -*- mode: zsh; sh-indentation: 2; indent-tabs-mode: nil; sh-basic-offset: 2; -*-
+# vim: ft=zsh sw=2 ts=2 et
+#----------------------------------------------------------------------------------------------------------------------
+#
 # Copyright (c) 2018, 2019 Philippe Troin (F-i-f on GitHub)
 #
 # Theme support using ini-files.
@@ -7,8 +10,12 @@
 
 zmodload zsh/zutil 2>/dev/null
 
-emulate -LR zsh
-setopt extendedglob typesetsilent warncreateglobal
+# Standard Recommended Options
+# https://z.digitalclouds.dev/community/zsh_plugin_standard/#standard-recommended-options
+emulate -L zsh
+setopt extended_glob warn_create_global typeset_silent \
+        no_short_loops rc_quotes no_auto_pushd
+
 autoload colors; colors
 
 typeset -g FAST_WORK_DIR
@@ -382,4 +389,3 @@ repeat 0 {
 }
 
 return 0
-# vim:ft=zsh:et:sw=4:sts=4
