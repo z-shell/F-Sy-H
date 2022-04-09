@@ -1,4 +1,4 @@
-# vim:ft=zsh:et:sw=4
+# -*- mode: zsh; sh-indentation: 2; indent-tabs-mode: nil; sh-basic-offset: 2; -*-
 
 local __first_call="$1" __start_pos="$3" __end_pos="$4"
 
@@ -15,3 +15,5 @@ local __first_call="$1" __start_pos="$3" __end_pos="$4"
 (( this_word = next_word ))
 _start_pos=$_end_pos
 return 0
+
+# vim: ft=zsh sw=2 ts=2 et
