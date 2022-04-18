@@ -184,7 +184,7 @@ Switch themes via `fast-theme {theme-name}`.
 
 <div style="width:100%;background-color:black;border:3px solid black;border-radius:6px;margin:5px 0;padding:2px 5px">
   <img
-    src="https://raw.githubusercontent.com/z-shell/F-Sy-H/main/images/theme.png"
+    src="https://raw.githubusercontent.com/z-shell/F-Sy-H/main/docs/images/theme.png"
     alt="image could not be loaded"
     style="color:red;background-color:black;font-weight:bold"
   />
@@ -200,7 +200,7 @@ Comparing to the project `zsh-users/zsh-syntax-highlighting` (the upper line):
 
 <div style="width:100%;background-color:black;border:3px solid black;border-radius:6px;margin:5px 0;padding:2px 5px">
   <img
-    src="https://raw.githubusercontent.com/z-shell/F-Sy-H/main/images/parameter.png"
+    src="https://raw.githubusercontent.com/z-shell/F-Sy-H/main/docs/images/parameter.png"
     alt="image could not be loaded"
     style="color:red;background-color:black;font-weight:bold"
   />
@@ -208,7 +208,7 @@ Comparing to the project `zsh-users/zsh-syntax-highlighting` (the upper line):
 
 <div style="width:100%;background-color:black;border:3px solid black;border-radius:6px;margin:5px 0;padding:2px 5px">
   <img
-    src="https://raw.githubusercontent.com/z-shell/F-Sy-H/main/images/in_string.png"
+    src="https://raw.githubusercontent.com/z-shell/F-Sy-H/main/docs/images/in_string.png"
     alt="image could not be loaded"
     style="color:red;background-color:black;font-weight:bold"
   />
@@ -218,7 +218,7 @@ Comparing to the project `zsh-users/zsh-syntax-highlighting` (the upper line):
 
 <div style="width:100%;background-color:black;border:3px solid black;border-radius:6px;margin:5px 0;padding:2px 5px">
   <img
-    src="https://raw.githubusercontent.com/z-shell/F-Sy-H/main/images/brackets.gif"
+    src="https://raw.githubusercontent.com/z-shell/F-Sy-H/main/docs/images/brackets.gif"
     alt="image could not be loaded"
     style="color:red;background-color:black;font-weight:bold"
   />
@@ -230,7 +230,7 @@ Comparing to the project `zsh-users/zsh-syntax-highlighting` (the upper line):
 
 <div style="width:100%;background-color:black;border:3px solid black;border-radius:6px;margin:5px 0;padding:2px 5px">
   <img
-    src="https://raw.githubusercontent.com/z-shell/F-Sy-H/main/images/cplx_cond.png"
+    src="https://raw.githubusercontent.com/z-shell/F-Sy-H/main/docs/images/cplx_cond.png"
     alt="image could not be loaded"
     style="color:red;background-color:black;font-weight:bold"
   />
@@ -252,7 +252,7 @@ Exact highlighting that recognizes quotings.
 
 <div style="width:100%;background-color:black;border:3px solid black;border-radius:6px;margin:5px 0;padding:2px 5px">
   <img
-    src="https://raw.githubusercontent.com/z-shell/F-Sy-H/main/images/herestring.png"
+    src="https://raw.githubusercontent.com/z-shell/F-Sy-H/main/docs/images/herestring.png"
     alt="image could not be loaded"
     style="color:red;background-color:black;font-weight:bold"
   />
@@ -274,7 +274,7 @@ Comparing to the project `zsh-users/zsh-syntax-highlighting` (the upper line):
 
 <div style="width:100%;background-color:black;border:3px solid black;border-radius:6px;margin:5px 0;padding:2px 5px">
   <img
-    src="https://raw.githubusercontent.com/z-shell/F-Sy-H/main/images/for-loop-cmp.png"
+    src="https://raw.githubusercontent.com/z-shell/F-Sy-H/main/docs/images/for-loop-cmp.png"
     alt="image could not be loaded"
     style="color:red;background-color:black;font-weight:bold"
   />
@@ -286,7 +286,7 @@ Comparing to the project `zsh-users/zsh-syntax-highlighting` (the upper 2 lines)
 
 <div style="width:100%;background-color:black;border:3px solid black;border-radius:6px;margin:5px 0;padding:2px 5px">
   <img
-    src="https://raw.githubusercontent.com/z-shell/F-Sy-H/main/images/function.png"
+    src="https://raw.githubusercontent.com/z-shell/F-Sy-H/main/docs/images/function.png"
     alt="image could not be loaded"
     style="color:red;background-color:black;font-weight:bold"
   />
@@ -298,7 +298,7 @@ Comparing to the project `zsh-users/zsh-syntax-highlighting` (the upper line):
 
 <div style="width:100%;background-color:black;border:3px solid black;border-radius:6px;margin:5px 0;padding:2px 5px">
   <img
-    src="https://raw.githubusercontent.com/z-shell/F-Sy-H/main/images/eval_cmp.png"
+    src="https://raw.githubusercontent.com/z-shell/F-Sy-H/main/docs/images/eval_cmp.png"
     alt="image could not be loaded"
     style="color:red;background-color:black;font-weight:bold"
   />
@@ -310,7 +310,7 @@ Highlighting that is specific for a given command.
 
 <div style="width:100%;background-color:black;border:3px solid black;border-radius:6px;margin:5px 0;padding:2px 5px">
   <img
-    src="https://raw.githubusercontent.com/z-shell/F-Sy-H/main/images/git_chroma.png"
+    src="https://raw.githubusercontent.com/z-shell/F-Sy-H/main/docs/images/git_chroma.png"
     alt="image could not be loaded"
     style="color:red;background-color:black;font-weight:bold"
   />
@@ -324,7 +324,7 @@ that are enabled by default can be found
 
 <div style="width:100%;background-color:black;border:3px solid black;border-radius:6px;margin:5px 0;padding:2px 5px">
   <img
-    src="https://raw.githubusercontent.com/z-shell/F-Sy-H/main/images/math.gif"
+    src="https://raw.githubusercontent.com/z-shell/F-Sy-H/main/docs/images/math.gif"
     alt="image could not be loaded"
     style="color:red;background-color:black;font-weight:bold"
   />
@@ -334,7 +334,7 @@ that are enabled by default can be found
 
 <div style="width:100%;background-color:black;border:3px solid black;border-radius:6px;margin:5px 0;padding:2px 5px">
   <img
-    src="https://raw.githubusercontent.com/z-shell/F-Sy-H/main/images/zcalc.png"
+    src="https://raw.githubusercontent.com/z-shell/F-Sy-H/main/docs/images/zcalc.png"
     alt="image could not be loaded"
     style="color:red;background-color:black;font-weight:bold"
   />
