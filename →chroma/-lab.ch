@@ -1,4 +1,4 @@
-# vim:ft=zsh:et:sw=4
+# -*- mode: zsh; sh-indentation: 2; indent-tabs-mode: nil; sh-basic-offset: 2; -*-
 #
 # The `lab' tool after which this chroma is modeled after:
 # https://github.com/zaquestion/lab
@@ -57,3 +57,5 @@ if [[ "$__wrd" != -* ]] && (( FAST_HIGHLIGHT[chroma-git-got-subcommand] == 0 ));
 fi
 
 chroma/-git.ch $*
+
+# vim: ft=zsh sw=2 ts=2 et

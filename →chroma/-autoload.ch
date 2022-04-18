@@ -1,5 +1,4 @@
-# -*- mode: sh; sh-indentation: 4; indent-tabs-mode: nil; sh-basic-offset: 4; -*-
-# Copyright (c) 2018 Sebastian Gniazdowski
+# -*- mode: zsh; sh-indentation: 2; indent-tabs-mode: nil; sh-basic-offset: 2; -*-
 #
 # Tracks autoload command - highlights function names if they exist somewhere
 # in $fpath. Also warns that the autoloaded function is already defined.
@@ -101,4 +100,4 @@ _start_pos=$_end_pos
 
 return 0
 
-# vim:ft=zsh:et:sw=4
+# vim: ft=zsh sw=2 ts=2 et

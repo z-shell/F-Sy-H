@@ -166,7 +166,6 @@ typeset -gA FAST_HIGHLIGHT
 
 # Brackets highlighter active by default
 : ${FAST_HIGHLIGHT[use_brackets]:=1}
-# TODO: #13 map-outdates e.g: pnpm
 FAST_HIGHLIGHT+=(
   chroma-fast-theme    →chroma/-fast-theme.ch
   chroma-alias         →chroma/-alias.ch

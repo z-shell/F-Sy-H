@@ -1,12 +1,15 @@
-# vim:ft=zsh:sw=4:sts=4
-
+#----------------------------------------------------------------------------------------------------------------------
+# -*- mode: zsh; sh-indentation: 2; indent-tabs-mode: nil; sh-basic-offset: 2; -*-
+# vim: ft=zsh sw=2 ts=2 et
+#----------------------------------------------------------------------------------------------------------------------
 #
 # $1 - PREBUFFER
 # $2 - BUFFER
 #
 function -fast-highlight-string-process {
-    emulate -LR zsh
-    setopt extendedglob warncreateglobal typesetsilent
+emulate -L zsh
+setopt extended_glob warn_create_global typeset_silent \
+        no_short_loops rc_quotes no_auto_pushd
 
     local -A pos_to_level level_to_pos pair_map final_pairs
     local input=$1$2 _mybuf=$1$2 __style __quoting

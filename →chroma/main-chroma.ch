@@ -1,4 +1,4 @@
-# Copyright (c) 2018 Sebastian Gniazdowski
+# -*- mode: zsh; sh-indentation: 2; indent-tabs-mode: nil; sh-basic-offset: 2; -*-
 #
 # Main chroma function. It allows to create the command-dedicated chromas
 # (like -git.ch) through a definition provided by `chroma_def' array (read
@@ -457,4 +457,4 @@ _start_pos=$_end_pos
 
 return 0
 
-# vim:ft=zsh:et:sw=4
+# vim: ft=zsh sw=2 ts=2 et

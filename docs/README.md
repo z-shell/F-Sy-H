@@ -58,13 +58,13 @@
 
 - <a href="#related">Related</a>
 - <a href="#news">News</a>
- - <a href="#installation">Installation</a>
-   - <a href="#manual">Manual</a>
-   - <a href="#zi">ZI</a>
-   - <a href="#zinit">Zinit</a>
-   - <a href="#antigen">Antigen</a>
-   - <a href="#zgen">Zgen</a>
-   - <a href="#oh-my-zsh">Oh-My-Zsh</a>
+- <a href="#installation">Installation</a>
+  - <a href="#manual">Manual</a>
+  - <a href="#zi">ZI</a>
+  - <a href="#zinit">Zinit</a>
+  - <a href="#antigen">Antigen</a>
+  - <a href="#zgen">Zgen</a>
+  - <a href="#oh-my-zsh">Oh-My-Zsh</a>
 - <a href="#features">Features</a>
   - <a href="#themes">Themes</a>
   - <a href="#variables">Variables</a>
@@ -107,13 +107,13 @@
 Clone the Repository.
 
 ```zsh
-git clone https://github.com/z-shell/fast-syntax-highlighting ~/path/to/fsh
+git clone https://github.com/z-shell/F-Sy-H ~/path/to/fsh
 ```
 
 And add the following to your `zshrc` file.
 
 ```zsh
-source ~/path/to/fsh/fast-syntax-highlighting.plugin.zsh
+source ~/path/to/fsh/f-sy-h.plugin.zsh
 ```
 
 ### ZI
@@ -121,7 +121,7 @@ source ~/path/to/fsh/fast-syntax-highlighting.plugin.zsh
 Add the following to your `zshrc` file.
 
 ```zsh
-zi light z-shell/fast-syntax-highlighting
+zi light z-shell/F-Sy-H
 ```
 
 Here's an example of how to load the plugin together with a few other popular
@@ -133,7 +133,7 @@ prompt, in background:
 ```zsh
 zi wait lucid for \
  atinit"ZI[COMPINIT_OPTS]=-C; zicompinit; zicdreplay" \
-    z-shell/fast-syntax-highlighting \
+    z-shell/F-Sy-H \
  blockf \
     zsh-users/zsh-completions \
  atload"!_zsh_autosuggest_start" \
@@ -145,7 +145,7 @@ zi wait lucid for \
 Add the following to your `zshrc` file.
 
 ```zsh
-zinit light z-shell/fast-syntax-highlighting
+zinit light z-shell/F-Sy-H
 ```
 
 ### Antigen
@@ -153,7 +153,7 @@ zinit light z-shell/fast-syntax-highlighting
 Add the following to your `zshrc` file.
 
 ```zsh
-antigen bundle z-shell/fast-syntax-highlighting
+antigen bundle z-shell/F-Sy-H
 ```
 
 ### Zgen
@@ -162,7 +162,7 @@ Add the following to your `.zshrc` file in the same place you're doing
 your other `zgen load` calls in.
 
 ```zsh
-zgen load z-shell/fast-syntax-highlighting
+zgen load z-shell/F-Sy-H
 ```
 
 ### Oh-My-Zsh
@@ -170,11 +170,11 @@ zgen load z-shell/fast-syntax-highlighting
 Clone the Repository.
 
 ```zsh
-git clone https://github.com/z-shell/fast-syntax-highlighting.git \
-  ${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/plugins/fast-syntax-highlighting
+git clone https://github.com/z-shell/F-Sy-H.git \
+  ${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/plugins/F-Sy-H
 ```
 
-And add `fast-syntax-highlighting` to your plugin list.
+And add `F-Sy-H` to your plugin list.
 
 ## Features
 
@@ -184,7 +184,7 @@ Switch themes via `fast-theme {theme-name}`.
 
 <div style="width:100%;background-color:black;border:3px solid black;border-radius:6px;margin:5px 0;padding:2px 5px">
   <img
-    src="https://raw.githubusercontent.com/z-shell/fast-syntax-highlighting/main/images/theme.png"
+    src="https://raw.githubusercontent.com/z-shell/F-Sy-H/main/images/theme.png"
     alt="image could not be loaded"
     style="color:red;background-color:black;font-weight:bold"
   />
@@ -200,7 +200,7 @@ Comparing to the project `zsh-users/zsh-syntax-highlighting` (the upper line):
 
 <div style="width:100%;background-color:black;border:3px solid black;border-radius:6px;margin:5px 0;padding:2px 5px">
   <img
-    src="https://raw.githubusercontent.com/z-shell/fast-syntax-highlighting/main/images/parameter.png"
+    src="https://raw.githubusercontent.com/z-shell/F-Sy-H/main/images/parameter.png"
     alt="image could not be loaded"
     style="color:red;background-color:black;font-weight:bold"
   />
@@ -208,7 +208,7 @@ Comparing to the project `zsh-users/zsh-syntax-highlighting` (the upper line):
 
 <div style="width:100%;background-color:black;border:3px solid black;border-radius:6px;margin:5px 0;padding:2px 5px">
   <img
-    src="https://raw.githubusercontent.com/z-shell/fast-syntax-highlighting/main/images/in_string.png"
+    src="https://raw.githubusercontent.com/z-shell/F-Sy-H/main/images/in_string.png"
     alt="image could not be loaded"
     style="color:red;background-color:black;font-weight:bold"
   />
@@ -218,7 +218,7 @@ Comparing to the project `zsh-users/zsh-syntax-highlighting` (the upper line):
 
 <div style="width:100%;background-color:black;border:3px solid black;border-radius:6px;margin:5px 0;padding:2px 5px">
   <img
-    src="https://raw.githubusercontent.com/z-shell/fast-syntax-highlighting/main/images/brackets.gif"
+    src="https://raw.githubusercontent.com/z-shell/F-Sy-H/main/images/brackets.gif"
     alt="image could not be loaded"
     style="color:red;background-color:black;font-weight:bold"
   />
@@ -230,7 +230,7 @@ Comparing to the project `zsh-users/zsh-syntax-highlighting` (the upper line):
 
 <div style="width:100%;background-color:black;border:3px solid black;border-radius:6px;margin:5px 0;padding:2px 5px">
   <img
-    src="https://raw.githubusercontent.com/z-shell/fast-syntax-highlighting/main/images/cplx_cond.png"
+    src="https://raw.githubusercontent.com/z-shell/F-Sy-H/main/images/cplx_cond.png"
     alt="image could not be loaded"
     style="color:red;background-color:black;font-weight:bold"
   />
@@ -242,7 +242,7 @@ Exact highlighting that recognizes quotings.
 
 <div style="width:100%;background-color:black;border:3px solid black;border-radius:6px;margin:5px 0;padding:2px 5px">
   <img
-    src="https://raw.githubusercontent.com/z-shell/fast-syntax-highlighting/main/images/ideal-string.png"
+    src="https://raw.githubusercontent.com/z-shell/F-Sy-H/main/images/ideal-string.png"
     alt="image could not be loaded"
     style="color:red;background-color:black;font-weight:bold"
   />
@@ -252,7 +252,7 @@ Exact highlighting that recognizes quotings.
 
 <div style="width:100%;background-color:black;border:3px solid black;border-radius:6px;margin:5px 0;padding:2px 5px">
   <img
-    src="https://raw.githubusercontent.com/z-shell/fast-syntax-highlighting/main/images/herestring.png"
+    src="https://raw.githubusercontent.com/z-shell/F-Sy-H/main/images/herestring.png"
     alt="image could not be loaded"
     style="color:red;background-color:black;font-weight:bold"
   />
@@ -264,7 +264,7 @@ Comparing to the project `zsh-users/zsh-syntax-highlighting` (the upper line):
 
 <div style="width:100%;background-color:black;border:3px solid black;border-radius:6px;margin:5px 0;padding:2px 5px">
   <img
-    src="https://raw.githubusercontent.com/z-shell/fast-syntax-highlighting/main/images/execfd_cmp.png"
+    src="https://raw.githubusercontent.com/z-shell/F-Sy-H/main/images/execfd_cmp.png"
     alt="image could not be loaded"
     style="color:red;background-color:black;font-weight:bold"
   />
@@ -274,7 +274,7 @@ Comparing to the project `zsh-users/zsh-syntax-highlighting` (the upper line):
 
 <div style="width:100%;background-color:black;border:3px solid black;border-radius:6px;margin:5px 0;padding:2px 5px">
   <img
-    src="https://raw.githubusercontent.com/z-shell/fast-syntax-highlighting/main/images/for-loop-cmp.png"
+    src="https://raw.githubusercontent.com/z-shell/F-Sy-H/main/images/for-loop-cmp.png"
     alt="image could not be loaded"
     style="color:red;background-color:black;font-weight:bold"
   />
@@ -286,7 +286,7 @@ Comparing to the project `zsh-users/zsh-syntax-highlighting` (the upper 2 lines)
 
 <div style="width:100%;background-color:black;border:3px solid black;border-radius:6px;margin:5px 0;padding:2px 5px">
   <img
-    src="https://raw.githubusercontent.com/z-shell/fast-syntax-highlighting/main/images/function.png"
+    src="https://raw.githubusercontent.com/z-shell/F-Sy-H/main/images/function.png"
     alt="image could not be loaded"
     style="color:red;background-color:black;font-weight:bold"
   />
@@ -298,7 +298,7 @@ Comparing to the project `zsh-users/zsh-syntax-highlighting` (the upper line):
 
 <div style="width:100%;background-color:black;border:3px solid black;border-radius:6px;margin:5px 0;padding:2px 5px">
   <img
-    src="https://raw.githubusercontent.com/z-shell/fast-syntax-highlighting/main/images/eval_cmp.png"
+    src="https://raw.githubusercontent.com/z-shell/F-Sy-H/main/images/eval_cmp.png"
     alt="image could not be loaded"
     style="color:red;background-color:black;font-weight:bold"
   />
@@ -310,21 +310,21 @@ Highlighting that is specific for a given command.
 
 <div style="width:100%;background-color:black;border:3px solid black;border-radius:6px;margin:5px 0;padding:2px 5px">
   <img
-    src="https://raw.githubusercontent.com/z-shell/fast-syntax-highlighting/main/images/git_chroma.png"
+    src="https://raw.githubusercontent.com/z-shell/F-Sy-H/main/images/git_chroma.png"
     alt="image could not be loaded"
     style="color:red;background-color:black;font-weight:bold"
   />
 </div>
 
-The [chromas](https://github.com/z-shell/fast-syntax-highlighting/tree/main/chroma)
+The [chromas](https://github.com/z-shell/F-Sy-H/tree/main/%E2%86%92chroma)
 that are enabled by default can be found
-[here](https://github.com/z-shell/fast-syntax-highlighting/blob/main/fast-highlight#L166).
+[here](https://github.com/z-shell/F-Sy-H/blob/main/fast-highlight#L166).
 
 ### Math-mode highlighting
 
 <div style="width:100%;background-color:black;border:3px solid black;border-radius:6px;margin:5px 0;padding:2px 5px">
   <img
-    src="https://raw.githubusercontent.com/z-shell/fast-syntax-highlighting/main/images/math.gif"
+    src="https://raw.githubusercontent.com/z-shell/F-Sy-H/main/images/math.gif"
     alt="image could not be loaded"
     style="color:red;background-color:black;font-weight:bold"
   />
@@ -334,7 +334,7 @@ that are enabled by default can be found
 
 <div style="width:100%;background-color:black;border:3px solid black;border-radius:6px;margin:5px 0;padding:2px 5px">
   <img
-    src="https://raw.githubusercontent.com/z-shell/fast-syntax-highlighting/main/images/zcalc.png"
+    src="https://raw.githubusercontent.com/z-shell/F-Sy-H/main/images/zcalc.png"
     alt="image could not be loaded"
     style="color:red;background-color:black;font-weight:bold"
   />

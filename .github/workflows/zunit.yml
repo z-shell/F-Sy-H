@@ -4,9 +4,9 @@ name: 🛡️ ZUnit
 on:
   workflow_dispatch:
   push:
-    branches: ['main', 'develop']
+    branches: ["main", "develop"]
   pull_request_target:
-    branches: ['main', 'develop']
+    branches: ["main", "develop"]
 
 jobs:
   build-macos:
@@ -30,7 +30,7 @@ jobs:
           export TERM="xterm-256color"
           export PATH="$PWD/bin:$PATH"
           zunit
-  
+
   build-linux:
     name: 🧪 ZUnit Linux
     runs-on: ubuntu-latest

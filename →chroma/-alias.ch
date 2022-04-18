@@ -1,4 +1,5 @@
-# vim:ft=zsh:et:sw=4
+# -*- mode: zsh; sh-indentation: 2; indent-tabs-mode: nil; sh-basic-offset: 2; -*-
+#
 (( next_word = 2 | 8192 ))
 [[ "$__arg_type" = 3 ]] && return 2
 
@@ -27,3 +28,5 @@ fi
 _start_pos=$_end_pos
 
 return 0
+
+# vim: ft=zsh sw=2 ts=2 et

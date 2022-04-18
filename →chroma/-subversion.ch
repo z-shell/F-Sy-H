@@ -1,4 +1,5 @@
-# -*- mode: sh; sh-indentation: 4; indent-tabs-mode: nil; sh-basic-offset: 4; -*-
+# -*- mode: zsh; sh-indentation: 2; indent-tabs-mode: nil; sh-basic-offset: 2; -*-
+#
 # -------------------------------------------------------------------------------------------------
 # Copyright (c) 2018 Sebastian Gniazdowski
 # Copyright (C) 2019 by Philippe Troin (F-i-f on GitHub)
@@ -247,4 +248,4 @@ _start_pos=$_end_pos
 
 return 0
 
-# vim:ft=zsh:et:sw=4
+# vim: ft=zsh sw=2 ts=2 et
