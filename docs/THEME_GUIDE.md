@@ -54,12 +54,12 @@ Secondary theme (`zdharma` in the example) will be used for highlighting of argu
 and of `$( ... )` interior (i.e. of interior of command substitution). Basically, recursive
 highlighting uses alternate theme to make the highlighted code distinct:
 
-![sshot](https://raw.githubusercontent.com/z-shell/fast-syntax-highlighting/main/images/cmdsubst.png)
+![sshot](https://raw.githubusercontent.com/z-shell/F-Sy-H/main/docs/images/cmdsubst.png)
 
 In the above screen-shot the interior of `$( ... )` uses different colors than the rest of the
 code. Example for `eval`:
 
-![image](https://raw.githubusercontent.com/z-shell/fast-syntax-highlighting/main/images/eval_cmp.png)
+![image](https://raw.githubusercontent.com/z-shell/F-Sy-H/main/docs/images/eval_cmp.png)
 
 First line doesn't use recursive highlighting, highlights `eval` argument as regular string.
 Second line switches theme to `zdharma` and does full recursive highlighting of eval argument.
