@@ -50,57 +50,17 @@
     align="center" style="width:80%;height:auto"
     src="https://raw.githubusercontent.com/z-shell/.github/main/metrics/plugin/projects/projects.svg"
   />
-  </td>
-</tr><tr><td>
-  
-<details open="open">
-<summary>Table of Contents</summary>
-
-- <a href="#related">Related</a>
-- <a href="#news">News</a>
-- <a href="#installation">Installation</a>
-  - <a href="#manual">Manual</a>
-  - <a href="#zi">ZI</a>
-  - <a href="#zinit">Zinit</a>
-  - <a href="#antigen">Antigen</a>
-  - <a href="#zgen">Zgen</a>
-  - <a href="#oh-my-zsh">Oh-My-Zsh</a>
-- <a href="#features">Features</a>
-  - <a href="#themes">Themes</a>
-  - <a href="#variables">Variables</a>
-  - <a href="#brackets">Brackets</a>
-  - <a href="#conditions">Conditions</a>
-  - <a href="#strings">Strings</a>
-  - <a href="#here-strings">Here Strings</a>
-  - <a href="#exec-descriptor-variables">`exec` descriptor variables</a>
-  - <a href="#for-loops-and-alternate-syntax-brace--blocks">for-loops and alternate syntax (brace `{`/`}` blocks)</a>
-  - <a href="#function-definitions">Function definitions</a>
-  - <a href="#recursive-eval-and---highlighting">Recursive `eval` and `$( )` highlighting</a>
-  - <a href="#chroma-functions">Chroma functions</a>
-  - <a href="#math-mode-highlighting">Math mode highlighting</a>
-  - <a href="#zcalc-highlighting">Zcalc highlighting</a>
-- <a href="#performance">Performance</a>
-
-</details>
 </td></tr><tr><td>
   
-## Related
+<h2 align="left">Related<h2>
 
 - [License](../LICENSE)
 - [Changelog](CHANGELOG.md)
 - [Theme Guide](THEME_GUIDE.md)
 - [Chroma Guide](CHROMA_GUIDE.adoc)
 
-## News
-
-- 15-06-2019
-  - A new architecture for defining the highlighting for **specific commands**: it now
-    uses **abstract definitions** instead of **top-down, regular code**. The first effect
-    is the highlighting for the `git` command it is now **maximally faithful**, it
-    follows the `git` command almost completely.
-    [Screencast](https://asciinema.org/a/253411)
-
-## Installation
+</td></tr><tr><td>
+<h2 align="left">Installation</h2>
 
 ### Manual
 
@@ -338,22 +298,18 @@ that are enabled by default can be found
     alt="image could not be loaded"
     style="color:red;background-color:black;font-weight:bold"
   />
-</div>
-
-## Performance
+</div><h2 align="left">Performance</h2>
 
 Performance differences can be observed in this Asciinema recording, where a `10 kB` function is being edited.
 
 <div style="width:100%;background-color:#121314;border:3px solid #121314;border-radius:6px;margin:5px 0;padding:2px 5px">
-  <a href="https://asciinema.org/a/112367">
+ <a href="https://asciinema.org/a/112367">
     <img src="https://asciinema.org/a/112367.png" alt="asciicast">
-  </a>
-</div>
-  
+ </a>
+ </div>
   </td>
 </tr>
-<tr><td align="center"><h2 align="left">Credits</h2>
- <a href="https://cloudflare.com" rel="nofollow">
+<tr><td align="center"><h2 align="left">Credits</h2><a href="https://cloudflare.com" rel="nofollow">
   <img style="width:140;height:40px" src="https://space.ss-o.workers.dev/img/brand/cloudflare/cf-logo-v-rgb.png" alt="Cloudflare" />
  </a>
  <a href="https://crowdin.com/?utm_source=badge&utm_medium=referral&utm_campaign=badge-add-on" rel="nofollow">
