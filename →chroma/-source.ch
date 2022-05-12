@@ -18,7 +18,7 @@
 (( next_word = 2 | 8192 ))
 
 local __first_call="$1" __wrd="$2" __start_pos="$3" __end_pos="$4"
-local __style __chars __home=${XDG_CACHE_HOME:-$HOME/.cache}/fsh
+local __style __chars __home=${FAST_WORK_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/fsh}
 integer __idx1 __idx2
 
 # First call, i.e. command starts, i.e. "grep" token etc.
