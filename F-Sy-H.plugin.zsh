@@ -38,7 +38,7 @@
 0="${ZERO:-${${0:#$ZSH_ARGZERO}:-${(%):-%N}}}"
 0="${${(M)0:#/*}:-$PWD/$0}"
 
-typeset -g FAST_HIGHLIGHT_VERSION=1.55
+typeset -g FAST_HIGHLIGHT_VERSION=1.66
 typeset -g FAST_BASE_DIR="${0:h}"
 typeset -ga _FAST_MAIN_CACHE
 # Holds list of indices pointing at brackets that
@@ -51,15 +51,21 @@ if [[ $PMSPEC != *f* ]]; then
   fpath+=( "${0:h}/functions" )
 fi
 
-typeset -g FAST_WORK_DIR=${FAST_WORK_DIR:-${XDG_CACHE_HOME:-~/.cache}/fsh}
+# Check if Zsh's cache directory exist.
+if [[ -d $ZSH_CACHE_DIR ]]; then
+  # Use Zsh's default cache directory.
+  typeset -g FAST_WORK_DIR=${FAST_WORK_DIR:-${ZSH_CACHE_DIR}/fsh}
+else
+  # Use common values to set default working directory.
+  typeset -g FAST_WORK_DIR=${FAST_WORK_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/fsh}
+fi
+
 : ${FAST_WORK_DIR:=$FAST_BASE_DIR}
 # Expand any tilde in the (supposed) path.
 FAST_WORK_DIR=${~FAST_WORK_DIR}
 
-if [[ ! -w $FAST_WORK_DIR ]]; then
-  FAST_WORK_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/fsh"
-  command mkdir -p "$FAST_WORK_DIR"
-fi
+# Create working directory if it doesn't exist.
+[[ -w $FAST_WORK_DIR ]] || command mkdir -p "$FAST_WORK_DIR"
 
 # Invokes each highlighter that needs updating.
 # This function is supposed to be called whenever the ZLE state changes.
@@ -364,7 +370,6 @@ unset __fsyh_theme
 alias fsh-alias=fast-theme
 
 -fast-highlight-fill-option-variables
-# TODO: #9 API update
 if [[ ! -e $FAST_WORK_DIR/secondary_theme.zsh ]] {
   if { type curl &>/dev/null } {
     curl -fsSL -o "$FAST_WORK_DIR/secondary_theme.zsh" \

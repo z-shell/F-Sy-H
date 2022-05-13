@@ -1,4 +1,5 @@
 # -*- mode: zsh; sh-indentation: 2; indent-tabs-mode: nil; sh-basic-offset: 2; -*-
+# vim: ft=zsh sw=2 ts=2 et
 #
 # Chroma for `source' builtin - verifies if file to be sourced compiles
 # correctly.
@@ -18,7 +19,7 @@
 (( next_word = 2 | 8192 ))
 
 local __first_call="$1" __wrd="$2" __start_pos="$3" __end_pos="$4"
-local __style __chars __home=${XDG_CACHE_HOME:-$HOME/.cache}/fsh
+local __style __chars __home=$FAST_WORK_DIR
 integer __idx1 __idx2
 
 # First call, i.e. command starts, i.e. "grep" token etc.
@@ -70,5 +71,3 @@ integer __idx1 __idx2
 _start_pos=$_end_pos
 
 return 0
-
-# vim: ft=zsh sw=2 ts=2 et

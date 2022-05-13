@@ -1,11 +1,27 @@
 version: 0.1
 cli:
-  version: 0.9.3-beta
+  version: 0.11.0-beta
+repo:
+  repo:
+    host: github.com
+    owner: z-shell
+    name: F-Sy-H
 lint:
+  linters:
+    - name: markdownlint
+      command:
+        [markdownlint, -q, --config, .trunk/.markdownlint.yaml, "${target}"]
+      direct_configs: [.trunk/.markdownlint.yaml]
   enabled:
     - actionlint@1.6.9
     - gitleaks@8.3.0
     - markdownlint@0.31.1
     - prettier@2.5.1
-    - shellcheck@0.8.0
     - shfmt@3.4.0
+  ignore:
+    - linters: [shfmt]
+      paths:
+        - "share/test/**"
+        - "functionts/**"
+        - "fast-highlight"
+        - "fast-string-highlight"

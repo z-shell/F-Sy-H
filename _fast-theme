@@ -1,10 +1,14 @@
 #compdef fast-theme
-
+#----------------------------------------------------------------------------------------------------------------------
+# -*- mode: zsh; sh-indentation: 2; indent-tabs-mode: nil; sh-basic-offset: 2; -*-
+# vim: ft=zsh sw=2 ts=2 et
+#----------------------------------------------------------------------------------------------------------------------
 #
 # Copyright (c) 2018 Sebastian Gniazdowski
+# Copyright (c) 2022-present, Z-Shell Community
 #
 # Completion for theme-switching function, fast-theme,
-# part of zdharma/fast-syntax-highlighting.
+# part of z-shell/F-Sy-H, zdharma/fast-syntax-highlighting.
 #
 
 integer ret=1
@@ -26,14 +30,14 @@ arguments=(
 typeset -a themes
 themes=( "$FAST_WORK_DIR"/themes/*.ini(:t:r) )
 
-if [[ -d ${XDG_CONFIG_HOME:-$HOME/.config}/fsh ]] {
-    typeset -a themes2
-    themes2=( "${XDG_CONFIG_HOME:-$HOME/.config}"/fsh/*.ini(:t:r) )
-    themes+=( XDG:${^themes2[@]} )
-}
+if [[ -d ${XDG_CONFIG_HOME:-$HOME/.config}/fsh ]]; then
+  typeset -a themes2
+  themes2=( "${XDG_CONFIG_HOME:-$HOME/.config}"/fsh/*.ini(:t:r) )
+  themes+=( XDG:${^themes2[@]} )
+fi
 
-_wanted themes expl "Themes" \
-    compadd "$@" -a - themes && ret=0
+
+_wanted themes expl "Themes" compadd "$@" -a - themes && ret=0
 _arguments -s $arguments && ret=0
 
 return $ret

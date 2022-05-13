@@ -13,9 +13,7 @@ zmodload zsh/zutil 2>/dev/null
 # Standard Recommended Options
 # https://z.digitalclouds.dev/community/zsh_plugin_standard/#standard-recommended-options
 emulate -L zsh
-setopt extended_glob warn_create_global typeset_silent \
-        no_short_loops rc_quotes no_auto_pushd
-
+setopt extended_glob warn_create_global typeset_silent no_short_loops rc_quotes no_auto_pushd
 autoload colors; colors
 
 typeset -g FAST_WORK_DIR
@@ -35,9 +33,8 @@ local OPT_HELP OPT_VERBOSE OPT_QUIET OPT_RESET OPT_LIST OPT_TEST OPT_SECONDARY O
 local OPT_PALETTE OPT_CDWD OPT_XCHG OPT_OV_XCHG
 local -A opthash
 zparseopts -E -D -A opthash h -help v -verbose q -quiet r -reset l -list t -test -secondary \
-            s -show -copy-shipped-theme: R -ov-reset p -palette w -workdir \
-            x -xchg y -ov-xchg || \
-                { echo "Improper options given, see help (-h/--help)"; return 1; }
+s -show -copy-shipped-theme: R -ov-reset p -palette w -workdir x -xchg y -ov-xchg || \
+{ echo "Improper options given, see help (-h/--help)"; return 1; }
 
 (( ${+opthash[-h]} + ${+opthash[--help]} ))    && OPT_HELP="-h"
 (( ${+opthash[-v]} + ${+opthash[--verbose]} )) && OPT_VERBOSE="-v"
@@ -58,25 +55,25 @@ local -a match mbegin mend
 local MATCH; integer MBEGIN MEND
 
 [[ -n "$OPT_CDWD" ]] && {
-    builtin cd $FAST_WORK_DIR
-    return 0
+  builtin cd $FAST_WORK_DIR
+  return 0
 }
 
 [[ -n "$OPT_PALETTE" ]] && {
-    local n
-    local -a __colors
-    for n in {000..255}
-    do
-        __colors+=("%F{$n}$n%f")
-    done
-    print -cP $__colors
-    return
+  local n
+  local -a __colors
+  for n in {000..255}
+  do
+    __colors+=("%F{$n}$n%f")
+  done
+  print -cP $__colors
+  return
 }
 
 [[ -n "$OPT_SHOW" ]] && {
-    print -r -- "Currently active theme: ${fg_bold[yellow]}$FAST_THEME_NAME$reset_color"
-    ( source "$FAST_WORK_DIR"/current_theme.zsh 2>/dev/null && print "Main theme (loaded at startup of a session): ${fg_bold[yellow]}$FAST_THEME_NAME$reset_color" || print "No main theme is set"; )
-    return 0
+  print -r -- "Currently active theme: ${fg_bold[yellow]}$FAST_THEME_NAME$reset_color"
+  ( source "$FAST_WORK_DIR"/current_theme.zsh 2>/dev/null && print "Main theme (loaded at startup of a session): ${fg_bold[yellow]}$FAST_THEME_NAME$reset_color" || print "No main theme is set"; )
+  return 0
 }
 
 [[ -n "$OPT_COPY" ]] && {
@@ -273,71 +270,71 @@ local k kk
 local inikey inival result result2 first_val isbg
 integer ov_counter=0 first
 for k in "${order[@]}"; do
-    first=1
-    for kk in ${(s. .)map[$k]} default; do
-        [[ "$kk" = "-" ]] && kk="$k"
-        (( first )) && first_val="$kk"
-        inikey="${out[(i)<*>_${kk}]}"
-        [[ -n "$inikey" ]] && {
-            (( !first )) && [[ -z "$OPT_QUIET" ]] && {
-                [[ $kk = default ]] && {
-                    [[ "$THEME_NAME" != *"overlay"* ]] && print "Missing style: $first_val"
-                } || print "For style $first_val, went for fallback style $kk"
-            }
-            break
-        }
-        first=0
-        [[ "$THEME_NAME" = *"overlay"* ]] && break
+  first=1
+  for kk in ${(s. .)map[$k]} default; do
+    [[ "$kk" = "-" ]] && kk="$k"
+    (( first )) && first_val="$kk"
+    inikey="${out[(i)<*>_${kk}]}"
+    [[ -n "$inikey" ]] && {
+      (( !first )) && [[ -z "$OPT_QUIET" ]] && {
+        [[ $kk = default ]] && {
+          [[ "$THEME_NAME" != *"overlay"* ]] && print "Missing style: $first_val"
+        } || print "For style $first_val, went for fallback style $kk"
+      }
+      break
+    }
+    first=0
+    [[ "$THEME_NAME" = *"overlay"* ]] && break
+  done
+
+  # ORIG: Clear orig-style when loading a new theme, not overlay
+  [[ -z "$OPT_OV_XCHG" ]] && unset "FAST_HIGHLIGHT_STYLES[orig-style-$k]"
+  # ORIG: Restore orig-style when loading a new overlay
+  [[ -n "$OPT_OV_XCHG" && -n "${FAST_HIGHLIGHT_STYLES[orig-style-$k]}" ]] && { FAST_HIGHLIGHT_STYLES[${FAST_THEME_NAME}$k]="${FAST_HIGHLIGHT_STYLES[orig-style-$k]}"; unset "FAST_HIGHLIGHT_STYLES[orig-style-$k]"; }
+  # Set only the keys provided in theme
+  [[ -z "$inikey" ]] && { [[ -z "$OPT_QUIET" && "$THEME_NAME" != *"overlay"* ]] && print "Missing style $first_val"; continue; }
+
+  inival="${out[$inikey]}"
+  if [[ "$k" = "secondary" && -z "$OPT_SECONDARY" && -n "$inival" ]]; then
+    fast-theme -q --secondary "$inival"
+  fi
+
+  result=""
+  if [[ $k = secondary ]]; then
+    result="$inival"
+  else
+    for kk in ${(s:,:)inival}
+    do
+      if [[ $kk = (none|(no-|)(bold|blink|conceal|reverse|standout|underline)) ]]; then
+        result+="${result:+,}$kk"
+      else
+        isbg=0
+        if [[ $kk = bg:* ]]; then
+          isbg=1
+          kk=${kk#bg:}
+        fi
+        if [[ $kk = (${(~j:|:)color}) || $kk = [0-9]## || $kk = \#[0-9a-fA-F](#c6,6) ]]; then
+          result+="${result:+,}"
+          (( isbg )) && result+="bg=" || result+="fg="
+          result+="$kk"
+        else
+          print "cannot parse style $k: unknown color or style element $kk"
+        fi
+    fi
     done
+  fi
 
-    # ORIG: Clear orig-style when loading a new theme, not overlay
-    [[ -z "$OPT_OV_XCHG" ]] && unset "FAST_HIGHLIGHT_STYLES[orig-style-$k]"
-    # ORIG: Restore orig-style when loading a new overlay
-    [[ -n "$OPT_OV_XCHG" && -n "${FAST_HIGHLIGHT_STYLES[orig-style-$k]}" ]] && { FAST_HIGHLIGHT_STYLES[${FAST_THEME_NAME}$k]="${FAST_HIGHLIGHT_STYLES[orig-style-$k]}"; unset "FAST_HIGHLIGHT_STYLES[orig-style-$k]"; }
-    # Set only the keys provided in theme
-    [[ -z "$inikey" ]] && { [[ -z "$OPT_QUIET" && "$THEME_NAME" != *"overlay"* ]] && print "Missing style $first_val"; continue; }
-
-    inival="${out[$inikey]}"
-    if [[ "$k" = "secondary" && -z "$OPT_SECONDARY" && -n "$inival" ]]; then
-        fast-theme -q --secondary "$inival"
-    fi
-
-    result=""
-    if [[ $k = secondary ]]; then
-        result="$inival"
-    else
-        for kk in ${(s:,:)inival}
-        do
-            if [[ $kk = (none|(no-|)(bold|blink|conceal|reverse|standout|underline)) ]]; then
-                result+="${result:+,}$kk"
-            else
-                isbg=0
-                if [[ $kk = bg:* ]]; then
-                    isbg=1
-                    kk=${kk#bg:}
-                fi
-                if [[ $kk = (${(~j:|:)color}) || $kk = [0-9]## || $kk = \#[0-9a-fA-F](#c6,6) ]]; then
-                    result+="${result:+,}"
-                    (( isbg )) && result+="bg=" || result+="fg="
-                    result+="$kk"
-                else
-                    print "cannot parse style $k: unknown color or style element $kk"
-                fi
-            fi
-        done
-    fi
-
-    if [[ "$THEME_NAME" = *"overlay"* || -n "$OPT_OV_XCHG" ]]; then
-        (( ++ ov_counter ))
-        [[ -z "$OPT_XCHG$OPT_OV_XCHG" ]] && print -r -- ': ${FAST_HIGHLIGHT_STYLES[${FAST_THEME_NAME}'"$k"']::='"$result"'}' >>! "$FAST_WORK_DIR"/"$outfile"
-        # ORIG: Save original value of the overwritten style
-        FAST_HIGHLIGHT_STYLES[orig-style-$k]=${FAST_HIGHLIGHT_STYLES[${FAST_THEME_NAME}$k]}
-        # Overwrite theme's style
-        FAST_HIGHLIGHT_STYLES[${FAST_THEME_NAME}$k]="$result"
-    else
-        [[ -z "$OPT_XCHG$OPT_OV_XCHG" ]] && print -r -- ': ${FAST_HIGHLIGHT_STYLES['"${FAST_THEME_NAME}$k"']:='"$result"'}' >>! "$FAST_WORK_DIR"/"$outfile"
-        FAST_HIGHLIGHT_STYLES[${FAST_THEME_NAME}$k]="$result"
-    fi
+  if [[ "$THEME_NAME" = *"overlay"* || -n "$OPT_OV_XCHG" ]]; then
+    (( ++ ov_counter ))
+    [[ -z "$OPT_XCHG$OPT_OV_XCHG" ]] && print -r -- ': ${FAST_HIGHLIGHT_STYLES[${FAST_THEME_NAME}'"$k"']::='"$result"'}' >>! "$FAST_WORK_DIR"/"$outfile"
+    # ORIG: Save original value of the overwritten style
+    FAST_HIGHLIGHT_STYLES[orig-style-$k]=${FAST_HIGHLIGHT_STYLES[${FAST_THEME_NAME}$k]}
+    # Overwrite theme's style
+    FAST_HIGHLIGHT_STYLES[${FAST_THEME_NAME}$k]="$result"
+  else
+    [[ -z "$OPT_XCHG$OPT_OV_XCHG" ]] && print -r -- ': ${FAST_HIGHLIGHT_STYLES['"${FAST_THEME_NAME}$k"']:='"$result"'}' >>! "$FAST_WORK_DIR"/"$outfile"
+    FAST_HIGHLIGHT_STYLES[${FAST_THEME_NAME}$k]="$result"
+  fi
 done
 
 # This can overwrite some of *_STYLES fields
@@ -347,15 +344,15 @@ done
 zcompile $FAST_WORK_DIR/$outfile 2>/dev/null
 
 [[ -z "$OPT_QUIET" ]] && {
-    if [[ "$THEME_NAME" != *"overlay"* ]]; then
-        print "Switched to theme \`$THEME_NAME' (current session, and future sessions)" || \
-    else
-        print "Processed the overlay ($ov_counter keys found), it is now active (for current session, and future sessions)"
-    fi
+  if [[ "$THEME_NAME" != *"overlay"* ]]; then
+    print "Switched to theme \`$THEME_NAME' (current session, and future sessions)" || \
+  else
+    print "Processed the overlay ($ov_counter keys found), it is now active (for current session, and future sessions)"
+  fi
 }
 
 [[ -n "$OPT_TEST" ]] && {
-    print -zr '
+  print -zr '
 # Subshell, assignments, math-mode
 echo $(cat /etc/hosts |& grep -i "hello337")
 local param1="text ${+variable[test]} text ${var} text"; typeset param2='"'"'other $variable'"'"'
@@ -363,27 +360,27 @@ math=$(( 10 + HISTSIZ + HISTSIZE + $SAVEHIST )) size=$(( 0 ))
 
 # Programming-like usage, bracket matching - through distinct colors; note the backslash quoting
 for (( ii = 1; ii <= size; ++ ii )); do
-    if [[ "${cmds[ii]} string" = "| string" ]]
-    then
-        sidx=${buffer[(in:ii:)\$\(?#[^\\\\]\)]} # find opening cmd-subst
-        (( sidx <= len + 100 )) && {
-            eidx=${buffer[(b:sidx:ii)[^\\\\]\)]} # find closing cmd-subst
-        }
-    fi
+  if [[ "${cmds[ii]} string" = "| string" ]]
+  then
+    sidx=${buffer[(in:ii:)\$\(?#[^\\\\]\)]} # find opening cmd-subst
+    (( sidx <= len + 100 )) && {
+      eidx=${buffer[(b:sidx:ii)[^\\\\]\)]} # find closing cmd-subst
+    }
+  fi
 done
 
 # Regular command-line usage
 repeat 0 {
-    zsh -i -c "cat /etc/shells* | grep -x --line-buffered -i '"'/bin/zsh'"'"
-    builtin exit $return_value
-    fast-theme -tq default
-    fsh-alias -tq default-X # alias '"'"'fsh-alias=fast-theme'"'"' works just like the previous line
-    command -v git | grep ".+git" && echo $'"'"'Git is installed'"'"'
-    git checkout -m --ours /etc/shells && git status-X
-    gem install asciidoctor
-    cat <<<$PATH | tr : \\n > /dev/null 2>/usr/local
-    man -a fopen fopen-X
-    CFLAGS="-g -Wall -O0" ./configure
+  zsh -i -c "cat /etc/shells* | grep -x --line-buffered -i '"'/bin/zsh'"'"
+  builtin exit $return_value
+  fast-theme -tq default
+  fsh-alias -tq default-X # alias '"'"'fsh-alias=fast-theme'"'"' works just like the previous line
+  command -v git | grep ".+git" && echo $'"'"'Git is installed'"'"'
+  git checkout -m --ours /etc/shells && git status-X
+  gem install asciidoctor
+  cat <<<$PATH | tr : \\n > /dev/null 2>/usr/local
+  man -a fopen fopen-X
+  CFLAGS="-g -Wall -O0" ./configure
 }
 '
 }
