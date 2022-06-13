@@ -1,7 +1,6 @@
 # -*- mode: zsh; sh-indentation: 2; indent-tabs-mode: nil; sh-basic-offset: 2; -*-
 #
-# Chroma function for command `git'. It colorizes the part of command
-# line that holds `git' invocation.
+# Chroma function for command `zi'. It colorizes the part of command line that holds `zi' invocation.
 
 (( FAST_HIGHLIGHT[-zi.ch-chroma-def] )) && return 1
 
@@ -17,8 +16,7 @@ fsh__zi__chroma__def=(
     subcmd:NULL "NULL_0_opt"
     NULL_0_opt "(-help|--help|-h)
                    <<>> NO-OP // ::→chroma/main-chroma-std-aopt-action"
-
-    "subcommands" "(help|man|self-update|cd|times|zstatus|load|light|unload|snippet|ls|ice|<ice|specification>|update|status|report|analytics|control|delete|loaded|list|cd|create|edit|glance|stress|changes|recently|clist|completions|cdisable|cname|cenable|cname|creinstall|cuninstall|csearch|compinit|dtrace|dstart|dstop|dunload|dreport|dclear|compile|uncompile|compiled|cdlist|cdreplay|cdclear|cclear|srv|recall|env-whitelist|add-fpath|bindkeys|module)"
+    "subcommands" "(help|man|codeload|turbo|self-update|cd|times|zstatus|load|light|unload|snippet|ls|ice|<ice|specification>|update|status|report|analytics|control|delete|loaded|list|cd|create|edit|glance|stress|changes|recently|clist|completions|cdisable|cname|cenable|cname|creinstall|cuninstall|csearch|compinit|dtrace|dstart|dstop|dunload|dreport|dclear|compile|uncompile|compiled|cdlist|cdreplay|cdclear|cclear|srv|recall|env-whitelist|add-fpath|bindkeys|module)"
 
     ## }}}
 
@@ -36,15 +34,12 @@ fsh__zi__chroma__def=(
 
     "ICE_#_arg" "NO-OP // ::→chroma/-zi-check-ice-mod"
 
-    ## }}}
-
     ##
     ## `snippet'
     ##
     ## {{{
 
-    subcmd:snippet "SNIPPET_0_opt // SNIPPET_1_arg // NO_MATCH_#_opt //
-                    NO_MATCH_#_arg"
+    subcmd:snippet "SNIPPET_0_opt // SNIPPET_1_arg // NO_MATCH_#_opt // NO_MATCH_#_arg"
 
     SNIPPET_0_opt "(-f|--command)
                         <<>> NO-OP // ::→chroma/main-chroma-std-aopt-action"
@@ -58,8 +53,7 @@ fsh__zi__chroma__def=(
     ##
     ## {{{
 
-    "subcmd:load"
-        "LOAD_1_arg // LOAD_2_arg // NO_MATCH_#_opt // NO_MATCH_#_arg"
+    "subcmd:load" "LOAD_1_arg // LOAD_2_arg // NO_MATCH_#_opt // NO_MATCH_#_arg"
 
     LOAD_1_arg "NO-OP // ::→chroma/-zi-verify-plugin"
 
@@ -86,8 +80,7 @@ fsh__zi__chroma__def=(
     ##
     ## {{{
 
-    subcmd:update "UPDATE_0_opt // PLGSNP_1_arg // PLGSNP_2_arg //
-                   NO_MATCH_#_opt // NO_MATCH_#_arg"
+    subcmd:update "UPDATE_0_opt // PLGSNP_1_arg // PLGSNP_2_arg // NO_MATCH_#_opt // NO_MATCH_#_arg"
 
     UPDATE_0_opt "
             (--all|-r|--reset|-q|--quiet|-p|--parallel)
@@ -100,8 +93,7 @@ fsh__zi__chroma__def=(
     ##
     ## {{{
 
-    subcmd:light "LIGHT_0_opt // LOAD_1_arg // LOAD_2_arg // NO_MATCH_#_opt //
-                  NO_MATCH_#_arg"
+    subcmd:light "LIGHT_0_opt // LOAD_1_arg // LOAD_2_arg // NO_MATCH_#_opt // NO_MATCH_#_arg"
 
     LIGHT_0_opt "-b
                     <<>> NO-OP // ::→chroma/main-chroma-std-aopt-action"
@@ -113,8 +105,7 @@ fsh__zi__chroma__def=(
     ##
     ## {{{
 
-    subcmd:unload "UNLOAD_0_opt // UNLOAD_1_arg // UNLOAD_2_arg // NO_MATCH_#_opt //
-                  NO_MATCH_#_arg"
+    subcmd:unload "UNLOAD_0_opt // UNLOAD_1_arg // UNLOAD_2_arg // NO_MATCH_#_opt // NO_MATCH_#_arg"
 
     UNLOAD_0_opt "-q
                     <<>> NO-OP // ::→chroma/main-chroma-std-aopt-action"
@@ -176,7 +167,7 @@ fsh__zi__chroma__def=(
 
 
     ##
-    ## `light'
+    ## `uncompile'
     ##
     ## {{{
 
@@ -336,10 +327,12 @@ fsh__zi__chroma__def=(
         unload blockf pick bpick src as ver silent lucid notify mv cp
         atinit atclone atload atpull nocd run-atpull has cloneonly make
         service trackbinds multisrc compile nocompile nocompletions
-        reset-prompt wrap-track reset sh \!sh bash \!bash ksh \!ksh csh
+        reset-prompt wrap reset sh \!sh bash \!bash ksh \!ksh csh
         \!csh aliases countdown ps-on-unload ps-on-update trigger-load
         light-mode is-snippet atdelete pack git verbose on-update-of
-        subscribe param extract
+        subscribe extract param opts autoload subst install pullopts debug
+        null binary
+
         # Include all additional ices – after
         # stripping them from the possible: ''
         ${(@s.|.)${ZI_EXTS[ice-mods]//\'\'/}}
@@ -348,6 +341,7 @@ fsh__zi__chroma__def=(
             blockf silent lucid trackbinds cloneonly nocd run-atpull
             nocompletions sh \!sh bash \!bash ksh \!ksh csh \!csh
             aliases countdown light-mode is-snippet git verbose
+            cloneopts pullopts debug null binary make nocompile notify reset
 
             # Include only those additional ices,
             # don't have the '' in their name, i.e.
