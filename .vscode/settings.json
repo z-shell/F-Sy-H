@@ -1,11 +1,11 @@
 {
-  "markdownlint.config": {
-    "MD013": false,
-    "MD033": false
-  },
   "conventionalCommits.scopes": [
-    "repository_maintenance",
-    "plugin_maintenance",
-    "chroma"
-  ]
+    "maintenance",
+    "workspace",
+    "general",
+    "theme"
+  ],
+  "markdownlint.config": {
+    "extends": ".github/.markdownlint.yaml"
+  }
 }
