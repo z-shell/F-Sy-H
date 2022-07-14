@@ -76,7 +76,7 @@ src="https://raw.githubusercontent.com/z-shell/.github/main/metrics/metrics.svg"
 
   <p>Add the following to your `zshrc` file.</p>
 
-<pre><code class="lang-zsh">antigen bundle z-<span class="hljs-keyword">shell</span>/F-Sy-H</code></pre>
+<pre><code class="lang-zsh">antigen bundle z-<span class="hljs-keyword">shell</span>/F-Sy-H --branch=main</code></pre>
 
   <hr /><h3 align="left">Zgen</h3>
 
