@@ -127,9 +127,9 @@ Array assignments were still boring, so I throwed in bracked colorizing:
 
 Assignments are no more one-colour default-white. When used in assignment, highlighted are:
 
--   variables (outside strings),
--   strings (double-quoted and single-quoted),
--   math-mode (`val=$(( ... ))`).
+- variables (outside strings),
+- strings (double-quoted and single-quoted),
+- math-mode (`val=$(( ... ))`).
 
 ![sshot](https://raw.githubusercontent.com/zdharma/fast-syntax-highlighting/main/images/assign.png)
 
