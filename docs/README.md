@@ -45,7 +45,7 @@ src="https://raw.githubusercontent.com/z-shell/.github/main/metrics/metrics.svg"
 
   <p>And add the following to your `zshrc` file.</p>
 
-<pre><code class="lang-zsh"><span class="hljs-keyword">source</span> ~<span class="hljs-regexp">/path/</span>to<span class="hljs-regexp">/fsh/</span>f-sy-h.plugin.zsh</code></pre>
+<pre><code class="lang-zsh"><span class="hljs-keyword">source</span> ~<span class="hljs-regexp">/path/</span>to<span class="hljs-regexp">/fsh/</span>F-Sy-H.plugin.zsh</code></pre>
 
 <hr /><h3 align="left">ZI</h3>
 
