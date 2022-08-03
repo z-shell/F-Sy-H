@@ -318,38 +318,15 @@ fsh__zi__chroma__def=(
     ext_val_ices=( ${(@)${(@Akons:|:u)${ZI_EXTS[ice-mods]//\'\'/}}/(#s)<->-/} )
 
     ice_order=(
-      ${${(s.|.)ZI[ice-list]}:#teleid}
+      ${${(s.|.)ZI[ice-list]}}
       # Include all additional ices – after stripping them from the possible: ''
       ${(@)${(@Akons:|:u)${ZI_EXTS[ice-mods]//\'\'/}}/(#s)<->-/}
-      # svn proto from teleid bindmap cloneopts id-as depth if wait load
-      # unload blockf pick bpick src as ver silent lucid notify mv cp
-      # atinit atclone atload atpull nocd run-atpull has cloneonly make
-      # service trackbinds multisrc compile nocompile nocompletions
-      # reset-prompt wrap reset sh \!sh bash \!bash ksh \!ksh csh
-      # \!csh aliases countdown ps-on-unload ps-on-update trigger-load
-      # light-mode is-snippet atdelete pack git verbose on-update-of
-      # subscribe extract param opts autoload subst install pullopts debug
-      # null binary
-
-      # Include all additional ices – after
-      # stripping them from the possible: ''
-      # ${(@s.|.)${ZI_EXTS[ice-mods]//\'\'/}}
     )
     nval_ices=(
       ${(s.|.)ZI[nval-ice-list]}
-      # blockf silent lucid trackbinds cloneonly nocd run-atpull
-      # nocompletions sh \!sh bash \!bash ksh \!ksh csh \!csh
-      # aliases countdown light-mode is-snippet git verbose
-      # cloneopts pullopts debug null binary make nocompile notify reset
-
-      # Include only those additional ices,
-      # don't have the '' in their name, i.e.
-      # aren't designed to hold value
-      # ${(@)${(@s.|.)ZI_EXTS[ice-mods]}:#*\'\'*}
-
       # Include only those additional ices,
       # don't have the '' in their name, i.e. aren't designed to hold value
-      ${(@)${(@)${(@Akons:|:u)${ZI_EXTS[ice-mods]//\'\'/}}/(#s)<->-/}:#(.*|dynamic-unscope)}
+      ${(@)${(@)${(@Akons:|:u)${ZI_EXTS[ice-mods]//\'\'/}}/(#s)<->-/}}
       # Must be last
       svn
     )
