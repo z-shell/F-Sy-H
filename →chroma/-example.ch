@@ -1,4 +1,5 @@
 # -*- mode: zsh; sh-indentation: 2; indent-tabs-mode: nil; sh-basic-offset: 2; -*-
+# vim: ft=zsh sw=2 ts=2 et
 #
 # Example chroma function. It colorizes first two arguments as `builtin' style,
 # third and following arguments as `globbing' style. First two arguments may
@@ -47,51 +48,47 @@ local __style
 integer __idx1 __idx2
 
 (( __first_call )) && {
-    # Called for the first time - new command.
-    # FAST_HIGHLIGHT is used because it survives between calls, and
-    # allows to use a single global hash only, instead of multiple
-    # global string variables.
-    FAST_HIGHLIGHT[chroma-example-counter]=0
+  # Called for the first time - new command. FAST_HIGHLIGHT is used because it survives between calls,
+  # and allows to use a single global hash only, instead of multiple global string variables.
+  FAST_HIGHLIGHT[chroma-example-counter]=0
 
-    # Set style for region_highlight entry. It is used below in
-    # '[[ -n "$__style" ]] ...' line, which adds highlight entry,
-    # like "10 12 fg=green", through `reply' array.
-    #
-    # Could check if command `example' exists and set `unknown-token'
-    # style instead of `command'
-    __style=${FAST_THEME_NAME}command
+  # Set style for region_highlight entry. It is used below in
+  # '[[ -n "$__style" ]] ...' line, which adds highlight entry, like "10 12 fg=green", through `reply' array.
+  #
+  # Could check if command `example' exists and set `unknown-token'
+  # style instead of `command'
+  __style=${FAST_THEME_NAME}command
 
 } || {
-    # Following call, i.e. not the first one
+  # Following call, i.e. not the first one
 
-    # Check if chroma should end – test if token is of type
-    # "starts new command", if so pass-through – chroma ends
-    [[ "$__arg_type" = 3 ]] && return 2
+  # Check if chroma should end – test if token is of type "starts new command", if so pass-through – chroma ends
+  [[ "$__arg_type" = 3 ]] && return 2
 
-    if (( in_redirection > 0 || this_word & 128 )) || [[ $__wrd == "<<<" ]]; then
+  if (( in_redirection > 0 || this_word & 128 )) || [[ $__wrd == "<<<" ]]; then
+    return 1
+  fi
+
+  if [[ "$__wrd" = -* ]]; then
+    # Detected option, add style for it.
+    [[ "$__wrd" = --* ]] && \
+    __style=${FAST_THEME_NAME}double-hyphen-option || __style=${FAST_THEME_NAME}single-hyphen-option
+  else
+    # Count non-option tokens
+    (( FAST_HIGHLIGHT[chroma-example-counter] += 1, __idx1 = FAST_HIGHLIGHT[chroma-example-counter] ))
+
+    # Colorize 1..2 as builtin, 3.. as glob
+    if (( FAST_HIGHLIGHT[chroma-example-counter] <= 2 )); then
+      if [[ "$__wrd" = \"* ]]; then
+        # Pass through, fsh main code will do the highlight!
         return 1
-    fi
-
-    if [[ "$__wrd" = -* ]]; then
-        # Detected option, add style for it.
-        [[ "$__wrd" = --* ]] && __style=${FAST_THEME_NAME}double-hyphen-option || \
-                                __style=${FAST_THEME_NAME}single-hyphen-option
+      else
+        __style=${FAST_THEME_NAME}builtin
+      fi
     else
-        # Count non-option tokens
-        (( FAST_HIGHLIGHT[chroma-example-counter] += 1, __idx1 = FAST_HIGHLIGHT[chroma-example-counter] ))
-
-        # Colorize 1..2 as builtin, 3.. as glob
-        if (( FAST_HIGHLIGHT[chroma-example-counter] <= 2 )); then
-            if [[ "$__wrd" = \"* ]]; then
-                # Pass through, fsh main code will do the highlight!
-                return 1
-            else
-                __style=${FAST_THEME_NAME}builtin
-            fi
-        else
-            __style=${FAST_THEME_NAME}globbing
-        fi
+      __style=${FAST_THEME_NAME}globbing
     fi
+  fi
 }
 
 # Add region_highlight entry (via `reply' array).
@@ -101,19 +98,18 @@ integer __idx1 __idx2
 # i.e. when multi-line command using backslash is entered.
 #
 # This is a common place of adding such entry, but any above code can do
-# it itself (and it does in other chromas) and skip setting __style to
-# this way disable this code.
-[[ -n "$__style" ]] && (( __start=__start_pos-${#PREBUFFER}, __end=__end_pos-${#PREBUFFER}, __start >= 0 )) && reply+=("$__start $__end ${FAST_HIGHLIGHT_STYLES[$__style]}")
+# it itself (and it does in other chromas) and skip setting __style to this way disable this code.
+[[ -n "$__style" ]] && \
+(( __start=__start_pos-${#PREBUFFER}, __end=__end_pos-${#PREBUFFER}, __start >= 0 )) && \
+reply+=("$__start $__end ${FAST_HIGHLIGHT_STYLES[$__style]}")
 
 # We aren't passing-through, do obligatory things ourselves.
 # _start_pos=$_end_pos advainces pointers in command line buffer.
 #
-# To pass through means to `return 1'. The highlighting of
-# this single token is then done by fast-syntax-highlighting's
+# To pass through means to `return 1'. 
+# The highlighting of this single token is then done by F-Sy-H's
 # main code and chroma doesn't have to do anything.
 (( this_word = next_word ))
 _start_pos=$_end_pos
 
 return 0
-
-# vim: ft=zsh sw=2 ts=2 et
