@@ -14,8 +14,7 @@ fsh__zi__chroma__def=(
     ## {{{
 
     subcmd:NULL "NULL_0_opt"
-    NULL_0_opt "(-help|--help|-h)
-                   <<>> NO-OP // ::→chroma/main-chroma-std-aopt-action"
+    NULL_0_opt "(-help|--help|-h) <<>> NO-OP // ::→chroma/main-chroma-std-aopt-action"
     "subcommands" "(help|subcmds|icemods|analytics|man|self-update|times|zstatus|load|light|unload|snippet|ls|ice|<ice|specification>|update|status|report|delete|loaded|list|cd|create|edit|glance|stress|changes|recently|clist|completions|cclear|cdisable|cenable|creinstall|cuninstall|csearch|compinit|dtrace|dstart|dstop|dunload|dreport|dclear|compile|uncompile|compiled|cdlist|cdreplay|cdclear|srv|recall|env-whitelist|bindkeys|module|add-fpath|run)"
 
     ## }}}
@@ -23,7 +22,6 @@ fsh__zi__chroma__def=(
     # Generic actions
     NO_MATCH_\#_opt "* <<>> __style=\${FAST_THEME_NAME}incorrect-subtle // NO-OP"
     NO_MATCH_\#_arg "__style=\${FAST_THEME_NAME}incorrect-subtle // NO-OP"
-
 
     ##
     ## `ice'
@@ -193,6 +191,15 @@ fsh__zi__chroma__def=(
     #FAST_HIGHLIGHT[chroma-zi-ice-elements-svn]=0
 #}
 
+→chroma/-zi-check-annex-sub() {
+  local _scmd="$1" _wrd="$4"
+  typeset -a annex_subcmd
+  annex_subcmd=( ${ZI_EXTS[(I)z-annex subcommand:*]#z-annex subcommand:} )
+
+  [[ -n "${annex_subcmd[(r)$_scmd]}" ]] && \
+  { __style=${FAST_THEME_NAME}correct-subtle; return 0 } || return 1
+}
+
 →chroma/-zi-verify-plugin() {
     local _scmd="$1" _wrd="$4"
 
@@ -242,9 +249,7 @@ fsh__zi__chroma__def=(
     completions=( "${completions[@]#_}" )
 
     [[ -n "${completions[(r)${_wrd#_}]}" ]] && \
-        __style=${FAST_THEME_NAME}correct-subtle || \
-        return 1
-
+      __style=${FAST_THEME_NAME}correct-subtle || return 1
     return 0
 }
 
@@ -255,9 +260,7 @@ fsh__zi__chroma__def=(
     completions=( "${ZI[COMPLETIONS_DIR]}"/[^_]*(N:t) )
 
     [[ -n "${completions[(r)${_wrd#_}]}" ]] && \
-        __style=${FAST_THEME_NAME}correct-subtle || \
-        return 1
-
+        __style=${FAST_THEME_NAME}correct-subtle || return 1
     return 0
 }
 
