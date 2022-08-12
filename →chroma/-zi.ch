@@ -28,7 +28,7 @@ fsh__zi__chroma__def=(
     ##
     ## {{{
 
-    subcmd:ice "ICE_#_arg // NO_MATCH_#_opt"
+    "subcmd:ice" "ICE_#_arg // NO_MATCH_#_opt"
 
     "ICE_#_arg" "NO-OP // ::→chroma/-zi-check-ice-mod"
 
