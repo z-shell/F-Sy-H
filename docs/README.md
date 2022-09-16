@@ -1,7 +1,7 @@
 <h1 align="center"><p>
-  <a title="❮ ZW ❯" target="_self" href="https://github.com/z-shell/zw">
-  <img style="width: 60px; height: 60px" src="https://raw.githubusercontent.com/z-shell/zi/main/docs/images/favicon.svg" malt="Logo" /></a>
-    ❮ ZI ❯ - F-Sy-H
+  <a title="❮ Zi ❯" target="_self" href="https://github.com/z-shell/zi">
+  <img style="width: 60px; height: 60px" src="https://raw.githubusercontent.com/z-shell/zi/main/docs/images/logo.svg" malt="Logo" /></a>
+    ❮ Zi ❯ - F-Sy-H
 </p></h1>
 <h2 align="center">Feature-rich Syntax Highlighting for Zsh</h2>
 <p align="center">
@@ -47,7 +47,7 @@ src="https://raw.githubusercontent.com/z-shell/.github/main/metrics/metrics.svg"
 
 <pre><code class="lang-zsh"><span class="hljs-keyword">source</span> ~<span class="hljs-regexp">/path/</span>to<span class="hljs-regexp">/fsh/</span>F-Sy-H.plugin.zsh</code></pre>
 
-<hr /><h3 align="left">ZI</h3>
+<hr /><h3 align="left">Zi</h3>
 
   <p>Add the following to your `zshrc` file.</p>
 
