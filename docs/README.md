@@ -6,12 +6,12 @@
 <h2 align="center">Feature-rich Syntax Highlighting for Zsh</h2>
 <p align="center">
   <a href="https://github.com/orgs/z-shell/discussions/">《❔》Ask a Question </a>
-  <a href="https://z.digitalclouds.dev/search/">《💡》Search Wiki </a>
+  <a href="https://wiki.zshell.dev.dev/search">《💡》Search Wiki </a>
 <a
   href="https://github.com/z-shell/community/issues/new?assignees=&labels=%F0%9F%91%A5+member&template=membership.yml&title=team%3A+">《💜》Join</a>
-<a href="https://digitalclouds.crowdin.com/z-shell/">《🌐》Localize </a></p>
+<a href="https://translate.zshell.dev">《🌐》Localize </a></p>
 <p align="center">
-<a target="_self" href="https://crowdin.digitalclouds.dev/z-shell">
+<a target="_self" href="https://translate.zshell.dev">
 <img align="center" src="https://badges.crowdin.net/e/f108c12713ee8526ac878d5671ad6e29/localized.svg" /></a>
   <a href="https://github.com/z-shell/f-sy-h/actions/workflows/zunit.yml">
 <img
@@ -27,7 +27,7 @@ href="https://github.com/z-shell/zi-vim-syntax/">
 <p align="center">
 <img align="center" style="width: 80%; height: auto" src="https://raw.githubusercontent.com/z-shell/.github/main/metrics/plugin/followup/f-sy-h_followup.svg" />
   <img align="center" style="width: 80%; height: auto"
-src="https://raw.githubusercontent.com/z-shell/.github/main/metrics/metrics.svg" />
+src="https://raw.githubusercontent.com/z-shell/.github/main/metrics/plugin/metrics.svg" />
 <hr /><h2 align="left">Related</h2>
 <ul>
   <li><a href="../LICENSE">License</a></li>
@@ -54,7 +54,7 @@ src="https://raw.githubusercontent.com/z-shell/.github/main/metrics/metrics.svg"
 <pre><code class="lang-zsh">zi light z-<span class="hljs-keyword">shell</span>/F-Sy-H</code></pre>
 
 <p> Here's an example of how to load the plugin together with a few other popular ones with the use of
- <a href="https://z.digitalclouds.dev/docs/getting_started/overview#turbo-mode-zsh--53">turbo mode</a></p>
+ <a href="https://wiki.zhsell.dev/docs/getting_started/overview#turbo-mode-zsh--53">turbo mode</a></p>
 <p>i.e.: speeding up the Zsh startup by loading the plugin right after the first prompt, in background: </p>
 
   <pre><code class="lang-zsh">zi wait lucid <span class="hljs-keyword">for</span> <span class="hljs-string">\</span>
