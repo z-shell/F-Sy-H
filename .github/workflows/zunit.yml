@@ -4,9 +4,9 @@ name: 🛡️ ZUnit
 on:
   workflow_dispatch:
   push:
-    branches: ["main", "develop"]
+    branches: ["main", "next"]
   pull_request_target:
-    branches: ["main", "develop"]
+    branches: ["main", "next"]
 
 jobs:
   build-macos:

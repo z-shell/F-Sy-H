@@ -10,32 +10,34 @@
 # Completion for theme-switching function, fast-theme,
 # part of z-shell/F-Sy-H, zdharma/fast-syntax-highlighting.
 #
+builtin emulate -L zsh ${=${options[xtrace]:#off}:+-o xtrace}
+builtin setopt extended_glob local_options warn_create_global typeset_silent no_short_loops rc_quotes no_auto_pushd
 
 integer ret=1
-local -a arguments
-
-arguments=(
-  {-h,--help}'[display help text]'
-  {-l,--list}'[list available themes]'
-  {-r,--reset}'[unset any theme (revert to default highlighting)]'
-  {-R,--ov-reset}'[unset overlay, use styles only from main-theme (requires restart)]'
-  {-q,--quiet}'[no default messages]'
-  {-s,--show}'[get and display the theme currently being set]'
-  {-v,--verbose}'[more messages during operation]'
-  {-t,--test}'[test theme after setting it (show example code)]'
-  {-p,--palette}'[just print all 256 colors and exit (useful when creating a theme)]'
-  {-w,--workdir}'[cd into $FAST_WORK_DIR (if not set, then into the plugin directory)]'
-)
-
-typeset -a themes
+typeset -a themes themes2 themes3 arguments expl
 themes=( "$FAST_WORK_DIR"/themes/*.ini(:t:r) )
 
-if [[ -d ${XDG_CONFIG_HOME:-$HOME/.config}/fsh ]]; then
-  typeset -a themes2
-  themes2=( "${XDG_CONFIG_HOME:-$HOME/.config}"/fsh/*.ini(:t:r) )
-  themes+=( XDG:${^themes2[@]} )
-fi
+arguments=(
+  {-w,--workdir}'[cd into $FAST_WORK_DIR (if not set, then into the plugin directory)]'
+  {-R,--ov-reset}'[unset overlay, use styles only from main-theme (requires restart)]'
+  {-p,--palette}'[just print all 256 colors and exit (useful when creating a theme)]'
+  {-r,--reset}'[unset any theme (revert to default highlighting)]'
+  {-t,--test}'[test theme after setting it (show example code)]'
+  {-s,--show}'[get and display the theme currently being set]'
+  {-v,--verbose}'[more messages during operation]'
+  {-i,--info}'[additional information]'
+  {-l,--list}'[list available themes]'
+  {-q,--quiet}'[no default messages]'
+  {-h,--help}'[display help text]'
+)
 
+if [[ -d ${XDG_CONFIG_HOME:-$HOME/.config}/fsh ]]; then
+  themes2=( "${XDG_CONFIG_HOME:-$HOME/.config}"/fsh/*.ini(:t:r) )
+  themes+=( CONFIG:${^themes2[@]} )
+elif [[ -d ${XDG_CACHE_HOME:-$HOME/.cache}/zi/fsh ]]; then
+  themes3=( "${XDG_CACHE_HOME:-$HOME/.cache}"/zi/fsh/*.ini(:t:r) )
+  themes+=( CACHE:${^themes3[@]} )
+fi
 
 _wanted themes expl "Themes" compadd "$@" -a - themes && ret=0
 _arguments -s $arguments && ret=0

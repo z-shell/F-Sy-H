@@ -24,39 +24,38 @@ integer __idx1 __idx2
 
 # First call, i.e. command starts, i.e. "grep" token etc.
 (( __first_call )) && {
-    FAST_HIGHLIGHT[chroma-src-counter]=0
-    __style=${FAST_THEME_NAME}builtin
+  FAST_HIGHLIGHT[chroma-src-counter]=0
+  __style=${FAST_THEME_NAME}builtin
 
-} || {
-    # Following call, i.e. not the first one.
+  } || {
 
-    # Check if chroma should end – test if token is of type
-    # "starts new command", if so pass-through – chroma ends
-    [[ "$__arg_type" = 3 ]] && return 2
+  # Following call, i.e. not the first one.
+  # Check if chroma should end – test if token is of type
+  # "starts new command", if so pass-through – chroma ends
+  [[ "$__arg_type" = 3 ]] && return 2
 
-    if (( in_redirection > 0 || this_word & 128 )) || [[ $__wrd == "<<<" ]]; then
-        return 1
+  if (( in_redirection > 0 || this_word & 128 )) || [[ $__wrd == "<<<" ]]; then
+    return 1
+  fi
+
+  if [[ "$__wrd" = -* ]]; then
+    # Detected option, add style for it.
+    [[ "$__wrd" = --* ]] && \
+    __style=${FAST_THEME_NAME}double-hyphen-option || __style=${FAST_THEME_NAME}single-hyphen-option
+  else
+    # Count non-option tokens.
+    (( FAST_HIGHLIGHT[chroma-src-counter] += 1, __idx1 = FAST_HIGHLIGHT[chroma-src-counter] ))
+    if (( FAST_HIGHLIGHT[chroma-src-counter] == 1 )); then
+      command mkdir -p "$__home"
+      command cp -f "${__wrd}" "$__home" 2>/dev/null && {
+        zcompile "$__home"/"${__wrd:t}" 2>/dev/null 1>&2 && \
+        __style=${FAST_THEME_NAME}correct-subtle || __style=${FAST_THEME_NAME}incorrect-subtle
+      }
+    elif (( FAST_HIGHLIGHT[chroma-src-counter] == 2 )); then
+      # Handle paths, etc. normally - just pass-through to the big highlighter (the main FSH highlighter, used before chromas).
+      return 1
     fi
-
-    if [[ "$__wrd" = -* ]]; then
-        # Detected option, add style for it.
-        [[ "$__wrd" = --* ]] && __style=${FAST_THEME_NAME}double-hyphen-option || \
-                                __style=${FAST_THEME_NAME}single-hyphen-option
-    else
-        # Count non-option tokens.
-        (( FAST_HIGHLIGHT[chroma-src-counter] += 1, __idx1 = FAST_HIGHLIGHT[chroma-src-counter] ))
-
-        if (( FAST_HIGHLIGHT[chroma-src-counter] == 1 )); then
-            command mkdir -p "$__home"
-            command cp -f "${__wrd}" "$__home" 2>/dev/null && {
-                zcompile "$__home"/"${__wrd:t}" 2>/dev/null 1>&2 && __style=${FAST_THEME_NAME}correct-subtle || __style=${FAST_THEME_NAME}incorrect-subtle
-            }
-        elif (( FAST_HIGHLIGHT[chroma-src-counter] == 2 )); then
-            # Handle paths, etc. normally - just pass-through to the big
-            # highlighter (the main FSH highlighter, used before chromas).
-            return 1
-        fi
-    fi
+  fi
 }
 
 # Add region_highlight entry (via `reply' array).

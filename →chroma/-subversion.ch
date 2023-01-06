@@ -1,4 +1,5 @@
 # -*- mode: zsh; sh-indentation: 2; indent-tabs-mode: nil; sh-basic-offset: 2; -*-
+# vim: ft=zsh sw=2 ts=2 et
 #
 # -------------------------------------------------------------------------------------------------
 # Copyright (c) 2018 Sebastian Gniazdowski
@@ -247,5 +248,3 @@ integer __idx1 __idx2
 _start_pos=$_end_pos
 
 return 0
-
-# vim: ft=zsh sw=2 ts=2 et

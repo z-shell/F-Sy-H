@@ -14,21 +14,21 @@
 
 ZERO="${(%):-%N}"
 
-if [[ -e "${ZERO}/../fast-highlight" ]]; then
-    source "${ZERO}/../fast-highlight"
-    source "${ZERO}/../fast-string-highlight"
+if [[ -e "${ZERO}/../functions/fast-highlight" ]]; then
+    source "${ZERO}/../functions/fast-highlight"
+    source "${ZERO}/../functions/fast-string-highlight"
     fpath+=( "${ZERO}/.." )
-elif [[ -e "../fast-highlight" ]]; then
-    source "../fast-highlight"
-    source "../fast-string-highlight"
+elif [[ -e "../functions/fast-highlight" ]]; then
+    source "../functions/fast-highlight"
+    source "../functions/fast-string-highlight"
     fpath+=( "$PWD/.." )
-elif [[ -e "${ZERO}/fast-highlight" ]]; then
-    source "${ZERO}/fast-highlight"
-    source "${ZERO}/fast-string-highlight"
+elif [[ -e "${ZERO}/functions/fast-highlight" ]]; then
+    source "${ZERO}/functions/fast-highlight"
+    source "${ZERO}/functions/fast-string-highlight"
     fpath+=( "${ZERO}" )
-elif [[ -e "./fast-highlight" ]]; then
-    source "./fast-highlight"
-    source "./fast-string-highlight"
+elif [[ -e "./functions/fast-highlight" ]]; then
+    source "./functions/fast-highlight"
+    source "./functions/fast-string-highlight"
     fpath+=( "./" )
 else
     print -u2 "Could not find fast-highlight, aborting"
@@ -45,9 +45,9 @@ if [[ "$1" = "-o" || "$1" = "-oo" || "$1" = "-ooo" || "$1" = "-git" || "$1" = "-
     typeset -a input
     input=()
     if [[ "$1" = "-o" ]]; then
-        input+=( "./parse.zsh ../fast-highlight parse2.out" )
+        input+=( "./parse.zsh ../functions/fast-highlight parse2.out" )
         input+=( "rm -f parse*.out" )
-        input+=( "./mh-parse.zsh ../fast-highlight > out" )
+        input+=( "./mh-parse.zsh ../functions/fast-highlight > out" )
         input+=( "if [[ -o multibyte ]]; then echo multibyte is set; fi" )
         input+=( "[[ \"a\" = *[[:alpha:]_-][[:alpha:]]# ]] && echo yes" )
         input+=( 'git tag -a v0.98 -m "Syntax highlighting of the history entries"' )

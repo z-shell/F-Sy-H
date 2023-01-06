@@ -1,4 +1,5 @@
 # -*- mode: zsh; sh-indentation: 2; indent-tabs-mode: nil; sh-basic-offset: 2; -*-
+# vim: ft=zsh sw=2 ts=2 et
 #
 # Tracks autoload command - highlights function names if they exist somewhere
 # in $fpath. Also warns that the autoloaded function is already defined.
@@ -99,5 +100,3 @@ local -a __results __deserialized __noshsplit
 _start_pos=$_end_pos
 
 return 0
-
-# vim: ft=zsh sw=2 ts=2 et

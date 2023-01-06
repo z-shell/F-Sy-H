@@ -1,4 +1,5 @@
 # -*- mode: zsh; sh-indentation: 2; indent-tabs-mode: nil; sh-basic-offset: 2; -*-
+# vim: ft=zsh sw=2 ts=2 et
 #
 # Outputs (under prompt) result of query done with `which', `type -w',
 # `whence -v', `whereis', `whatis'.
@@ -91,5 +92,3 @@ local -a __results
 _start_pos=$_end_pos
 
 return 0
-
-# vim: ft=zsh sw=2 ts=2 et

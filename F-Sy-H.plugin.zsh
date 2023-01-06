@@ -34,7 +34,7 @@
 # the plugin directory (i.e. set ZERO parameter)
 #
 # Standardized $0 Handling
-# https://z.digitalclouds.dev/community/zsh_plugin_standard#zero-handling
+# https://wiki.zshell.dev/community/zsh_plugin_standard#zero-handling
 0="${ZERO:-${${0:#$ZSH_ARGZERO}:-${(%):-%N}}}"
 0="${${(M)0:#/*}:-$PWD/$0}"
 
@@ -46,15 +46,15 @@ typeset -ga _FAST_MAIN_CACHE
 typeset -ga _FAST_COMPLEX_BRACKETS
 
 # Functions Directory
-# https://z.digitalclouds.dev/community/zsh_plugin_standard#funtions-directory
+# https://wiki.zshell.dev/community/zsh_plugin_standard#funtions-directory
 if [[ $PMSPEC != *f* ]]; then
   fpath+=( "${0:h}/functions" )
 fi
 
 # Check if Zsh's cache directory exist.
-if [[ -d $ZSH_CACHE_DIR ]]; then
+if [[ -n ${ZI[CACHE_DIR]} ]]; then
   # Use Zsh's default cache directory.
-  typeset -g FAST_WORK_DIR=${FAST_WORK_DIR:-${ZSH_CACHE_DIR}/fsh}
+  typeset -g FAST_WORK_DIR=${FAST_WORK_DIR:-${ZI[CACHE_DIR]}/fsh}
 else
   # Use common values to set default working directory.
   typeset -g FAST_WORK_DIR=${FAST_WORK_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/fsh}
@@ -69,8 +69,7 @@ FAST_WORK_DIR=${~FAST_WORK_DIR}
 
 # Invokes each highlighter that needs updating.
 # This function is supposed to be called whenever the ZLE state changes.
-_zsh_highlight()
-{
+_zsh_highlight() {
   # Store the previous command return code to restore it whatever happens.
   local ret=$?
 
@@ -81,8 +80,8 @@ _zsh_highlight()
     return $ret
   fi
 
-  emulate -LR zsh
-  setopt extendedglob warncreateglobal typesetsilent noshortloops
+  builtin emulate -L zsh ${=${options[xtrace]:#off}:+-o xtrace}
+  builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc_quotes no_auto_pushd
 
   local REPLY # don't leak $REPLY into global scope
   local -a reply
@@ -202,16 +201,14 @@ _zsh_highlight_apply_zle_highlight() {
 # Whether the command line buffer has been modified or not.
 #
 # Returns 0 if the buffer has changed since _zsh_highlight was last called.
-_zsh_highlight_buffer_modified()
-{
+_zsh_highlight_buffer_modified() {
   [[ "${_ZSH_HIGHLIGHT_PRIOR_BUFFER:-}" != "$BUFFER" ]] || [[ "$REGION_ACTIVE" != "$_ZSH_HIGHLIGHT_PRIOR_RACTIVE" ]] || { _zsh_highlight_cursor_moved && [[ "$REGION_ACTIVE" = 1 || "$REGION_ACTIVE" = 2 ]] }
 }
 
 # Whether the cursor has moved or not.
 #
 # Returns 0 if the cursor has moved since _zsh_highlight was last called.
-_zsh_highlight_cursor_moved()
-{
+_zsh_highlight_cursor_moved() {
   [[ -n $CURSOR ]] && [[ -n ${_ZSH_HIGHLIGHT_PRIOR_CURSOR-} ]] && (($_ZSH_HIGHLIGHT_PRIOR_CURSOR != $CURSOR))
 }
 
@@ -221,8 +218,7 @@ _zsh_highlight_cursor_moved()
 
 # Helper for _zsh_highlight_bind_widgets
 # $1 is name of widget to call
-_zsh_highlight_call_widget()
-{
+_zsh_highlight_call_widget() {
   integer ret
   builtin zle "$@"
   ret=$?
@@ -231,8 +227,7 @@ _zsh_highlight_call_widget()
 }
 
 # Rebind all ZLE widgets to make them invoke _zsh_highlights.
-_zsh_highlight_bind_widgets()
-{
+_zsh_highlight_bind_widgets() {
   setopt localoptions noksharrays
   local -F2 SECONDS
   local prefix=orig-s${SECONDS/./}-r$(( RANDOM % 1000 )) # unique each time, in case we're sourced more than once
@@ -307,8 +302,7 @@ _zsh_highlight_bind_widgets || {
 }
 
 # Reset scratch variables when commandline is done.
-_zsh_highlight_preexec_hook()
-{
+_zsh_highlight_preexec_hook() {
   typeset -g _ZSH_HIGHLIGHT_PRIOR_BUFFER=
   typeset -gi _ZSH_HIGHLIGHT_PRIOR_CURSOR=0
   typeset -ga _FAST_MAIN_CACHE
@@ -331,7 +325,7 @@ zmodload zsh/parameter 2>/dev/null
 zmodload zsh/system 2>/dev/null
 
 autoload -Uz -- is-at-least fast-theme \
-  .fast-read-ini-file .fast-run-git-command \
+  _fast-theme .fast-read-ini-file .fast-run-git-command \
   .fast-make-targets .fast-run-command .fast-zts-read-all
 
 autoload -Uz -- →chroma/-git.ch →chroma/-hub.ch →chroma/-lab.ch →chroma/-example.ch \
@@ -344,8 +338,8 @@ autoload -Uz -- →chroma/-git.ch →chroma/-hub.ch →chroma/-lab.ch →chroma/
   →chroma/-precommand.ch →chroma/-subversion.ch →chroma/-ionice.ch \
   →chroma/-nice.ch →chroma/main-chroma.ch →chroma/-ogit.ch →chroma/-zi.ch
 
-source "${0:h}/fast-highlight"
-source "${0:h}/fast-string-highlight"
+source "${0:h}/functions/fast-highlight"
+source "${0:h}/functions/fast-string-highlight"
 
 local __fsyh_theme
 zstyle -s :plugin:fast-syntax-highlighting theme __fsyh_theme
@@ -367,8 +361,6 @@ zstyle -s :plugin:fast-syntax-highlighting theme __fsyh_theme
 
 unset __fsyh_theme
 
-alias fsh-alias=fast-theme
-
 -fast-highlight-fill-option-variables
 if [[ ! -e $FAST_WORK_DIR/secondary_theme.zsh ]] {
   if { type curl &>/dev/null } {
@@ -383,9 +375,9 @@ if [[ ! -e $FAST_WORK_DIR/secondary_theme.zsh ]] {
   touch "$FAST_WORK_DIR/secondary_theme.zsh"
 }
 
-if [[ $(uname -a) = (#i)*darwin* ]] {
+if [[ $(uname -a) = (#i)*darwin* ]]; then
   typeset -gA FAST_HIGHLIGHT
   FAST_HIGHLIGHT[chroma-man]=
-}
+fi
 
 [[ $COLORTERM == (24bit|truecolor) || ${terminfo[colors]} -eq 16777216 ]] || zmodload zsh/nearcolor &>/dev/null || true

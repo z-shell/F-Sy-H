@@ -1,4 +1,5 @@
 # -*- mode: zsh; sh-indentation: 2; indent-tabs-mode: nil; sh-basic-offset: 2; -*-
+# vim: ft=zsh sw=2 ts=2 et
 #
 # Copyright (C) 2019 by Philippe Troin (F-i-f on GitHub)
 #
@@ -16,8 +17,8 @@
 # $4 - a private copy of $_end_pos from the above scope
 #
 
-emulate -LR zsh
-setopt extended_glob warn_create_global typeset_silent
+builtin emulate -LR zsh ${=${options[xtrace]:#off}:+-o xtrace}
+builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc_quotes no_auto_pushd
 
 # This chroma guards that port number isn't passed in hostname (no :{port} occurs).
 
@@ -155,5 +156,3 @@ local -a match mbegin mend completions_users completions_host
 _start_pos=$_end_pos
 
 return 0
-
-# vim: ft=zsh sw=2 ts=2 et

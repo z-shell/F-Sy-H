@@ -1,4 +1,5 @@
 # -*- mode: zsh; sh-indentation: 2; indent-tabs-mode: nil; sh-basic-offset: 2; -*-
+# vim: ft=zsh sw=2 ts=2 et
 #
 # Chroma function for command `zi'. It colorizes the part of command line that holds `zi' invocation.
 
@@ -346,5 +347,3 @@ fsh__zi__chroma__def=(
 }
 
 return 0
-
-# vim: ft=zsh sw=2 ts=2 et

@@ -1,4 +1,5 @@
 # -*- mode: zsh; sh-indentation: 2; indent-tabs-mode: nil; sh-basic-offset: 2; -*-
+# vim: ft=zsh sw=2 ts=2 et
 #
 # This chroma does a narrow, obscure but prestigious parsing of fpath+=( elem1
 # elem2 ... ) construct to provide *the* *future* contents of $fpath to
@@ -56,5 +57,3 @@ local -a deserialized
 _start_pos=$_end_pos
 
 return 0
-
-# vim: ft=zsh sw=2 ts=2 et

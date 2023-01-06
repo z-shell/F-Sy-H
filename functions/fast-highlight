@@ -33,20 +33,22 @@
 
 typeset -gA __fast_highlight_main__command_type_cache FAST_BLIST_PATTERNS
 typeset -g FAST_WORK_DIR
+
 : ${FAST_WORK_DIR:=$FAST_BASE_DIR}
 FAST_WORK_DIR=${~FAST_WORK_DIR}
+
 () {
-  # emulate -L zsh -o extendedglob
-  # Zsh < v5.0 do not support -o
-  emulate -L zsh
-  setopt extendedglob
+  # Emulate zsh options in the current shell.
+  builtin emulate -L zsh ${=${options[xtrace]:#off}:+-o xtrace}
+  builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc_quotes no_auto_pushd
   local -A map
-  map=( "XDG:"    "${XDG_CONFIG_HOME:-$HOME/.config}/fsh/"
+  map=( "CONFIG:" "${XDG_CONFIG_HOME:-$HOME/.config}/fsh/"
+        "CACHE:"  "${XDG_CACHE_HOME:-$HOME/.cache}/zi/fsh/"
         "LOCAL:"  "/usr/local/share/fsh/"
-        "HOME:"   "$HOME/.fsh/"
-        "OPT:"    "/opt/local/share/fsh/"
+        "HOME:" "$HOME/.fsh/"
+        "OPT:"  "/opt/local/share/fsh/"
   )
-  FAST_WORK_DIR=${${FAST_WORK_DIR/(#m)(#s)(XDG|LOCAL|HOME|OPT):(#c0,1)/${map[${MATCH%:}:]}}%/}
+  FAST_WORK_DIR=${${FAST_WORK_DIR/(#m)(#s)(CONFIG|CACHE|LOCAL|HOME|OPT):(#c0,1)/${map[${MATCH%:}:]}}%/}
 }
 
 # Define default styles. You can set this after loading the plugin in
@@ -248,7 +250,6 @@ FAST_HIGHLIGHT+=(
   chroma-asciinema     →chroma/-subcommand.ch
   chroma-ipfs          →chroma/-subcommand.ch
   chroma-zi            →chroma/main-chroma.ch%zi
-  chroma-zinit         →chroma/-zinit.ch
   chroma-aspell        →chroma/-subcommand.ch
   chroma-bspc          →chroma/-subcommand.ch
   chroma-cryptsetup    →chroma/-subcommand.ch
@@ -298,46 +299,44 @@ typeset -ga ZLAST_COMMANDS
   REPLY=$__fast_highlight_main__command_type_cache[(e)$1]
   [[ -z $REPLY ]] && {
 
-  if zmodload -e zsh/parameter; then
-    if (( $+aliases[(e)$1] )); then
-      REPLY=alias
-    elif (( ${+galiases[(e)$1]} )); then
-      REPLY="global alias"
-    elif (( $+functions[(e)$1] )); then
-      REPLY=function
-    elif (( $+builtins[(e)$1] )); then
-      REPLY=builtin
-    elif (( $+commands[(e)$1] )); then
-      REPLY=command
-    elif (( $+saliases[(e)${1##*.}] )); then
-      REPLY='suffix alias'
-    elif (( $reswords[(Ie)$1] )); then
-      REPLY=reserved
-    # zsh 5.2 and older have a bug whereby running 'type -w ./sudo' implicitly
-    # runs 'hash ./sudo=/usr/local/bin/./sudo' (assuming /usr/local/bin/sudo
-    # exists and is in $PATH).  Avoid triggering the bug, at the expense of
-    # falling through to the $() below, incurring a fork.  (Issue #354.)
-    #
-    # The second disjunct mimics the isrelative() C call from the zsh bug.
-    elif [[ $1 != */* || ${+ZSH_ARGZERO} = "1" ]] && ! builtin type -w -- $1 >/dev/null 2>&1; then
-      REPLY=none
+    if zmodload -e zsh/parameter; then
+      if (( $+aliases[(e)$1] )); then
+        REPLY=alias
+      elif (( ${+galiases[(e)$1]} )); then
+        REPLY="global alias"
+      elif (( $+functions[(e)$1] )); then
+        REPLY=function
+      elif (( $+builtins[(e)$1] )); then
+        REPLY=builtin
+      elif (( $+commands[(e)$1] )); then
+        REPLY=command
+      elif (( $+saliases[(e)${1##*.}] )); then
+        REPLY='suffix alias'
+      elif (( $reswords[(Ie)$1] )); then
+        REPLY=reserved
+      # zsh 5.2 and older have a bug whereby running 'type -w ./sudo' implicitly
+      # runs 'hash ./sudo=/usr/local/bin/./sudo' (assuming /usr/local/bin/sudo
+      # exists and is in $PATH).  Avoid triggering the bug, at the expense of
+      # falling through to the $() below, incurring a fork.  (Issue #354.)
+      #
+      # The second disjunct mimics the isrelative() C call from the zsh bug.
+      elif [[ $1 != */* || ${+ZSH_ARGZERO} = "1" ]] && ! builtin type -w -- $1 >/dev/null 2>&1; then
+        REPLY=none
+      fi
     fi
-  fi
 
-  [[ -z $REPLY ]] && REPLY="${$(LC_ALL=C builtin type -w -- $1 2>/dev/null)##*: }"
+    [[ -z $REPLY ]] && REPLY="${$(LC_ALL=C builtin type -w -- $1 2>/dev/null)##*: }"
 
-  [[ $REPLY = "none" ]] && {
-    [[ -n ${FAST_BLIST_PATTERNS[(k)${${(M)1:#/*}:-$PWD/$1}]} ]] || {
-      [[ -d $1 ]] && REPLY="dirpath" || {
-        for cdpath_dir in $cdpath; do
-          [[ -d $cdpath_dir/$1 ]] && { REPLY="dirpath"; break; }
-        done
+    [[ $REPLY = "none" ]] && {
+      [[ -n ${FAST_BLIST_PATTERNS[(k)${${(M)1:#/*}:-$PWD/$1}]} ]] || {
+        [[ -d $1 ]] && REPLY="dirpath" || {
+          for cdpath_dir in $cdpath; do
+            [[ -d $cdpath_dir/$1 ]] && { REPLY="dirpath"; break; }
+          done
+        }
       }
     }
-  }
-
-  __fast_highlight_main__command_type_cache[(e)$1]=$REPLY
-
+    __fast_highlight_main__command_type_cache[(e)$1]=$REPLY
   }
 }
 
@@ -370,10 +369,9 @@ typeset -ga ZLAST_COMMANDS
 }
 
 # Main syntax highlighting function.
--fast-highlight-process()
-{
-  emulate -L zsh
-  setopt extendedglob bareglobqual nonomatch typesetsilent
+-fast-highlight-process() {
+  builtin emulate -L zsh ${=${options[xtrace]:#off}:+-o xtrace}
+  builtin setopt extended_glob warn_create_global bare_glob_qual no_nomatch typeset_silent
 
   [[ $CONTEXT == "select" ]] && return 0
 
@@ -459,8 +457,7 @@ typeset -ga ZLAST_COMMANDS
 
   # Processing buffer
   local proc_buf=$__buf needle
-  for __arg in ${interactive_comments-${(z)__buf}} \
-             ${interactive_comments+${(zZ+c+)__buf}}; do
+  for __arg in ${interactive_comments-${(z)__buf}} ${interactive_comments+${(zZ+c+)__buf}}; do
 
     # Initialize $next_word to its default value?
     (( in_redirection = in_redirection > 0 ? in_redirection - 1 : in_redirection ));
@@ -894,7 +891,7 @@ typeset -ga ZLAST_COMMANDS
                    if [[ -n ${FAST_HIGHLIGHT_STYLES[${FAST_THEME_NAME}secondary]} ]]; then
                      __idx=1
                      _mybuf=$FAST_THEME_NAME
-                     FAST_THEME_NAME=${${${FAST_HIGHLIGHT_STYLES[${FAST_THEME_NAME}secondary]}:t:r}#(XDG|LOCAL|HOME|OPT):}
+                     FAST_THEME_NAME=${${${FAST_HIGHLIGHT_STYLES[${FAST_THEME_NAME}secondary]}:t:r}#(CONFIG|CACHE|LOCAL|HOME|OPT):}
                      (( ${+FAST_HIGHLIGHT_STYLES[${FAST_THEME_NAME}default]} )) || source $FAST_WORK_DIR/secondary_theme.zsh
                    else
                      __idx=0
@@ -973,7 +970,7 @@ typeset -ga ZLAST_COMMANDS
                  if [[ -n ${FAST_HIGHLIGHT_STYLES[${FAST_THEME_NAME}secondary]} ]]; then
                    __idx=1
                    _mybuf=$FAST_THEME_NAME
-                   FAST_THEME_NAME=${${${FAST_HIGHLIGHT_STYLES[${FAST_THEME_NAME}secondary]}:t:r}#(XDG|LOCAL|HOME|OPT):}
+                   FAST_THEME_NAME=${${${FAST_HIGHLIGHT_STYLES[${FAST_THEME_NAME}secondary]}:t:r}#(CONFIG|CACHE|LOCAL|HOME|OPT):}
                    (( ${+FAST_HIGHLIGHT_STYLES[${FAST_THEME_NAME}default]} )) || source $FAST_WORK_DIR/secondary_theme.zsh
                  else
                    __idx=0
@@ -1246,7 +1243,7 @@ typeset -ga ZLAST_COMMANDS
     if [[ -n ${FAST_HIGHLIGHT_STYLES[${FAST_THEME_NAME}secondary]} ]]; then
       __idx=1
       __tmp=$FAST_THEME_NAME
-      FAST_THEME_NAME=${${${FAST_HIGHLIGHT_STYLES[${FAST_THEME_NAME}secondary]}:t:r}#(XDG|LOCAL|HOME|OPT):}
+      FAST_THEME_NAME=${${${FAST_HIGHLIGHT_STYLES[${FAST_THEME_NAME}secondary]}:t:r}#(CONFIG|CACHE|LOCAL|HOME|OPT):}
       (( ${+FAST_HIGHLIGHT_STYLES[${FAST_THEME_NAME}default]} )) || source $FAST_WORK_DIR/secondary_theme.zsh
     else
       __idx=0
@@ -1264,8 +1261,7 @@ typeset -ga ZLAST_COMMANDS
   return 0
 }
 
--fast-highlight-check-path()
-{
+-fast-highlight-check-path() {
   (( _start_pos-__PBUFLEN >= 0 )) || \
     { [[ $1 != "noasync" ]] && print -r -- "- $_start_pos $_end_pos"; return 1; }
   [[ $1 != "noasync" ]] && {
@@ -1338,8 +1334,7 @@ zle -N -- fast-highlight-check-path-handler -fast-highlight-check-path-handler
 # backslash-something (not ['"$]) is occured.
 #
 # $1 - additional style to glue-in to added style
--fast-highlight-string()
-{
+-fast-highlight-string() {
   (( _start_pos-__PBUFLEN >= 0 )) || return 0
   _mybuf=$__arg
   __idx=_start_pos
@@ -1374,13 +1369,11 @@ zle -N -- fast-highlight-check-path-handler -fast-highlight-check-path-handler
 # - D matches words [a-zA-Z]## (variables)
 #
 # Parameters used: _mybuf, __idx, _end_idx, __style
--fast-highlight-math-string()
-{
+-fast-highlight-math-string() {
   (( _start_pos-__PBUFLEN >= 0 )) || return 0
   _mybuf=$__arg
   __idx=_start_pos
 
-  #                                                                                                                                                                                                                       7
   while [[ $_mybuf = (#b)[^\$_a-zA-Z0-9]#((\$(#B)(+|)(#B)([a-zA-Z_:][a-zA-Z0-9_:]#|[0-9]##)(#b)(\[[^\]]##\])(#c0,1))|(\$[{](#B)(+|)(#b)(\([a-zA-Z0-9_:@%#]##\))(#c0,1)[a-zA-Z0-9_:#]##(\[[^\]]##\])(#c0,1)[}])|\$|[a-zA-Z_][a-zA-Z0-9_]#|[0-9]##)(*) ]]; do
     __idx+=${mbegin[1]}-1
     _end_idx=__idx+${mend[1]}-${mbegin[1]}+1
@@ -1412,8 +1405,7 @@ zle -N -- fast-highlight-check-path-handler -fast-highlight-check-path-handler
 }
 
 # Highlight special chars inside dollar-quoted strings
--fast-highlight-dollar-string()
-{
+-fast-highlight-dollar-string() {
   (( _start_pos-__PBUFLEN >= 0 )) || return 0
   local i j k __style
   local AA

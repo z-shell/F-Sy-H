@@ -29,7 +29,7 @@ set_fast_theme() {
 
 If you have set theme before an update of styles (e.g. recent addition of bracket highlighting)
 then please repeat `fast-theme {theme}` call to regenerate theme files. (**2018-08-09**: FSH
-now has full user-theme support, refer to [appropriate section of README](#customization)).
+now has full user-theme support, refer to [appropriate section of README](README.md#customization)).
 
 ## 2018-07-30
 
@@ -137,7 +137,7 @@ Assignments are no more one-colour default-white. When used in assignment, highl
 
 Math mode is highlighted – expressions `(( ... ))` and `$(( ... ))`. Empty variables are colorized as red.
 There are 3 style names (fields of
-[FAST_HIGHLIGHT_STYLES](https://github.com/zdharma/fast-syntax-highlighting/blob/main/fast-highlight#L34)
+[FAST_HIGHLIGHT_STYLES](https://github.com/zdharma/fast-syntax-highlighting/blob/main/functions/fast-highlight#L34)
 hash) for math-variable, number and empty variable (error): `mathvar`, `mathnum`, `matherr`. You can set
 them (like the animation below shows) to change colors.
 
