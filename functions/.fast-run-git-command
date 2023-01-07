@@ -51,7 +51,7 @@ if [[ -z ${FAST_HIGHLIGHT[$2-cache]} || $(( EPOCHSECONDS - FAST_HIGHLIGHT[$2-cac
   FAST_HIGHLIGHT[$2-cache]="${(j:;:)__response}"
 else
   # Quoted (s:;:) flag without @ will skip empty elements. It
-  # still produces array output, interesingly. All this is for
+  # still produces array output, interestingly. All this is for
   # the trailing ";" above, to skip last, empty element.
   [[ "$1" = "+"* ]] && __lines_list+=( "${(@s:;:)FAST_HIGHLIGHT[$2-cache]}" ) || \
     __lines_list=( "${(@s:;:)FAST_HIGHLIGHT[$2-cache]}" )

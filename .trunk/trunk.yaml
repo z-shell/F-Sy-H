@@ -13,7 +13,7 @@ lint:
     - git-diff-check
     - actionlint@1.6.22
     - shfmt@3.5.0
-    - markdownlint@0.32.2
+    - markdownlint@0.33.0
     - oxipng@8.0.0
     - prettier@2.8.1
   ignore:

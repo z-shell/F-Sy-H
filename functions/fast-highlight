@@ -40,13 +40,13 @@ FAST_WORK_DIR=${~FAST_WORK_DIR}
 () {
   # Emulate zsh options in the current shell.
   builtin emulate -L zsh ${=${options[xtrace]:#off}:+-o xtrace}
-  builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc_quotes no_auto_pushd
+  builtin setopt extended_glob no_short_loops rc_quotes no_auto_pushd
   local -A map
-  map=( "CONFIG:" "${XDG_CONFIG_HOME:-$HOME/.config}/fsh/"
-        "CACHE:"  "${XDG_CACHE_HOME:-$HOME/.cache}/zi/fsh/"
-        "LOCAL:"  "/usr/local/share/fsh/"
-        "HOME:" "$HOME/.fsh/"
-        "OPT:"  "/opt/local/share/fsh/"
+  map=( "CONFIG:" "${XDG_CONFIG_HOME:-$HOME/.config}/f-sy-h/"
+        "CACHE:"  "${XDG_CACHE_HOME:-$HOME/.cache}/zi/f-sy-h/"
+        "LOCAL:"  "/usr/local/share/f-sy-h/"
+        "HOME:" "$HOME/.f-sy-h/"
+        "OPT:"  "/opt/local/share/f-sy-h/"
   )
   FAST_WORK_DIR=${${FAST_WORK_DIR/(#m)(#s)(CONFIG|CACHE|LOCAL|HOME|OPT):(#c0,1)/${map[${MATCH%:}:]}}%/}
 }
@@ -172,108 +172,109 @@ typeset -gA FAST_HIGHLIGHT
 # Brackets highlighter active by default
 : ${FAST_HIGHLIGHT[use_brackets]:=1}
 FAST_HIGHLIGHT+=(
-  chroma-fast-theme    →chroma/-fast-theme.ch
-  chroma-alias         →chroma/-alias.ch
-  chroma-autoload      →chroma/-autoload.ch
-  chroma-autorandr     →chroma/-autorandr.ch
-  chroma-docker        →chroma/-docker.ch
-  chroma-example       →chroma/-example.ch
-  chroma-ionice        →chroma/-ionice.ch
-  chroma-make          →chroma/-make.ch
-  chroma-nice          →chroma/-nice.ch
-  chroma-nmcli         →chroma/-nmcli.ch
-  chroma-node          →chroma/-node.ch
-  chroma-perl          →chroma/-perl.ch
-  chroma-printf        →chroma/-printf.ch
-  chroma-ruby          →chroma/-ruby.ch
-  chroma-scp           →chroma/-scp.ch
-  chroma-ssh           →chroma/-ssh.ch
+  chroma-fast-theme    chroma/-fast-theme.ch
+  chroma-alias         chroma/-alias.ch
+  chroma-autoload      chroma/-autoload.ch
+  chroma-autorandr     chroma/-autorandr.ch
+  chroma-docker        chroma/-docker.ch
+  chroma-example       chroma/-example.ch
+  chroma-ionice        chroma/-ionice.ch
+  chroma-make          chroma/-make.ch
+  chroma-nice          chroma/-nice.ch
+  chroma-nmcli         chroma/-nmcli.ch
+  chroma-node          chroma/-node.ch
+  chroma-perl          chroma/-perl.ch
+  chroma-printf        chroma/-printf.ch
+  chroma-ruby          chroma/-ruby.ch
+  chroma-scp           chroma/-scp.ch
+  chroma-ssh           chroma/-ssh.ch
 
-  chroma-git           →chroma/main-chroma.ch%git
-  chroma-hub           →chroma/-hub.ch
-  chroma-lab           →chroma/-lab.ch
-  chroma-svn           →chroma/-subversion.ch
-  chroma-svnadmin      →chroma/-subversion.ch
-  chroma-svndumpfilter →chroma/-subversion.ch
+  chroma-git           chroma/main-chroma.ch%git
+  chroma-hub           chroma/-hub.ch
+  chroma-lab           chroma/-lab.ch
+  chroma-svn           chroma/-subversion.ch
+  chroma-svnadmin      chroma/-subversion.ch
+  chroma-svndumpfilter chroma/-subversion.ch
 
-  chroma-egrep         →chroma/-grep.ch
-  chroma-fgrep         →chroma/-grep.ch
-  chroma-grep          →chroma/-grep.ch
+  chroma-egrep         chroma/-grep.ch
+  chroma-fgrep         chroma/-grep.ch
+  chroma-grep          chroma/-grep.ch
 
-  chroma-awk           →chroma/-awk.ch
-  chroma-gawk          →chroma/-awk.ch
-  chroma-mawk          →chroma/-awk.ch
+  chroma-awk           chroma/-awk.ch
+  chroma-gawk          chroma/-awk.ch
+  chroma-mawk          chroma/-awk.ch
 
-  chroma-source        →chroma/-source.ch
-  chroma-.             →chroma/-source.ch
+  chroma-source        chroma/-source.ch
+  chroma-.             chroma/-source.ch
 
-  chroma-bash          →chroma/-sh.ch
-  chroma-fish          →chroma/-sh.ch
-  chroma-sh            →chroma/-sh.ch
-  chroma-zsh           →chroma/-sh.ch
+  chroma-bash          chroma/-sh.ch
+  chroma-fish          chroma/-sh.ch
+  chroma-sh            chroma/-sh.ch
+  chroma-zsh           chroma/-sh.ch
 
-  chroma-whatis        →chroma/-whatis.ch
-  chroma-man           →chroma/-whatis.ch
+  chroma-whatis        chroma/-whatis.ch
+  chroma-man           chroma/-whatis.ch
 
-  chroma--             →chroma/-precommand.ch
-  chroma-xargs         →chroma/-precommand.ch
-  chroma-nohup         →chroma/-precommand.ch
-  chroma-strace        →chroma/-precommand.ch
-  chroma-ltrace        →chroma/-precommand.ch
+  chroma--             chroma/-precommand.ch
+  chroma-xargs         chroma/-precommand.ch
+  chroma-nohup         chroma/-precommand.ch
+  chroma-strace        chroma/-precommand.ch
+  chroma-ltrace        chroma/-precommand.ch
 
-  chroma-hg            →chroma/-subcommand.ch
-  chroma-cvs           →chroma/-subcommand.ch
-  chroma-pip           →chroma/-subcommand.ch
-  chroma-pip2          →chroma/-subcommand.ch
-  chroma-pip3          →chroma/-subcommand.ch
-  chroma-gem           →chroma/-subcommand.ch
-  chroma-bundle        →chroma/-subcommand.ch
-  chroma-yard          →chroma/-subcommand.ch
-  chroma-cabal         →chroma/-subcommand.ch
-  chroma-npm           →chroma/-subcommand.ch
-  chroma-pnpm          →chroma/-subcommand.ch
-  chroma-nvm           →chroma/-subcommand.ch
-  chroma-yarn          →chroma/-subcommand.ch
-  chroma-brew          →chroma/-subcommand.ch
-  chroma-port          →chroma/-subcommand.ch
-  chroma-yum           →chroma/-subcommand.ch
-  chroma-dnf           →chroma/-subcommand.ch
-  chroma-tmux          →chroma/-subcommand.ch
-  chroma-pass          →chroma/-subcommand.ch
-  chroma-aws           →chroma/-subcommand.ch
-  chroma-apt           →chroma/-subcommand.ch
-  chroma-apt-get       →chroma/-subcommand.ch
-  chroma-apt-cache     →chroma/-subcommand.ch
-  chroma-aptitude      →chroma/-subcommand.ch
-  chroma-keyctl        →chroma/-subcommand.ch
-  chroma-systemctl     →chroma/-subcommand.ch
-  chroma-asciinema     →chroma/-subcommand.ch
-  chroma-ipfs          →chroma/-subcommand.ch
-  chroma-zi            →chroma/main-chroma.ch%zi
-  chroma-aspell        →chroma/-subcommand.ch
-  chroma-bspc          →chroma/-subcommand.ch
-  chroma-cryptsetup    →chroma/-subcommand.ch
-  chroma-diskutil      →chroma/-subcommand.ch
-  chroma-exercism      →chroma/-subcommand.ch
-  chroma-gulp          →chroma/-subcommand.ch
-  chroma-i3-msg        →chroma/-subcommand.ch
-  chroma-openssl       →chroma/-subcommand.ch
-  chroma-solargraph    →chroma/-subcommand.ch
-  chroma-subliminal    →chroma/-subcommand.ch
-  chroma-svnadmin      →chroma/-subcommand.ch
-  chroma-travis        →chroma/-subcommand.ch
-  chroma-udisksctl     →chroma/-subcommand.ch
-  chroma-xdotool       →chroma/-subcommand.ch
-  chroma-zmanage       →chroma/-subcommand.ch
-  chroma-zsystem       →chroma/-subcommand.ch
-  chroma-zypper        →chroma/-subcommand.ch
+  chroma-hg            chroma/-subcommand.ch
+  chroma-cvs           chroma/-subcommand.ch
+  chroma-pip           chroma/-subcommand.ch
+  chroma-pip2          chroma/-subcommand.ch
+  chroma-pip3          chroma/-subcommand.ch
+  chroma-gem           chroma/-subcommand.ch
+  chroma-bundle        chroma/-subcommand.ch
+  chroma-yard          chroma/-subcommand.ch
+  chroma-cabal         chroma/-subcommand.ch
+  chroma-npm           chroma/-subcommand.ch
+  chroma-pnpm          chroma/-subcommand.ch
+  chroma-nvm           chroma/-subcommand.ch
+  chroma-yarn          chroma/-subcommand.ch
+  chroma-brew          chroma/-subcommand.ch
+  chroma-port          chroma/-subcommand.ch
+  chroma-yum           chroma/-subcommand.ch
+  chroma-dnf           chroma/-subcommand.ch
+  chroma-tmux          chroma/-subcommand.ch
+  chroma-pass          chroma/-subcommand.ch
+  chroma-aws           chroma/-subcommand.ch
+  chroma-apt           chroma/-subcommand.ch
+  chroma-apt-get       chroma/-subcommand.ch
+  chroma-apt-cache     chroma/-subcommand.ch
+  chroma-aptitude      chroma/-subcommand.ch
+  chroma-keyctl        chroma/-subcommand.ch
+  chroma-systemctl     chroma/-subcommand.ch
+  chroma-asciinema     chroma/-subcommand.ch
+  chroma-ipfs          chroma/-subcommand.ch
+  chroma-aspell        chroma/-subcommand.ch
+  chroma-bspc          chroma/-subcommand.ch
+  chroma-cryptsetup    chroma/-subcommand.ch
+  chroma-diskutil      chroma/-subcommand.ch
+  chroma-exercism      chroma/-subcommand.ch
+  chroma-gulp          chroma/-subcommand.ch
+  chroma-i3-msg        chroma/-subcommand.ch
+  chroma-openssl       chroma/-subcommand.ch
+  chroma-solargraph    chroma/-subcommand.ch
+  chroma-subliminal    chroma/-subcommand.ch
+  chroma-svnadmin      chroma/-subcommand.ch
+  chroma-travis        chroma/-subcommand.ch
+  chroma-udisksctl     chroma/-subcommand.ch
+  chroma-xdotool       chroma/-subcommand.ch
+  chroma-zmanage       chroma/-subcommand.ch
+  chroma-zsystem       chroma/-subcommand.ch
+  chroma-zypper        chroma/-subcommand.ch
 
-  chroma-fpath+=\(     →chroma/-fpath_peq.ch
-  chroma-fpath=\(      →chroma/-fpath_peq.ch
-  chroma-FPATH+=       →chroma/-fpath_peq.ch
-  chroma-FPATH=        →chroma/-fpath_peq.ch
-  #chroma-which        →chroma/-which.ch
-  #chroma-vim          →chroma/-vim.ch
+  chroma-zi            chroma/main-chroma.ch%zi
+
+  chroma-fpath+=\(     chroma/-fpath_peq.ch
+  chroma-fpath=\(      chroma/-fpath_peq.ch
+  chroma-FPATH+=       chroma/-fpath_peq.ch
+  chroma-FPATH=        chroma/-fpath_peq.ch
+  #chroma-which        chroma/-which.ch
+  #chroma-vim          chroma/-vim.ch
 )
 
 if [[ $OSTYPE == darwin* ]] {
@@ -298,11 +299,10 @@ typeset -ga ZLAST_COMMANDS
 -fast-highlight-main-type() {
   REPLY=$__fast_highlight_main__command_type_cache[(e)$1]
   [[ -z $REPLY ]] && {
-
     if zmodload -e zsh/parameter; then
       if (( $+aliases[(e)$1] )); then
         REPLY=alias
-      elif (( ${+galiases[(e)$1]} )); then
+      elif (( ${+galiases[(e)${(Q)1}]} )); then
         REPLY="global alias"
       elif (( $+functions[(e)$1] )); then
         REPLY=function
@@ -324,9 +324,7 @@ typeset -ga ZLAST_COMMANDS
         REPLY=none
       fi
     fi
-
     [[ -z $REPLY ]] && REPLY="${$(LC_ALL=C builtin type -w -- $1 2>/dev/null)##*: }"
-
     [[ $REPLY = "none" ]] && {
       [[ -n ${FAST_BLIST_PATTERNS[(k)${${(M)1:#/*}:-$PWD/$1}]} ]] || {
         [[ -d $1 ]] && REPLY="dirpath" || {
@@ -368,10 +366,12 @@ typeset -ga ZLAST_COMMANDS
   fi
 }
 
+
+
 # Main syntax highlighting function.
 -fast-highlight-process() {
   builtin emulate -L zsh ${=${options[xtrace]:#off}:+-o xtrace}
-  builtin setopt extended_glob warn_create_global bare_glob_qual no_nomatch typeset_silent
+  builtin setopt extended_glob bare_glob_qual no_nomatch typeset_silent
 
   [[ $CONTEXT == "select" ]] && return 0
 
@@ -421,7 +421,7 @@ typeset -ga ZLAST_COMMANDS
   # word delimiters (an improvised array); [[ $x == *:foo:* ]] and x=${x//:foo:/}
   # will DTRT regardless of how many elements or repetitions $x has..
   #
-  # Handling of redirections: upon seeing a redirection token, we must stall
+  # Handling of redirection: upon seeing a redirection token, we must stall
   # the current state --- that is, the value of $this_word --- for two iterations
   # (one for the redirection operator, one for the word following it representing
   # the redirection target).  Therefore, we set $in_redirection to 2 upon seeing a
@@ -603,215 +603,201 @@ typeset -ga ZLAST_COMMANDS
          ${${FAST_HIGHLIGHT[chroma-${__list[1]}]}%\%*} ${(M)FAST_HIGHLIGHT[chroma-${__list[1]}]%\%*} 1 "$__arg" $_start_pos $_end_pos 2>/dev/null && continue
        fi
      } || (( 1 ))
-   }
+  }
 
-   expanded_path=""
+  expanded_path=""
 
-   # The Great Fork: is this a command word?  Is this a non-command word?
-   if (( this_word & 16 )) && [[ $__arg == 'always' ]]; then
-     # try-always construct
-     __style=${FAST_THEME_NAME}reserved-word # de facto a reserved word, although not de jure
-     (( next_word = 1 | (this_word & BIT_case_code) ))
-   elif (( (this_word & 1) && (in_redirection == 0) )) || [[ $braces_stack = T* ]]; then # T - typedef, etc.
-     if (( __arg_type == 1 )); then
+  # The Great Fork: is this a command word?  Is this a non-command word?
+  if (( this_word & 16 )) && [[ $__arg == 'always' ]]; then
+    # try-always construct
+    __style=${FAST_THEME_NAME}reserved-word # de facto a reserved word, although not de jure
+    (( next_word = 1 | (this_word & BIT_case_code) ))
+  elif (( (this_word & 1) && (in_redirection == 0) )) || [[ $braces_stack = T* ]]; then # T - typedef, etc.
+    if (( __arg_type == 1 )); then
       __style=${FAST_THEME_NAME}precommand
       [[ $__arg = "command" || $__arg = "exec" ]] && (( next_word = next_word | 64 ))
-     elif [[ $__arg = (sudo|doas) ]]; then
+    elif [[ $__arg = (sudo|doas) ]]; then
       __style=${FAST_THEME_NAME}precommand
       (( next_word = (next_word & ~2) | 4 | 1 ))
-     else
-       _mybuf=${${(Q)__arg}#\"}
-       if (( ${+parameters} )) && \
+    else
+      _mybuf=${${(Q)__arg}#\"}
+      if (( ${+parameters} )) && \
           [[ $_mybuf = (#b)(*)(*)\$([a-zA-Z_][a-zA-Z0-9_]#|[0-9]##)(*) || \
-             $_mybuf = (#b)(*)(*)\$\{([a-zA-Z_][a-zA-Z0-9_:-]#|[0-9]##)(*) ]] && \
-         (( ${+parameters[${match[3]%%:-*}]} ))
-       then
-         -fast-highlight-main-type ${match[1]}${match[2]}${(P)match[3]%%:-*}${match[4]#\}}
-       elif [[ $braces_stack = T* ]]; then # T - typedef, etc.
-         REPLY=none
-       else
-         : ${expanded_path::=${~_mybuf}}
-         -fast-highlight-main-type $expanded_path
-       fi
+            $_mybuf = (#b)(*)(*)\$\{([a-zA-Z_][a-zA-Z0-9_:-]#|[0-9]##)(*) ]] && \
+              (( ${+parameters[${match[3]%%:-*}]} ))
+      then
+        -fast-highlight-main-type ${match[1]}${match[2]}${(P)match[3]%%:-*}${match[4]#\}}
+      elif [[ $braces_stack = T* ]]; then # T - typedef, etc.
+        REPLY=none
+      else
+        : ${expanded_path::=${~_mybuf}}
+        -fast-highlight-main-type $expanded_path
+      fi
 
       case $REPLY in
         reserved)       # reserved word
-                        [[ $__arg = "[[" ]] && __style=${FAST_THEME_NAME}double-sq-bracket || __style=${FAST_THEME_NAME}reserved-word
-                        if [[ $__arg == $'\x7b' ]]; then # Y - '{'
-                          braces_stack='Y'$braces_stack
+          [[ $__arg = "[[" ]] && __style=${FAST_THEME_NAME}double-sq-bracket || __style=${FAST_THEME_NAME}reserved-word
+          if [[ $__arg == $'\x7b' ]]; then # Y - '{'
+            braces_stack='Y'$braces_stack
 
-                        elif [[ $__arg == $'\x7d' && $braces_stack = Y* ]]; then # Y - '}'
-                          # We're at command word, so no need to check right_brace_is_recognised_everywhere
-                          braces_stack=${braces_stack#Y}
-                          __style=${FAST_THEME_NAME}reserved-word
-                          (( next_word = next_word | 16 ))
+          elif [[ $__arg == $'\x7d' && $braces_stack = Y* ]]; then # Y - '}'
+            # We're at command word, so no need to check right_brace_is_recognised_everywhere
+            braces_stack=${braces_stack#Y}
+            __style=${FAST_THEME_NAME}reserved-word
+            (( next_word = next_word | 16 ))
 
-                        elif [[ $__arg == "[[" ]]; then  # A - [[
-                          braces_stack='A'$braces_stack
+          elif [[ $__arg == "[[" ]]; then  # A - [[
+            braces_stack='A'$braces_stack
 
-                          # Counting complex brackets (for brackets-highlighter): 1. [[ as command
-                          _FAST_COMPLEX_BRACKETS+=( $(( _start_pos-__PBUFLEN )) $(( _start_pos-__PBUFLEN + 1 )) )
-                        elif [[ $__arg == "for" ]]; then
-                          (( next_word = next_word | 32 )) # BIT_for
+            # Counting complex brackets (for brackets-highlighter): 1. [[ as command
+            _FAST_COMPLEX_BRACKETS+=( $(( _start_pos-__PBUFLEN )) $(( _start_pos-__PBUFLEN + 1 )) )
+          elif [[ $__arg == "for" ]]; then
+            (( next_word = next_word | 32 )) # BIT_for
 
-                        elif [[ $__arg == "case" ]]; then
-                          (( next_word = BIT_case_preamble ))
+          elif [[ $__arg == "case" ]]; then
+            (( next_word = BIT_case_preamble ))
 
-                        elif [[ $__arg = (typeset|declare|local|float|integer|export|readonly) ]]; then
-                          braces_stack='T'$braces_stack
-                        fi
-                        ;;
+          elif [[ $__arg = (typeset|declare|local|float|integer|export|readonly) ]]; then
+            braces_stack='T'$braces_stack
+          fi
+        ;;
         'suffix alias') __style=${FAST_THEME_NAME}suffix-alias;;
         'global alias') __style=${FAST_THEME_NAME}global-alias;;
-
         alias)
-                          if [[ $__arg = ?*'='* ]]; then
-                            # The so called (by old code) "insane_alias"
-                            __style=${FAST_THEME_NAME}unknown-token
-                          else
-                            __style=${FAST_THEME_NAME}alias
-                            (( ${+aliases} )) && alias_target=${aliases[$__arg]} || alias_target="${"$(alias -- $__arg)"#*=}"
-                            [[ ${__FAST_HIGHLIGHT_TOKEN_TYPES[$alias_target]} = "1" && $__arg_type != "1" ]] && __FAST_HIGHLIGHT_TOKEN_TYPES[$__arg]="1"
-                          fi
-                        ;;
-
-        builtin)        [[ $__arg = "[" ]] && {
-                          __style=${FAST_THEME_NAME}single-sq-bracket
-                          _FAST_COMPLEX_BRACKETS+=( $(( _start_pos-__PBUFLEN )) )
-                        } || __style=${FAST_THEME_NAME}builtin
-                        # T - typeset, etc. mode
-                        [[ $__arg = (typeset|declare|local|float|integer|export|readonly) ]] && braces_stack='T'$braces_stack
-                        [[ $__arg = eval ]] && (( next_word = next_word | 256 ))
-                        ;;
-
+          if [[ $__arg = ?*'='* ]]; then
+            # The so called (by old code) "insane_alias"
+            __style=${FAST_THEME_NAME}unknown-token
+          else
+            __style=${FAST_THEME_NAME}alias
+            (( ${+aliases} )) && alias_target=${aliases[$__arg]} || alias_target="${"$(alias -- $__arg)"#*=}"
+            [[ ${__FAST_HIGHLIGHT_TOKEN_TYPES[$alias_target]} = "1" && $__arg_type != "1" ]] && __FAST_HIGHLIGHT_TOKEN_TYPES[$__arg]="1"
+          fi
+        ;;
+        builtin)
+          [[ $__arg = "[" ]] && {
+            __style=${FAST_THEME_NAME}single-sq-bracket
+            _FAST_COMPLEX_BRACKETS+=( $(( _start_pos-__PBUFLEN )) )
+          } || __style=${FAST_THEME_NAME}builtin
+          # T - typeset, etc. mode
+          [[ $__arg = (typeset|declare|local|float|integer|export|readonly) ]] && braces_stack='T'$braces_stack
+          [[ $__arg = eval ]] && (( next_word = next_word | 256 ))
+        ;;
         function)       __style=${FAST_THEME_NAME}function;;
-
         command)        __style=${FAST_THEME_NAME}command;;
-
         hashed)         __style=${FAST_THEME_NAME}hashed-command;;
-
         dirpath)        __style=${FAST_THEME_NAME}path-to-dir;;
-
         none)           # Assign?
-                        if [[ $__arg == [a-zA-Z_][a-zA-Z0-9_]#(|\[[^\]]#\])(|[^\]]#\])(|[+])=* || $__arg == [0-9]##(|[+])=* || ( $braces_stack = T* && ${__arg_type} != 3 ) ]] {
-                          __style=${FAST_THEME_NAME}assign
-                          FAST_ASSIGNS_SEEN[${__arg%%=*}]=1
+          if [[ $__arg == [a-zA-Z_][a-zA-Z0-9_]#(|\[[^\]]#\])(|[^\]]#\])(|[+])=* || $__arg == [0-9]##(|[+])=* || ( $braces_stack = T* && ${__arg_type} != 3 ) ]] {
+            __style=${FAST_THEME_NAME}assign
+            FAST_ASSIGNS_SEEN[${__arg%%=*}]=1
 
-                          # Handle array assignment
-                          [[ $__arg = (#b)*=(\()*(\))* || $__arg = (#b)*=(\()* ]] && {
-                              (( __start=_start_pos-__PBUFLEN+${mbegin[1]}-1, __end=__start+1, __start >= 0 )) && reply+=("$__start $__end ${FAST_HIGHLIGHT_STYLES[${FAST_THEME_NAME}assign-array-bracket]}")
-                              # Counting complex brackets (for brackets-highlighter): 2. ( in array assign
-                              _FAST_COMPLEX_BRACKETS+=( $__start )
-                              (( mbegin[2] >= 1 )) && {
-                                (( __start=_start_pos-__PBUFLEN+${mbegin[2]}-1, __end=__start+1, __start >= 0 )) && reply+=("$__start $__end ${FAST_HIGHLIGHT_STYLES[${FAST_THEME_NAME}assign-array-bracket]}")
-                                # Counting complex brackets (for brackets-highlighter): 3a. ) in array assign
-                                _FAST_COMPLEX_BRACKETS+=( $__start )
-                              } || in_array_assignment=1
-                          } || { [[ ${braces_stack[1]} != 'T' ]] && (( next_word = (next_word | 1) & ~2 )); }
+            # Handle array assignment
+            [[ $__arg = (#b)*=(\()*(\))* || $__arg = (#b)*=(\()* ]] && {
+              (( __start=_start_pos-__PBUFLEN+${mbegin[1]}-1, __end=__start+1, __start >= 0 )) && reply+=("$__start $__end ${FAST_HIGHLIGHT_STYLES[${FAST_THEME_NAME}assign-array-bracket]}")
+              # Counting complex brackets (for brackets-highlighter): 2. ( in array assign
+              _FAST_COMPLEX_BRACKETS+=( $__start )
+              (( mbegin[2] >= 1 )) && {
+                (( __start=_start_pos-__PBUFLEN+${mbegin[2]}-1, __end=__start+1, __start >= 0 )) && reply+=("$__start $__end ${FAST_HIGHLIGHT_STYLES[${FAST_THEME_NAME}assign-array-bracket]}")
+                # Counting complex brackets (for brackets-highlighter): 3a. ) in array assign
+                _FAST_COMPLEX_BRACKETS+=( $__start )
+              } || in_array_assignment=1
+            } || { [[ ${braces_stack[1]} != 'T' ]] && (( next_word = (next_word | 1) & ~2 )); }
 
-                          # Handle no-string highlight, string "/' highlight, math mode highlight
-                          local ctmp="\"" dtmp="'"
-                          itmp=${__arg[(i)$ctmp]}-1 iitmp=${__arg[(i)$dtmp]}-1
-                          integer jtmp=${__arg[(b:itmp+2:i)$ctmp]} jjtmp=${__arg[(b:iitmp+2:i)$dtmp]}
-                          (( itmp < iitmp && itmp <= __asize - 1 )) && (( jtmp > __asize && (jtmp = __asize), 1 > 0 )) && \
-                              (( __start=_start_pos-__PBUFLEN+itmp, __end=_start_pos-__PBUFLEN+jtmp, __start >= 0 )) && \
-                                  reply+=("$__start $__end ${FAST_HIGHLIGHT_STYLES[${FAST_THEME_NAME}double-quoted-argument]}") && \
-                                      { itmp=${__arg[(i)=]}; __arg=${__arg[itmp,__asize]}; (( _start_pos += itmp - 1 ));
-                                        -fast-highlight-string; (( _start_pos = _start_pos - itmp + 1, 1 > 0 )); } || \
-                          {
-                              (( iitmp <= __asize - 1 )) && (( jjtmp > __asize && (jjtmp = __asize), 1 > 0 )) && \
-                                  (( __start=_start_pos-__PBUFLEN+iitmp, __end=_start_pos-__PBUFLEN+jjtmp, __start >= 0 )) && \
-                                      reply+=("$__start $__end ${FAST_HIGHLIGHT_STYLES[${FAST_THEME_NAME}single-quoted-argument]}")
-                          } || \
-                            {
-                                itmp=${__arg[(i)=]}; __arg=${__arg[itmp,__asize]}; (( _start_pos += itmp - 1 ));
-                                [[ ${__arg[2,4]} = '$((' ]] && { -fast-highlight-math-string;
-                                   (( __start=_start_pos-__PBUFLEN+2, __end=__start+2, __start >= 0 )) && reply+=("$__start $__end ${FAST_HIGHLIGHT_STYLES[${FAST_THEME_NAME}double-paren]}")
-                                   # Counting complex brackets (for brackets-highlighter): 4. $(( in assign argument
-                                   _FAST_COMPLEX_BRACKETS+=( $__start $(( __start + 1 )) )
-                                   (( jtmp = ${__arg[(I)\)\)]}-1, jtmp > 0 )) && {
-                                     (( __start=_start_pos-__PBUFLEN+jtmp, __end=__start+2, __start >= 0 )) && reply+=("$__start $__end ${FAST_HIGHLIGHT_STYLES[${FAST_THEME_NAME}double-paren]}")
-                                     # Counting complex brackets (for brackets-highlighter): 5. )) in assign argument
-                                     _FAST_COMPLEX_BRACKETS+=( $__start $(( __start + 1 )) )
-                                   }
-                                } || -fast-highlight-string;
-                                (( _start_pos = _start_pos - itmp + 1, 1 > 0 ))
-                            }
+            # Handle no-string highlight, string "/' highlight, math mode highlight
+            local ctmp="\"" dtmp="'"
+            itmp=${__arg[(i)$ctmp]}-1 iitmp=${__arg[(i)$dtmp]}-1
+            integer jtmp=${__arg[(b:itmp+2:i)$ctmp]} jjtmp=${__arg[(b:iitmp+2:i)$dtmp]}
+            (( itmp < iitmp && itmp <= __asize - 1 )) && (( jtmp > __asize && (jtmp = __asize), 1 > 0 )) && \
+            (( __start=_start_pos-__PBUFLEN+itmp, __end=_start_pos-__PBUFLEN+jtmp, __start >= 0 )) && \
+            reply+=("$__start $__end ${FAST_HIGHLIGHT_STYLES[${FAST_THEME_NAME}double-quoted-argument]}") && \
+            { itmp=${__arg[(i)=]}; __arg=${__arg[itmp,__asize]}; (( _start_pos += itmp - 1 )); -fast-highlight-string; \
+            (( _start_pos = _start_pos - itmp + 1, 1 > 0 )); } || \
+            { (( iitmp <= __asize - 1 )) && (( jjtmp > __asize && (jjtmp = __asize), 1 > 0 )) && \
+            (( __start=_start_pos-__PBUFLEN+iitmp, __end=_start_pos-__PBUFLEN+jjtmp, __start >= 0 )) && \
+            reply+=("$__start $__end ${FAST_HIGHLIGHT_STYLES[${FAST_THEME_NAME}single-quoted-argument]}")
+            } || {
+              itmp=${__arg[(i)=]}; __arg=${__arg[itmp,__asize]}; (( _start_pos += itmp - 1 ));
+              [[ ${__arg[2,4]} = '$((' ]] && {
+                -fast-highlight-math-string; (( __start=_start_pos-__PBUFLEN+2, __end=__start+2, __start >= 0 )) && \
+                reply+=("$__start $__end ${FAST_HIGHLIGHT_STYLES[${FAST_THEME_NAME}double-paren]}")
+                # Counting complex brackets (for brackets-highlighter): 4. $(( in assign argument
+                _FAST_COMPLEX_BRACKETS+=( $__start $(( __start + 1 )) )
+                (( jtmp = ${__arg[(I)\)\)]}-1, jtmp > 0 )) && {
+                  (( __start=_start_pos-__PBUFLEN+jtmp, __end=__start+2, __start >= 0 )) && reply+=("$__start $__end ${FAST_HIGHLIGHT_STYLES[${FAST_THEME_NAME}double-paren]}")
+                  # Counting complex brackets (for brackets-highlighter): 5. )) in assign argument
+                  _FAST_COMPLEX_BRACKETS+=( $__start $(( __start + 1 )) )
+                }
+              } || -fast-highlight-string; (( _start_pos = _start_pos - itmp + 1, 1 > 0 ))
+            }
+          } elif [[ $__arg = ${histchars[1]}* && -n ${__arg[2]} ]] {
+            __style=${FAST_THEME_NAME}history-expansion
 
-                        } elif [[ $__arg = ${histchars[1]}* && -n ${__arg[2]} ]] {
-                          __style=${FAST_THEME_NAME}history-expansion
+          } elif [[ $__arg == ${histchars[2]}* ]] {
+            __style=${FAST_THEME_NAME}history-expansion
 
-                        } elif [[ $__arg == ${histchars[2]}* ]] {
-                          __style=${FAST_THEME_NAME}history-expansion
+          } elif (( __arg_type == 3 )) {
+            # This highlights empty commands (semicolon follows nothing) as an error.
+            # Zsh accepts them, though.
+            (( this_word & 3 )) && __style=${FAST_THEME_NAME}commandseparator
 
-                        } elif (( __arg_type == 3 )) {
-                          # This highlights empty commands (semicolon follows nothing) as an error.
-                          # Zsh accepts them, though.
-                          (( this_word & 3 )) && __style=${FAST_THEME_NAME}commandseparator
+          } elif [[ $__arg[1,2] == '((' ]] {
+            # Arithmetic evaluation.
+            #
+            # Note: prior to zsh-5.1.1-52-g4bed2cf (workers/36669), the ${(z)...}
+            # splitter would only output the '((' token if the matching '))' had
+            # been typed.  Therefore, under those versions of zsh, BUFFER="(( 42"
+            # would be highlighted as an error until the matching "))" are typed.
+            #
+            # We highlight just the opening parentheses, as a reserved word; this
+            # is how [[ ... ]] is highlighted, too.
 
-                        } elif [[ $__arg[1,2] == '((' ]] {
-                          # Arithmetic evaluation.
-                          #
-                          # Note: prior to zsh-5.1.1-52-g4bed2cf (workers/36669), the ${(z)...}
-                          # splitter would only output the '((' token if the matching '))' had
-                          # been typed.  Therefore, under those versions of zsh, BUFFER="(( 42"
-                          # would be highlighted as an error until the matching "))" are typed.
-                          #
-                          # We highlight just the opening parentheses, as a reserved word; this
-                          # is how [[ ... ]] is highlighted, too.
+            # ADD
+            (( __start=_start_pos-__PBUFLEN, __end=__start+2, __start >= 0 )) && \
+            reply+=("$__start $__end ${FAST_HIGHLIGHT_STYLES[${FAST_THEME_NAME}double-paren]}")
+            already_added=1
 
-                          # ADD
-                          (( __start=_start_pos-__PBUFLEN, __end=__start+2, __start >= 0 )) && reply+=("$__start $__end ${FAST_HIGHLIGHT_STYLES[${FAST_THEME_NAME}double-paren]}")
-                          already_added=1
+            # Counting complex brackets (for brackets-highlighter): 6. (( as command
+            _FAST_COMPLEX_BRACKETS+=( $__start $(( __start + 1 )) )
+            -fast-highlight-math-string
 
-                          # Counting complex brackets (for brackets-highlighter): 6. (( as command
-                          _FAST_COMPLEX_BRACKETS+=( $__start $(( __start + 1 )) )
-
-                          -fast-highlight-math-string
-
-                          # ADD
-                          [[ $__arg[-2,-1] == '))' ]] && {
-                            (( __start=_end_pos-__PBUFLEN-2, __end=__start+2, __start >= 0 )) && reply+=("$__start $__end ${FAST_HIGHLIGHT_STYLES[${FAST_THEME_NAME}double-paren]}")
-                            (( __delimited = __delimited ? 2 : __delimited ))
-
-                            # Counting complex brackets (for brackets-highlighter): 7. )) for as-command ((
-                            _FAST_COMPLEX_BRACKETS+=( $__start $(( __start + 1 )) )
-                          }
-
-                        } elif [[ $__arg == '()' ]] {
-                          _FAST_COMPLEX_BRACKETS+=( $(( _start_pos-__PBUFLEN )) $(( _start_pos-__PBUFLEN + 1 )) )
-                          # anonymous function
-                          __style=${FAST_THEME_NAME}reserved-word
-                        } elif [[ $__arg == $'\x28' ]] {
-                          # subshell '(', stack: letter 'R'
-                          __style=${FAST_THEME_NAME}reserved-word
-                          braces_stack='R'$braces_stack
-
-                        } elif [[ $__arg == $'\x29' ]] {
-                          # ')', stack: letter 'R' for subshell
-                          [[ $braces_stack = R* ]] && { braces_stack=${braces_stack#R}; __style=${FAST_THEME_NAME}reserved-word; }
-
-                        } elif (( this_word & 14 )) {
-                          __style=${FAST_THEME_NAME}default
-
-                        } elif [[ $__arg = (';;'|';&'|';|') ]] && (( this_word & BIT_case_code )) {
-                          (( next_word = (next_word | BIT_case_item) & ~(BIT_case_code+3) ))
-                          __style=${FAST_THEME_NAME}default
-
-                        } elif [[ $__arg = \$\([^\(]* ]] {
-                          already_added=1
-                        }
-                        ;;
+            # ADD
+            [[ $__arg[-2,-1] == '))' ]] && {
+              (( __start=_end_pos-__PBUFLEN-2, __end=__start+2, __start >= 0 )) && \
+              reply+=("$__start $__end ${FAST_HIGHLIGHT_STYLES[${FAST_THEME_NAME}double-paren]}")
+              (( __delimited = __delimited ? 2 : __delimited ))
+              # Counting complex brackets (for brackets-highlighter): 7. )) for as-command ((
+              _FAST_COMPLEX_BRACKETS+=( $__start $(( __start + 1 )) )
+            }
+          } elif [[ $__arg == '()' ]] {
+            _FAST_COMPLEX_BRACKETS+=( $(( _start_pos-__PBUFLEN )) $(( _start_pos-__PBUFLEN + 1 )) )
+            # anonymous function
+            __style=${FAST_THEME_NAME}reserved-word
+          } elif [[ $__arg == $'\x28' ]] {
+            # subshell '(', stack: letter 'R'
+            __style=${FAST_THEME_NAME}reserved-word
+            braces_stack='R'$braces_stack
+          } elif [[ $__arg == $'\x29' ]] {
+            # ')', stack: letter 'R' for subshell
+            [[ $braces_stack = R* ]] && { braces_stack=${braces_stack#R}; __style=${FAST_THEME_NAME}reserved-word; }
+          } elif (( this_word & 14 )) {
+            __style=${FAST_THEME_NAME}default
+          } elif [[ $__arg = (';;'|';&'|';|') ]] && (( this_word & BIT_case_code )) {
+            (( next_word = (next_word | BIT_case_item) & ~(BIT_case_code+3) ))
+              __style=${FAST_THEME_NAME}default
+          } elif [[ $__arg = \$\([^\(]* ]] {
+            already_added=1
+          }
+        ;;
         *)
-                        # ADD
-                        # (( __start=_start_pos-__PBUFLEN, __end=_end_pos-__PBUFLEN, __start >= 0 )) && reply+=("$__start $__end commandtypefromthefuture-$REPLY")
-                        already_added=1
-                        ;;
+          # ADD
+          # (( __start=_start_pos-__PBUFLEN, __end=_end_pos-__PBUFLEN, __start >= 0 )) && reply+=("$__start $__end commandtypefromthefuture-$REPLY")
+          already_added=1
+        ;;
       esac
-     fi
-   # in_redirection || BIT_regular || BIT_sudo_opt || BIT_sudo_arg
-   elif (( in_redirection + this_word & 14 ))
-   then # $__arg is a non-command word
+    fi
+  # in_redirection || BIT_regular || BIT_sudo_opt || BIT_sudo_arg
+  elif (( in_redirection + this_word & 14 ))
+  then # $__arg is a non-command word
       case $__arg in
         ']]')
                  # A - [[
@@ -1065,7 +1051,7 @@ typeset -ga ZLAST_COMMANDS
                    __style=${FAST_THEME_NAME}commandseparator
                  elif (( in_redirection == 2 )); then
                    __style=${FAST_THEME_NAME}redirection
-                 elif (( ${+galiases[(e)$__arg]} )); then
+                 elif (( ${+galiases[(e)${(Q)__arg}]} )); then
                    __style=${FAST_THEME_NAME}global-alias
                  else
                    if [[ ${FAST_HIGHLIGHT[no_check_paths]} != 1 ]]; then
@@ -1331,7 +1317,7 @@ zle -N -- fast-highlight-check-path-handler -fast-highlight-check-path-handler
 # - E matches \*
 #
 # and the first condition -n ${match[7] uses D to continue searching when
-# backslash-something (not ['"$]) is occured.
+# backslash-something (not ['"$]) is occurred.
 #
 # $1 - additional style to glue-in to added style
 -fast-highlight-string() {
@@ -1427,7 +1413,7 @@ zle -N -- fast-highlight-check-path-handler -fast-highlight-check-path-handler
                   || "$AA" == (#m)(#s)[0-7](#c1,3)
                   || "$AA" == (#m)(#s)u[0-9a-fA-F](#c1,4)
                   || "$AA" == (#m)(#s)U[0-9a-fA-F](#c1,8)
-               ]]; then
+              ]]; then
               (( k += MEND ))
               (( i += MEND ))
             else
@@ -1454,7 +1440,7 @@ zle -N -- fast-highlight-check-path-handler -fast-highlight-check-path-handler
 
 typeset -ga FSH_LIST
 -fsh_sy_h_shappend() {
-    FSH_LIST+=( "$(( $1 - 1 ));;$(( $2 ))" )
+  FSH_LIST+=( "$(( $1 - 1 ));;$(( $2 ))" )
 }
 
 functions -M fsh_sy_h_append 2 2 -fsh_sy_h_shappend 2>/dev/null

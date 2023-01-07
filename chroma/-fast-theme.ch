@@ -19,11 +19,11 @@ else
 fi
 
 if [[ "$__wrd" = */* || "$__wrd" = (CONFIG|CACHE|LOCAL|HOME|OPT):* ]]; then
-  __wrd="${${__wrd/(#s)CONFIG:/${${XDG_CONFIG_HOME:-$HOME/.config}%/}/fsh/}%.ini}.ini"
-  __wrd="${${__wrd/(#s)CACHE:/${${XDG_CACHE_HOME:-$HOME/.cache}%/}/zi/fsh/}%.ini}.ini"
-  __wrd="${${__wrd/(#s)LOCAL://usr/local/share/fsh/}%.ini}.ini"
-  __wrd="${${__wrd/(#s)HOME:/$HOME/.fsh/}%.ini}.ini"
-  __wrd="${${__wrd/(#s)OPT://opt/local/share/fsh/}%.ini}.ini"
+  __wrd="${${__wrd/(#s)CONFIG:/${${XDG_CONFIG_HOME:-$HOME/.config}%/}/f-sy-h/}%.ini}.ini"
+  __wrd="${${__wrd/(#s)CACHE:/${${XDG_CACHE_HOME:-$HOME/.cache}%/}/f-sy-h/}%.ini}.ini"
+  __wrd="${${__wrd/(#s)LOCAL://usr/local/share/f-sy-h/}%.ini}.ini"
+  __wrd="${${__wrd/(#s)HOME:/$HOME/.f-sy-h/}%.ini}.ini"
+  __wrd="${${__wrd/(#s)OPT://opt/local/share/f-sy-h/}%.ini}.ini"
   __wrd=${~__wrd} # allow user to quote ~
 else
   __wrd="$FAST_BASE_DIR/themes/$__wrd.ini"

@@ -5,11 +5,11 @@
 # elem2 ... ) construct to provide *the* *future* contents of $fpath to
 # -autoload.ch, so that it can detect functions in those provided directories
 # `elem1', `elem2', etc. and highlight the functions with `correct-subtle'
-# instead of `incorrect-subtle'. Basically all thit is for command-lines like:
+# instead of `incorrect-subtle'. Basically all this is for command-lines like:
 #
 # % fpath+=( `pwd` ); autoload my-fun-from-PWD
 
-# Keep chroma-takever state meaning: until ; or similar (see $__arg_type below)
+# Keep chroma-takeover state meaning: until ; or similar (see $__arg_type below)
 # The 8192 sum takes care that the next token will be routed to this chroma
 (( next_word = 2 | 8192 ))
 

@@ -30,7 +30,7 @@
 # OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 # -------------------------------------------------------------------------------------------------
 
-→chroma/-subversion.ch/parse-revision() {
+chroma/-subversion.ch/parse-revision() {
     setopt local_options extendedglob warn_create_global typeset_silent
     local __wrd="$1" __start_pos="$2" __end_pos="$3" __style __start __end
     case $__wrd in
@@ -42,7 +42,7 @@
     (( __start=__start_pos-${#PREBUFFER}, __end=__end_pos-${#PREBUFFER}, __start >= 0 )) && reply+=("$__start $__end ${FAST_HIGHLIGHT_STYLES[$__style]}")
 }
 
-→chroma/-subversion.ch/parse-target() {
+chroma/-subversion.ch/parse-target() {
     setopt local_options extendedglob warn_create_global typeset_silent
     local __wrd="$1" __start_pos="$2" __end_pos="$3" __style __start __end
     if [[ $__wrd == *@[^/]# ]]
@@ -57,7 +57,7 @@
         fi
         (( __start=__start_pos-${#PREBUFFER}+$#place, __end=__end_pos-${#PREBUFFER}-$#rev, __start >= 0 )) \
             && reply+=("$__start $__end ${FAST_HIGHLIGHT_STYLES[${FAST_THEME_NAME}for-loop-separator]}")
-        →chroma/-subversion.ch/parse-revision $rev $((__start_pos+$#place+1)) $__end_pos
+        chroma/-subversion.ch/parse-revision $rev $((__start_pos+$#place+1)) $__end_pos
     else
         return 1
     fi
@@ -181,21 +181,21 @@ integer __idx1 __idx2
                     || __style=${FAST_THEME_NAME}incorrect-subtle
                 ;;
             revision)
-                →chroma/-subversion.ch/parse-revision $__wrd $__start_pos $__end_pos
+                chroma/-subversion.ch/parse-revision $__wrd $__start_pos $__end_pos
                 ;;
             revision-pair)
                 local -a match mbegin mend
                 if [[ $__wrd = (#b)(\{[^}]##\}|[^:]##)(:)(*) ]]; then
-                    →chroma/-subversion.ch/parse-revision $match[1] $__start_pos $(( __end_pos - ( mend[3]-mend[2] ) - 1 ))
-                    →chroma/-subversion.ch/parse-revision $match[3] $(( __start_pos + ( mbegin[3]-mbegin[1] ) )) $__end_pos
+                    chroma/-subversion.ch/parse-revision $match[1] $__start_pos $(( __end_pos - ( mend[3]-mend[2] ) - 1 ))
+                    chroma/-subversion.ch/parse-revision $match[3] $(( __start_pos + ( mbegin[3]-mbegin[1] ) )) $__end_pos
                     (( __start=__start_pos-${#PREBUFFER}+(mbegin[2]-mbegin[1]), __end=__end_pos-${#PREBUFFER}-(mend[3]-mend[2]), __start >= 0 )) \
                         && reply+=("$__start $__end ${FAST_HIGHLIGHT_STYLES[${FAST_THEME_NAME}for-loop-separator]}")
                 else
-                    →chroma/-subversion.ch/parse-revision $__wrd $__start_pos $__end_pos
+                    chroma/-subversion.ch/parse-revision $__wrd $__start_pos $__end_pos
                 fi
                 ;;
             target)
-                →chroma/-subversion.ch/parse-target $__wrd $__start_pos $__end_pos || return $?
+                chroma/-subversion.ch/parse-target $__wrd $__start_pos $__end_pos || return $?
                 ;;
             cmd)
                 this_word=1
@@ -220,7 +220,7 @@ integer __idx1 __idx2
         (( FAST_HIGHLIGHT[subversion-subcommand-arguments]+=1 ))
         if [[ ( $FAST_HIGHLIGHT[subversion-subcommand] == (checkout|co|export|log|merge|switch|sw) && $FAST_HIGHLIGHT[subversion-subcommand-arguments] -eq 1 ) \
                   || $FAST_HIGHLIGHT[subversion-subcommand] == (blame|praise|annotate|ann|cat|copy|cp|diff|info|list|ls|mergeinfo) ]]; then
-            →chroma/-subversion.ch/parse-target $__wrd $__start_pos $__end_pos || return $?
+            chroma/-subversion.ch/parse-target $__wrd $__start_pos $__end_pos || return $?
         else
             return 1
         fi
@@ -239,7 +239,7 @@ integer __idx1 __idx2
 [[ -n "$__style" ]] && (( __start=__start_pos-${#PREBUFFER}, __end=__end_pos-${#PREBUFFER}, __start >= 0 )) && reply+=("$__start $__end ${FAST_HIGHLIGHT_STYLES[$__style]}")
 
 # We aren't passing-through, do obligatory things ourselves.
-# _start_pos=$_end_pos advainces pointers in command line buffer.
+# _start_pos=$_end_pos advances pointers in command line buffer.
 #
 # To pass through means to `return 1'. The highlighting of
 # this single token is then done by fast-syntax-highlighting's

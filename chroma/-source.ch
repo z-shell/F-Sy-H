@@ -52,7 +52,7 @@ integer __idx1 __idx2
         __style=${FAST_THEME_NAME}correct-subtle || __style=${FAST_THEME_NAME}incorrect-subtle
       }
     elif (( FAST_HIGHLIGHT[chroma-src-counter] == 2 )); then
-      # Handle paths, etc. normally - just pass-through to the big highlighter (the main FSH highlighter, used before chromas).
+      # Handle paths, etc. normally - just pass-through to the big highlighter (the main f-sy-h highlighter, used before chromas).
       return 1
     fi
   fi
@@ -65,7 +65,7 @@ integer __idx1 __idx2
 # to disable this code.
 [[ -n "$__style" ]] && (( __start=__start_pos-${#PREBUFFER}, __end=__end_pos-${#PREBUFFER}, __start >= 0 )) && reply+=("$__start $__end ${FAST_HIGHLIGHT_STYLES[$__style]}")
 
-# We aren't passing-through (no return 1 occured), do obligatory things ourselves.
+# We aren't passing-through (no return 1 occurred), do obligatory things ourselves.
 (( this_word = next_word ))
 _start_pos=$_end_pos
 

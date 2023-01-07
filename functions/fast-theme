@@ -14,7 +14,7 @@ zmodload zsh/zutil 2>/dev/null
 # https://wiki.zshell.dev/community/zsh_plugin_standard/#standard-recommended-options
 
 builtin emulate -L zsh ${=${options[xtrace]:#off}:+-o xtrace}
-builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc_quotes no_auto_pushd
+builtin setopt extended_glob typeset_silent no_short_loops rc_quotes no_auto_pushd
 autoload colors; colors
 
 typeset -g FAST_WORK_DIR
@@ -22,11 +22,11 @@ typeset -g FAST_WORK_DIR
 FAST_WORK_DIR=${~FAST_WORK_DIR}
 
 local -A map
-map=( "CONFIG:" "${XDG_CONFIG_HOME:-$HOME/.config}/fsh/"
-      "CACHE:"  "${XDG_CACHE_HOME:-$HOME/.cache}/zi/fsh/"
-      "LOCAL:"  "/usr/local/share/fsh/"
-      "HOME:" "$HOME/.fsh/"
-      "OPT:"  "/opt/local/share/fsh/"
+map=( "CONFIG:" "${XDG_CONFIG_HOME:-$HOME/.config}/f-sy-h/"
+      "CACHE:"  "${XDG_CACHE_HOME:-$HOME/.cache}/f-sy-h/"
+      "LOCAL:"  "/usr/local/share/f-sy-h/"
+      "HOME:" "$HOME/.f-sy-h/"
+      "OPT:"  "/opt/local/share/f-sy-h/"
 )
 
 FAST_WORK_DIR=${${FAST_WORK_DIR/(#m)(#s)(CONFIG|CACHE|LOCAL|HOME|OPT):(#c0,1)/${map[${MATCH%:}:]}}%/}
@@ -64,17 +64,17 @@ fi
 if [[ -n "$OPT_INFO" ]]; then
   print -r -- "The default ${fg[green]}fast-theme$reset_color command can be used to switch current and future sessions to a new different theme."
   print -r -- ""
-  print -r -- "The theme path can use one of the shorthands below to point ~/.config/fsh/<theme>.ini."
+  print -r -- "The theme path can use one of the shorthands below to point ~/.config/f-sy-h/<theme>.ini."
   print -r -- "If the INI file pointed in the path is \"*overlay*\", then it is not a full theme,"
   print -r -- "but an additional theme-snippet that overwrites only selected styles of the main theme."
   print -r -- ""
   print -r -- "${fg[yellow]}Shorthands$reset_color:"
   print -r -- ""
-  print -r -- "CONFIG: = ${XDG_CONFIG_HOME:-$HOME/.config}/fsh/"
-  print -r -- "CACHE: = ${XDG_CACHE_HOME:-$HOME/.cache}/zi/fsh/"
-  print -r -- "LOCAL: = /usr/local/share/fsh/"
-  print -r -- "HOME: = $HOME/.fsh/"
-  print -r -- "OPT: = /opt/local/share/fsh/"
+  print -r -- "CONFIG: = ${XDG_CONFIG_HOME:-$HOME/.config}/f-sy-h/"
+  print -r -- "CACHE: = ${XDG_CACHE_HOME:-$HOME/.cache}/f-sy-h/"
+  print -r -- "LOCAL: = /usr/local/share/f-sy-h/"
+  print -r -- "HOME: = $HOME/.f-sy-h/"
+  print -r -- "OPT: = /opt/local/share/f-sy-h/"
   print -r -- ""
   print -r -- "${fg[yellow]}Example$reset_color:"
   print -r -- ""
@@ -99,13 +99,13 @@ fi
 
 if [[ -n "$OPT_SHOW" ]]; then
   print -r -- "Currently active theme: ${fg_bold[green]}$FAST_THEME_NAME$reset_color"
-  ( source "$FAST_WORK_DIR"/current_theme.zsh 2>/dev/null && print "Main theme (loaded at startup of a session): ${fg_bold[yellow]}$FAST_THEME_NAME$reset_color" || print "No main theme is set"; )
+  ( source "$FAST_WORK_DIR"/current_theme.zsh 2>/dev/null && print -r -- "Main theme (session startup): ${fg_bold[green]}$FAST_THEME_NAME$reset_color" || print "No main theme is set"; )
   return 0
 fi
 
 if [[ -n "$OPT_COPY" ]]; then
-  [[ ! -f "$FAST_BASE_DIR"/themes/"${OPT_COPY%.ini}.ini" ]] && { print "Theme \`$OPT_COPY' doesn't exist in FSH plugin dir ($FAST_BASE_DIR/themes)"; return 1; }
-  [[ ! -r "$FAST_BASE_DIR"/themes/"${OPT_COPY%.ini}.ini" ]] && { print "Theme \`$OPT_COPY' isn't readable in FSH plugin dir ($FAST_BASE_DIR/themes)"; return 1; }
+  [[ ! -f "$FAST_BASE_DIR"/themes/"${OPT_COPY%.ini}.ini" ]] && { print -r -- "Theme ${fg_bold[green]}\`$OPT_COPY'$reset_color doesn't exist in F-Sy-H plugin dir ($FAST_BASE_DIR/themes)"; return 1; }
+  [[ ! -r "$FAST_BASE_DIR"/themes/"${OPT_COPY%.ini}.ini" ]] && { print -r -- "Theme ${fg_bold[green]}\`$OPT_COPY'$reset_color isn't readable in F-Sy-H plugin dir ($FAST_BASE_DIR/themes)"; return 1; }
   [[ -n "$1" ]] && {
     [[ ! -e "$1" && ! -e ${1:h} ]] && { print "Destination path doesn't exist, aborting"; return 1; }
   }
@@ -128,22 +128,23 @@ fi
 
 if [[ -n "$OPT_HELP" ]]; then
   print -r -- "${fg_bold[yellow]}Usage$reset_color:"
+  print -r -- "   ${fg[green]}fast-theme$reset_color [-h/--help] [-v/--verbose] [-q/--quiet] [-t/--test] <theme-name|theme-path>"
+  print -r -- "   ${fg[green]}fast-theme$reset_color [-r/--reset] [-l/--list] [-s/--show] [-p/--palette] [-w/--workdir]"
+  print -r -- "   ${fg[green]}fast-theme$reset_color --copy-shipped-theme {theme-name} [destination-path]"
   print -r -- ""
-  print -r -- "     ${fg[green]}fast-theme$reset_color [-h/--help] [-v/--verbose] [-q/--quiet] [-t/--test] <theme-name|theme-path>"
-  print -r -- "     ${fg[green]}fast-theme$reset_color [-r/--reset] [-l/--list] [-s/--show] [-p/--palette] [-w/--workdir]"
-  print -r -- "     ${fg[green]}fast-theme$reset_color --copy-shipped-theme {theme-name} [destination-path]"
+  print -r -- "${fg_bold[yellow]}Flags$reset_color:"
+  print -r -- "   ${fg[cyan]}-R, --ov-reset$reset_color  - unset overlay, use styles only from main-theme (requires restart)"
+  print -r -- "   ${fg[cyan]}-p, --palette$reset_color   - just print all 256 colors and exit (useful when creating a theme)"
+  print -r -- "   ${fg[cyan]}-r, --reset$reset_color     - unset any theme, use default highlighting (requires restart)"
+  print -r -- "   ${fg[cyan]}-t, --test$reset_color      - show test block of code after switching theme"
+  print -r -- "   ${fg[cyan]}-s, --show$reset_color      - get and display the theme currently being set"
+  print -r -- "   ${fg[cyan]}-w, --workdir$reset_color   - cd into $FAST_WORK_DIR (\$FAST_WORK_DIR)"
+  print -r -- "   ${fg[cyan]}-l, --list$reset_color      - list names of available themes"
+  print -r -- "   ${fg[cyan]}-v, --verbose$reset_color   - more messages during operation"
+  print -r -- "   ${fg[cyan]}-i, --info$reset_color      - additional usage information"
+  print -r -- "   ${fg[cyan]}-q, --quiet$reset_color     - no default messages"
+  print -r -- "   ${fg[cyan]}-h, --help$reset_color      - this help message"
   print -r -- ""
-  print -r -- "${fg[cyan]}-w/--workdir$reset_color   - cd into \$FAST_WORK_DIR (if not set, then into the plugin directory)"
-  print -r -- "${fg[cyan]}-R/--ov-reset$reset_color  - unset overlay, use styles only from main-theme (requires restart)"
-  print -r -- "${fg[cyan]}-p/--palette$reset_color   - just print all 256 colors and exit (useful when creating a theme)"
-  print -r -- "${fg[cyan]}-r/--reset$reset_color     - unset any theme, use default highlighting (requires restart)"
-  print -r -- "${fg[cyan]}-t/--test$reset_color      - show test block of code after switching theme"
-  print -r -- "${fg[cyan]}-s/--show$reset_color      - get and display the theme currently being set"
-  print -r -- "${fg[cyan]}-l/--list$reset_color      - list names of available themes"
-  print -r -- "${fg[cyan]}-v/--verbose$reset_color   - more messages during operation"
-  print -r -- "${fg[cyan]}-i/--info$reset_color      - additional usage information"
-  print -r -- "${fg[cyan]}-q/--quiet$reset_color     - no default messages"
-  print -r -- "${fg[cyan]}-h/--help$reset_color      - this help message"
   return 0
 fi
 
@@ -243,11 +244,11 @@ color=( red green blue yellow cyan magenta black white default )
 local -A out
 local THEME_NAME THEME_PATH="$1"
 if [[ "$1" = */* || "$1" = (CONFIG|CACHE|LOCAL|HOME|OPT):* ]]; then
-  1="${${1/(#s)CONFIG:/${${XDG_CONFIG_HOME:-$HOME/.config}%/}/fsh/}%.ini}.ini"
-  1="${${1/(#s)CACHE:/${${XDG_CACHE_HOME:-$HOME/.cache}%/}/zi/fsh/}%.ini}.ini"
-  1="${${1/(#s)LOCAL://usr/local/share/fsh/}%.ini}.ini"
-  1="${${1/(#s)HOME:/$HOME/.fsh/}%.ini}.ini"
-  1="${${1/(#s)OPT://opt/local/share/fsh/}%.ini}.ini"
+  1="${${1/(#s)CONFIG:/${${XDG_CONFIG_HOME:-$HOME/.config}%/}/f-sy-h/}%.ini}.ini"
+  1="${${1/(#s)CACHE:/${${XDG_CACHE_HOME:-$HOME/.cache}%/}/f-sy-h/}%.ini}.ini"
+  1="${${1/(#s)LOCAL://usr/local/share/f-sy-h/}%.ini}.ini"
+  1="${${1/(#s)HOME:/$HOME/.f-sy-h/}%.ini}.ini"
+  1="${${1/(#s)OPT://opt/local/share/f-sy-h/}%.ini}.ini"
   1=${~1} # allow user to quote ~
 
   [[ ! -f "$1" ]] && { print -u2 "${fg[yellow]}No such theme$reset_color \`$1'${fg[yellow]}, aborting$reset_color"; return 1; }
@@ -370,35 +371,35 @@ fi
 
 if [[ -n "$OPT_TEST" ]]; then
   print -zr '
-  # Subshell, assignments, math-mode
-  echo $(cat /etc/hosts |& grep -i "hello337")
-  local param1="text ${+variable[test]} text ${var} text"; typeset param2='"'"'other $variable'"'"'
-  math=$(( 10 + HISTSIZ + HISTSIZE + $SAVEHIST )) size=$(( 0 ))
+    # Sub-shell, assignments, math-mode
+    echo $(cat /etc/hosts |& grep -i "hello337")
+    local param1="text ${+variable[test]} text ${var} text"; typeset param2='"'"'other $variable'"'"'
+    math=$(( 10 + HISTSIZ + HISTSIZE + $SAVEHIST )) size=$(( 0 ))
 
-  # Programming-like usage, bracket matching - through distinct colors; note the backslash quoting
-  for (( ii = 1; ii <= size; ++ ii )); do
-    if [[ "${cmds[ii]} string" = "| string" ]]
-    then
-      sidx=${buffer[(in:ii:)\$\(?#[^\\\\]\)]} # find opening cmd-subst
-      (( sidx <= len + 100 )) && {
-        eidx=${buffer[(b:sidx:ii)[^\\\\]\)]} # find closing cmd-subst
-      }
-    fi
-  done
+    # Programming-like usage, bracket matching - through distinct colors; note the backslash quoting
+    for (( ii = 1; ii <= size; ++ ii )); do
+      if [[ "${cmds[ii]} string" = "| string" ]]
+      then
+        sidx=${buffer[(in:ii:)\$\(?#[^\\\\]\)]} # find opening cmd-subst
+        (( sidx <= len + 100 )) && {
+          eidx=${buffer[(b:sidx:ii)[^\\\\]\)]} # find closing cmd-subst
+        }
+      fi
+    done
 
-  # Regular command-line usage
-  repeat 0 {
-    zsh -i -c "cat /etc/shells* | grep -x --line-buffered -i '"'/bin/zsh'"'"
-    builtin exit $return_value
-    fast-theme -tq default
-    fsh-alias -tq default-X # alias '"'"'fsh-alias=fast-theme'"'"' works just like the previous line
-    command -v git | grep ".+git" && echo $'"'"'Git is installed'"'"'
-    git checkout -m --ours /etc/shells && git status-X
-    gem install asciidoctor
-    cat <<<$PATH | tr : \\n > /dev/null 2>/usr/local
-    man -a fopen fopen-X
-    CFLAGS="-g -Wall -O0" ./configure
-  }
+    # Regular command-line usage
+    repeat 0 {
+      zsh -i -c "cat /etc/shells* | grep -x --line-buffered -i '"'/bin/zsh'"'"
+      builtin exit $return_value
+      fast-theme -tq default
+      f-sy-h -tq default-X # alias '"'"'f-sy-h=fast-theme'"'"' works just like the previous line
+      command -v git | grep ".+git" && echo $'"'"'Git is installed'"'"'
+      git checkout -m --ours /etc/shells && git status-X
+      gem install asciidoctor
+      cat <<<$PATH | tr : \\n > /dev/null 2>/usr/local
+      man -a fopen fopen-X
+      CFLAGS="-g -Wall -O0" ./configure
+    }
   '
 fi
 

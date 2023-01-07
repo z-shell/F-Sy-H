@@ -2,7 +2,7 @@
 #
 # Example chroma function. It colorizes first two arguments as `builtin' style,
 # third and following arguments as `globbing' style. First two arguments may
-# be "strings", they will be passed through to normal higlighter (by returning 1).
+# be "strings", they will be passed through to normal highlighter (by returning 1).
 #
 # $1 - 0 or 1, denoting if it's first call to the chroma, or following one
 #
@@ -16,10 +16,10 @@
 # $4 - a private copy of $_end_pos from the above scope
 #
 #
-# Overall functioning is: when command "example" is occured, this function
+# Overall functioning is: when command "example" is occurred, this function
 # is called with $1 == 1, it ("example") is the first token ($2), then for any
 # following token, this function is called with $1 == 0, until end of command
-# is occured (i.e. till enter is pressed or ";" is put into source, or the
+# is occurred (i.e. till enter is pressed or ";" is put into source, or the
 # command line simply ends).
 #
 # Other tips are:
@@ -38,7 +38,7 @@
 # Remember to reset the hash and others at __first_call == 1, so that you have
 # a fresh state for new command.
 
-# Keep chroma-takever state meaning: until ;, handle highlighting via chroma.
+# Keep chroma-takeover state meaning: until ;, handle highlighting via chroma.
 # So the below 8192 assignment takes care that next token will be routed to chroma.
 (( next_word = 2 | 8192 ))
 
@@ -83,7 +83,7 @@ integer __idx1 __idx2
         # Colorize 1..2 as builtin, 3.. as glob
         if (( FAST_HIGHLIGHT[chroma-example-counter] <= 2 )); then
             if [[ "$__wrd" = \"* ]]; then
-                # Pass through, fsh main code will do the highlight!
+                # Pass through, f-sy-h main code will do the highlight!
                 return 1
             else
                 __style=${FAST_THEME_NAME}builtin

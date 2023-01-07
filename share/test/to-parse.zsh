@@ -245,7 +245,7 @@ typeset -gA HSMW_HIGHLIGHT_STYLES
   # word delimiters (an improvised array); [[ $x == *:foo:* ]] and x=${x//:foo:/}
   # will DTRT regardless of how many elements or repetitions $x has..
   #
-  # Handling of redirections: upon seeing a redirection token, we must stall
+  # Handling of redirection: upon seeing a redirection token, we must stall
   # the current state --- that is, the value of $this_word --- for two iterations
   # (one for the redirection operator, one for the word following it representing
   # the redirection target).  Therefore, we set $in_redirection to 2 upon seeing a

@@ -41,11 +41,11 @@ src="https://raw.githubusercontent.com/z-shell/.github/main/metrics/plugin/metri
 
   <p>Clone the Repository.</p>
 
-<pre><code class="lang-zsh">git clone https://github.<span class="hljs-keyword">com</span>/<span class="hljs-keyword">z</span>-<span class="hljs-keyword">shell</span>/F-Sy-H ~/path/<span class="hljs-keyword">to</span>/fsh</code></pre>
+<pre><code class="lang-zsh">git clone https://github.<span class="hljs-keyword">com</span>/<span class="hljs-keyword">z</span>-<span class="hljs-keyword">shell</span>/F-Sy-H ~/path/<span class="hljs-keyword">to</span>/f-sy-h</code></pre>
 
   <p>And add the following to your `zshrc` file.</p>
 
-<pre><code class="lang-zsh"><span class="hljs-keyword">source</span> ~<span class="hljs-regexp">/path/</span>to<span class="hljs-regexp">/fsh/</span>F-Sy-H.plugin.zsh</code></pre>
+<pre><code class="lang-zsh"><span class="hljs-keyword">source</span> ~<span class="hljs-regexp">/path/</span>to<span class="hljs-regexp">/f-sy-h/</span>F-Sy-H.plugin.zsh</code></pre>
 
 <hr /><h3 align="left">Zi</h3>
 

@@ -8,7 +8,7 @@
 #
 -fast-highlight-string-process() {
   builtin emulate -L zsh ${=${options[xtrace]:#off}:+-o xtrace}
-  builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc_quotes no_auto_pushd
+  builtin setopt extended_glob typeset_silent no_short_loops rc_quotes no_auto_pushd
 
   local -A pos_to_level level_to_pos pair_map final_pairs
   local input=$1$2 _mybuf=$1$2 __style __quoting
