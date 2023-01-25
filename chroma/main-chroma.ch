@@ -16,7 +16,7 @@
 (( next_word = 2 | 8192 ))
 
 chroma/main-chroma-print() {
-    (( FAST_HIGHLIGHT[DEBUG] )) && print "$@" >> /tmp/fsh-dbg
+  (( FAST_HIGHLIGHT[DEBUG] )) && print "$@" >> /tmp/fsh-dbg
 }
 
 local __chroma_name="${1#\%}" __first_call="$2" __wrd="$3" __start_pos="$4" __end_pos="$5"

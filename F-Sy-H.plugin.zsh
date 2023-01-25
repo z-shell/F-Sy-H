@@ -43,10 +43,11 @@ if [[ $PMSPEC != *f* ]]; then
   fpath+=( "${0:h}/functions" )
 fi
 
-typeset -g FAST_HIGHLIGHT_VERSION=1.66
-
+# Default global variables
+typeset -g FAST_HIGHLIGHT_VERSION=1.67
 typeset -g FAST_BASE_DIR="${0:h}"
 typeset -ga _FAST_MAIN_CACHE
+
 # Holds list of indices pointing at brackets that are complex, i.e. e.g. part of "[[" in [[ ... ]]
 typeset -ga _FAST_COMPLEX_BRACKETS
 
@@ -57,7 +58,10 @@ typeset -g FAST_WORK_DIR=${FAST_WORK_DIR:-${XDG_CACHE_HOME:-~/.cache}/f-sy-h}
 FAST_WORK_DIR=${~FAST_WORK_DIR}
 
 # Create working directory if it doesn't exist.
-[[ -w $FAST_WORK_DIR ]] || command mkdir -p "$FAST_WORK_DIR"
+[[ -w $FAST_WORK_DIR ]] || command mkdir -p "$FAST_WORK_DIR" || {
+  print -u2 "f-sy-h: cannot create working directory $FAST_WORK_DIR"
+  return 1
+}
 
 # Invokes each highlighter that needs updating.
 # This function is supposed to be called whenever the ZLE state changes.
@@ -231,7 +235,7 @@ _zsh_highlight_bind_widgets() {
 
   # Load ZSH module zsh/zleparameter, needed to override user defined widgets.
   zmodload zsh/zleparameter 2>/dev/null || {
-    print -r -- >&2 'zsh-syntax-highlighting: failed loading zsh/zleparameter.'
+    builtin print -r -- >&2 'zsh-syntax-highlighting: failed loading zsh/zleparameter.'
     return 1
   }
 
@@ -282,7 +286,7 @@ _zsh_highlight_bind_widgets() {
         zle -N -- $cur_widget _zsh_highlight_widget_$cur_widget
       else
         # Default: unhandled case.
-        print -r -- >&2 "zsh-syntax-highlighting: unhandled ZLE widget ${(qq)cur_widget}"
+        builtin print -r -- >&2 "zsh-syntax-highlighting: unhandled ZLE widget ${(qq)cur_widget}"
       fi
     esac
   done
@@ -294,7 +298,7 @@ _zsh_highlight_bind_widgets() {
 
 # Try binding widgets.
 _zsh_highlight_bind_widgets || {
-  print -r -- >&2 'zsh-syntax-highlighting: failed binding ZLE widgets, exiting.'
+  builtin print -r -- >&2 'zsh-syntax-highlighting: failed binding ZLE widgets, exiting.'
   return 1
 }
 
@@ -308,11 +312,11 @@ _zsh_highlight_preexec_hook() {
 
 autoload -Uz add-zsh-hook
 add-zsh-hook preexec _zsh_highlight_preexec_hook 2>/dev/null || {
-  print -r -- >&2 'zsh-syntax-highlighting: failed loading add-zsh-hook.'
+  builtin print -r -- >&2 'zsh-syntax-highlighting: failed loading add-zsh-hook.'
 }
 
 /f-sy-h-debug() {
-  print -r -- "$@" >>! /tmp/reply
+  builtin print -r -- "$@" >>! /tmp/reply
 }
 
 typeset -g ZSH_HIGHLIGHT_MAXLENGTH=10000
@@ -321,18 +325,49 @@ typeset -g ZSH_HIGHLIGHT_MAXLENGTH=10000
 zmodload zsh/parameter 2>/dev/null
 zmodload zsh/system 2>/dev/null
 
-autoload -Uz -- is-at-least fast-theme \
+autoload -Uz -- is-at-least \
   .fast-read-ini-file .fast-run-git-command \
   .fast-make-targets .fast-run-command .fast-zts-read-all
 
-autoload -Uz -- chroma/-git.ch chroma/-hub.ch chroma/-lab.ch \
-  chroma/-example.ch chroma/-grep.ch chroma/-perl.ch chroma/-make.ch \
-  chroma/-awk.ch chroma/-vim.ch chroma/-source.ch chroma/-sh.ch chroma/-docker.ch \
-  chroma/-autoload.ch chroma/-ssh.ch chroma/-scp.ch chroma/-which.ch \
-  chroma/-printf.ch chroma/-ruby.ch chroma/-whatis.ch chroma/-alias.ch \
-  chroma/-subcommand.ch chroma/-autorandr.ch chroma/-nmcli.ch chroma/-fast-theme.ch \
-  chroma/-node.ch chroma/-fpath_peq.ch chroma/-precommand.ch chroma/-subversion.ch \
-  chroma/-ionice.ch chroma/-nice.ch chroma/main-chroma.ch chroma/-ogit.ch chroma/-zi.ch
+# Disabled: chroma/-vim.ch chroma/-which.ch
+autoload -Uz -- \
+  chroma/-alias.ch \
+  chroma/-autoload.ch \
+  chroma/-autorandr.ch \
+  chroma/-awk.ch \
+  chroma/-docker.ch \
+  chroma/-fpath_peq.ch \
+  chroma/-git.ch \
+  chroma/-grep.ch \
+  chroma/-hub.ch \
+  chroma/-ionice.ch \
+  chroma/-lab.ch \
+  chroma/-make.ch \
+  chroma/-nice.ch \
+  chroma/-nmcli.ch \
+  chroma/-node.ch \
+  chroma/-ogit.ch \
+  chroma/-perl.ch \
+  chroma/-precommand.ch \
+  chroma/-printf.ch \
+  chroma/-ruby.ch \
+  chroma/-scp.ch \
+  chroma/-sh.ch \
+  chroma/-source.ch \
+  chroma/-ssh.ch \
+  chroma/-subcommand.ch \
+  chroma/-subversion.ch \
+  chroma/-whatis.ch \
+  chroma/-zi.ch \
+  chroma/main-chroma.ch
+
+if (( FAST_THEME_MANAGER_DISABLED )) {
+  unset '_comps[fast-theme]' 2>/dev/null
+  unset -f chroma/-fast-theme.ch 2>/dev/null
+} else {
+  autoload -Uz -- fast-theme chroma/-fast-theme.ch chroma/-example.ch
+  alias f-sy-h=fast-theme
+}
 
 source "${0:h}/functions/fast-highlight"
 source "${0:h}/functions/fast-string-highlight"
@@ -356,7 +391,6 @@ zstyle -s :plugin:fast-syntax-highlighting theme __fsyh_theme
 }
 
 unset __fsyh_theme
-alias f-sy-h=fast-theme
 
 -fast-highlight-fill-option-variables
 
@@ -370,10 +404,5 @@ if [[ ! -e $FAST_WORK_DIR/secondary_theme.zsh ]] {
   touch "$FAST_WORK_DIR/secondary_theme.zsh"
   unset theme_link
 }
-
-if [[ $(uname -a) = (#i)*darwin* ]]; then
-  typeset -gA FAST_HIGHLIGHT
-  FAST_HIGHLIGHT[chroma-man]=
-fi
 
 [[ $COLORTERM == (24bit|truecolor) || ${terminfo[colors]} -eq 16777216 ]] || zmodload zsh/nearcolor &>/dev/null || true
