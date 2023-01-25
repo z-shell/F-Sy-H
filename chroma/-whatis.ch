@@ -1,27 +1,28 @@
 # -*- mode: zsh; sh-indentation: 2; indent-tabs-mode: nil; sh-basic-offset: 2; -*-
-#
+# vim: ft=zsh sw=2 ts=2 et
+
 (( next_word = 2 | 8192 ))
 local THEFD check __first_call="$1" __wrd="$2" __start_pos="$3" __end_pos="$4"
 local __style
 
 (( ! ${+FAST_HIGHLIGHT[whatis_chroma_callback_was_ran]} )) && \
-        FAST_HIGHLIGHT[whatis_chroma_callback_was_ran]=0
+  FAST_HIGHLIGHT[whatis_chroma_callback_was_ran]=0
 
 (( ! ${+FAST_HIGHLIGHT[whatis_chroma_zle_-F_have_-w_opt]} )) && {
-        is-at-least 5.0.6 && local __res=1 || local __res=0
-        FAST_HIGHLIGHT[whatis_chroma_zle_-F_have_-w_opt]="$__res"
+  is-at-least 5.0.6 && local __res=1 || local __res=0
+  FAST_HIGHLIGHT[whatis_chroma_zle_-F_have_-w_opt]="$__res"
 }
 
 -fast-whatis-chroma-callback() {
-    emulate -L zsh
-    setopt extendedglob warncreateglobal typesetsilent
+  builtin emulate -L zsh ${=${options[xtrace]:#off}:+-o xtrace}
+  builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc_quotes no_auto_pushd
 
-    local THEFD="$1" input check=2 nl=$'\n' __wrd __style
+  local THEFD="$1" input check=2 nl=$'\n' __wrd __style
 
-    .fast-zts-read-all "$THEFD" input
+  .fast-zts-read-all "$THEFD" input
 
-    zle -F "$THEFD"
-    exec {THEFD}<&-
+  zle -F "$THEFD"
+  exec {THEFD}<&-
 
     __wrd="${${input#[^$nl]#$nl}%%$nl*}"
     if [[ "$input" = test* ]]; then
@@ -133,5 +134,3 @@ fi
 _start_pos=$_end_pos
 
 return 0
-
-# vim: ft=zsh sw=2 ts=2 et

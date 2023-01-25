@@ -1,4 +1,5 @@
 # -*- mode: zsh; sh-indentation: 2; indent-tabs-mode: nil; sh-basic-offset: 2; -*-
+# vim: ft=zsh sw=2 ts=2 et
 #
 # -------------------------------------------------------------------------------------------------
 # Copyright (c) 2018 Sebastian Gniazdowski
@@ -29,7 +30,7 @@
 # OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 # -------------------------------------------------------------------------------------------------
 
-setopt local_options extendedglob warn_create_global typeset_silent
+builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc_quotes no_auto_pushd
 
 # Keep chroma-takever state meaning: until ;, handle highlighting via chroma.
 # So the below 8192 assignment takes care that next token will be routed to chroma.
@@ -126,7 +127,7 @@ local -a match mbegin mend
 [[ -n "$__style" ]] && (( __start=__start_pos-${#PREBUFFER}, __end=__end_pos-${#PREBUFFER}, __start >= 0 )) && reply+=("$__start $__end ${FAST_HIGHLIGHT_STYLES[$__style]}")
 
 # We aren't passing-through, do obligatory things ourselves.
-# _start_pos=$_end_pos advainces pointers in command line buffer.
+# _start_pos=$_end_pos advances pointers in command line buffer.
 #
 # To pass through means to `return 1'. The highlighting of
 # this single token is then done by fast-syntax-highlighting's
@@ -135,5 +136,3 @@ local -a match mbegin mend
 _start_pos=$_end_pos
 
 return 0
-
-# vim: ft=zsh sw=2 ts=2 et

@@ -1,5 +1,6 @@
 # -*- mode: zsh; sh-indentation: 2; indent-tabs-mode: nil; sh-basic-offset: 2; -*-
-#
+# vim: ft=zsh sw=2 ts=2 et
+
 (( next_word = 2 | 8192 ))
 [[ "$__arg_type" = 3 ]] && return 2
 
@@ -36,5 +37,3 @@ elif (( FAST_HIGHLIGHT[chroma-node-file] )); then
 fi
 
 return 1
-
-# vim: ft=zsh sw=2 ts=2 et

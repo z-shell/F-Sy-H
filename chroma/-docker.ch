@@ -57,7 +57,6 @@ local -a __lines_list
             if [[ "${FAST_HIGHLIGHT[chroma-docker-subcommand]}" = "image" ]]; then
                 [[ "$__wrd" != -* ]] && {
                     (( FAST_HIGHLIGHT[chroma-docker-counter] += 1, __idx1 = FAST_HIGHLIGHT[chroma-docker-counter] ))
-
                     if (( __idx1 == 2 )); then
                         __style=${FAST_THEME_NAME}subcommand
                     elif (( __idx1 == 3 )); then

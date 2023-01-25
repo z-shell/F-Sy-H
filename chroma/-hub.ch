@@ -1,5 +1,6 @@
 # -*- mode: zsh; sh-indentation: 2; indent-tabs-mode: nil; sh-basic-offset: 2; -*-
-#
+# vim: ft=zsh sw=2 ts=2 et
+
 (( next_word = 2 | 8192 ))
 local __first_call="$1" __wrd="$2" __start_pos="$3" __end_pos="$4"
 
@@ -50,5 +51,3 @@ if [[ "$__wrd" != -* ]] && (( FAST_HIGHLIGHT[chroma-git-got-subcommand] == 0 ));
 fi
 
 chroma/-git.ch $*
-
-# vim: ft=zsh sw=2 ts=2 et

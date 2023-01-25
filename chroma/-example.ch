@@ -106,7 +106,7 @@ integer __idx1 __idx2
 [[ -n "$__style" ]] && (( __start=__start_pos-${#PREBUFFER}, __end=__end_pos-${#PREBUFFER}, __start >= 0 )) && reply+=("$__start $__end ${FAST_HIGHLIGHT_STYLES[$__style]}")
 
 # We aren't passing-through, do obligatory things ourselves.
-# _start_pos=$_end_pos advainces pointers in command line buffer.
+# _start_pos=$_end_pos advances pointers in command line buffer.
 #
 # To pass through means to `return 1'. The highlighting of
 # this single token is then done by fast-syntax-highlighting's

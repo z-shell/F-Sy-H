@@ -31,7 +31,7 @@
 # -------------------------------------------------------------------------------------------------
 
 chroma/-subversion.ch/parse-revision() {
-    setopt local_options extendedglob warn_create_global typeset_silent
+    builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc_quotes no_auto_pushd local_options
     local __wrd="$1" __start_pos="$2" __end_pos="$3" __style __start __end
     case $__wrd in
         (r|)[0-9]##)               __style=${FAST_THEME_NAME}mathnum          ;;
@@ -43,7 +43,7 @@ chroma/-subversion.ch/parse-revision() {
 }
 
 chroma/-subversion.ch/parse-target() {
-    setopt local_options extendedglob warn_create_global typeset_silent
+    builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc_quotes no_auto_pushd local_options
     local __wrd="$1" __start_pos="$2" __end_pos="$3" __style __start __end
     if [[ $__wrd == *@[^/]# ]]
     then
@@ -63,7 +63,7 @@ chroma/-subversion.ch/parse-target() {
     fi
 }
 
-setopt local_options extendedglob warn_create_global
+  builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc_quotes no_auto_pushd local_options
 
 # Keep chroma-takever state meaning: until ;, handle highlighting via chroma.
 # So the below 8192 assignment takes care that next token will be routed to chroma.

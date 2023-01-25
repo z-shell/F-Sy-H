@@ -42,7 +42,7 @@ local -a __viminfo
 # skip setting __style to disable this code.
 [[ -n "$__style" ]] && (( __start=__start_pos-${#PREBUFFER}, __end=__end_pos-${#PREBUFFER}, __start >= 0 )) && reply+=("$__start $__end ${FAST_HIGHLIGHT_STYLES[$__style]}")
 
-# We aren't passing-through (no return 1 occured), do obligatory things ourselves.
+# We aren't passing-through (no return 1 occurred), do obligatory things ourselves.
 (( this_word = next_word ))
 _start_pos=$_end_pos
 
