@@ -15,9 +15,11 @@ fsh__zi__chroma__def=(
     ## {{{
 
     subcmd:NULL "NULL_0_opt"
-    NULL_0_opt "(-help|--help|-h)
+    NULL_0_opt "(--help|-h|--version|-V)
                    <<>> NO-OP // ::chroma/main-chroma-std-aopt-action"
-    "subcommands" "(help|subcmds|icemods|analytics|man|self-update|times|zstatus|load|light|unload|snippet|ls|ice|<ice|specification>|update|status|report|delete|loaded|list|cd|create|edit|glance|stress|changes|recently|clist|completions|cclear|cdisable|cenable|creinstall|cuninstall|csearch|compinit|dtrace|dstart|dstop|dunload|dreport|dclear|compile|uncompile|compiled|cdlist|cdreplay|cdclear|srv|recall|env-whitelist|bindkeys|module|add-fpath|run)"
+
+    "subcommands" "NO-OP // ::chroma/-zi-check-sub-list"
+    #"subcommands" "(help|version|subcmds|icemods|analytics|man|self-update|times|zstatus|load|light|unload|snippet|ls|ice|<ice|specification>|update|status|report|delete|loaded|list|cd|create|edit|glance|stress|changes|recently|clist|completions|cclear|cdisable|cenable|creinstall|cuninstall|csearch|compinit|dtrace|dstart|dstop|dunload|dreport|dclear|compile|uncompile|compiled|cdlist|cdreplay|cdclear|srv|recall|env-whitelist|bindkeys|module|add-fpath|run)"
 
     ## }}}
 
@@ -84,7 +86,7 @@ fsh__zi__chroma__def=(
     subcmd:update "UPDATE_0_opt // PLGSNP_1_arg // PLGSNP_2_arg // NO_MATCH_#_opt // NO_MATCH_#_arg"
 
     UPDATE_0_opt "
-            (-L|--plugins|-s|--snippets|-p|--parallel|-a|--all|-q|--quiet|-r|--reset|-u|--urge|-n|--no-pager|-v|--verbose|-h|--help)
+            (-h|--help|-l|--plugins|-s|--snippets|-p|--parallel|-a|--all|-q|--quiet|-r|--reset|-u|--urge|-n|--no-pager|-v|--verbose)
                     <<>> NO-OP // ::chroma/main-chroma-std-aopt-action"
 
     ## }}}
@@ -96,7 +98,7 @@ fsh__zi__chroma__def=(
 
     subcmd:light "LIGHT_0_opt // LOAD_1_arg // LOAD_2_arg // NO_MATCH_#_opt // NO_MATCH_#_arg"
 
-    LIGHT_0_opt "-h|--help|-b
+    LIGHT_0_opt "-h|--help|-b|--bindkeys
                     <<>> NO-OP // ::chroma/main-chroma-std-aopt-action"
 
     ## }}}
@@ -125,7 +127,7 @@ fsh__zi__chroma__def=(
     subcmd:report "REPORT_0_opt // UNLOAD_1_arg // UNLOAD_2_arg // NO_MATCH_#_opt //
                   NO_MATCH_#_arg"
 
-    REPORT_0_opt "--all
+    REPORT_0_opt "-a|--all
                     <<>> NO-OP // ::chroma/main-chroma-std-aopt-action"
 
     ## }}}
@@ -139,7 +141,7 @@ fsh__zi__chroma__def=(
         "DELETE_0_opt // PLGSNP_1_arg // PLGSNP_2_arg // NO_MATCH_#_opt // NO_MATCH_#_arg"
 
     DELETE_0_opt "
-            (-a|--all|-c|--clean|-y|--yes|-q|--quiet|-h|--help)
+            (-h|--help|-a|--all|-c|--clean|-y|--yes|-q|--quiet)
                     <<>> NO-OP // ::chroma/main-chroma-std-aopt-action"
 
     ## }}}
@@ -319,12 +321,12 @@ chroma/-zi-check-ice-mod() {
     ext_val_ices=( ${(@)${(@Akons:|:u)${ZI_EXTS[ice-mods]//\'\'/}}/(#s)<->-/} )
 
     ice_order=(
-      ${${(s.|.)ZI[ice-list]}}
+      ${(As:|:)ZI[ice-list]}
       # Include all additional ices – after stripping them from the possible: ''
       ${(@)${(@Akons:|:u)${ZI_EXTS[ice-mods]//\'\'/}}/(#s)<->-/}
     )
     nval_ices=(
-      ${(s.|.)ZI[nval-ice-list]}
+      ${(As:|:)ZI[nval-ice-list]}
       # Include only those additional ices,
       # don't have the '' in their name, i.e. aren't designed to hold value
       ${(@)${(@)${(@Akons:|:u)${ZI_EXTS[ice-mods]//\'\'/}}/(#s)<->-/}}
@@ -339,6 +341,20 @@ chroma/-zi-check-ice-mod() {
         return 0
     elif [[ "$_wrd" = (#b)(${(~j:|:)nval_ices[@]}) ]]; then
         __style=${FAST_THEME_NAME}single-hyphen-option
+        return 0
+    else
+        __style=${FAST_THEME_NAME}incorrect-subtle
+        return 1
+    fi
+}
+
+chroma/-zi-check-sub-list() {
+  local _scmd="$1" _wrd="$4"
+    local -a cmd-list
+    cmd-list=( ${(As:|:)ZI[cmd-list]} )
+
+    if [[ "$_wrd" = (#b)(${(~j:|:)cmd-list[@]}) ]]; then
+        __style=${FAST_THEME_NAME}correct-subtle
         return 0
     else
         __style=${FAST_THEME_NAME}incorrect-subtle
