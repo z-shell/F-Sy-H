@@ -18,8 +18,7 @@ fsh__zi__chroma__def=(
     NULL_0_opt "(--help|-h|--version|-V)
                    <<>> NO-OP // ::chroma/main-chroma-std-aopt-action"
 
-    "subcommands" "NO-OP // ::chroma/-zi-check-sub-list"
-    #"subcommands" "(help|version|subcmds|icemods|analytics|man|self-update|times|zstatus|load|light|unload|snippet|ls|ice|<ice|specification>|update|status|report|delete|loaded|list|cd|create|edit|glance|stress|changes|recently|clist|completions|cclear|cdisable|cenable|creinstall|cuninstall|csearch|compinit|dtrace|dstart|dstop|dunload|dreport|dclear|compile|uncompile|compiled|cdlist|cdreplay|cdclear|srv|recall|env-whitelist|bindkeys|module|add-fpath|run)"
+    "subcommands" "(help|version|subcmds|icemods|analytics|man|self-update|times|zstatus|load|light|unload|snippet|ls|ice|<ice|specification>|update|status|report|delete|loaded|list|cd|create|edit|glance|stress|changes|recently|clist|completions|cclear|cdisable|cenable|creinstall|cuninstall|csearch|compinit|dtrace|dstart|dstop|dunload|dreport|dclear|compile|uncompile|compiled|cdlist|cdreplay|cdclear|srv|recall|env-whitelist|bindkeys|module|add-fpath|run)"
 
     ## }}}
 
