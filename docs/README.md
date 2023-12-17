@@ -56,7 +56,7 @@
 <pre><code class="lang-zsh">zi light z-<span class="hljs-keyword">shell</span>/F-Sy-H</code></pre>
 
 <p> Here's an example of how to load the plugin together with a few other popular ones with the use of
- <a href="https://wiki.zhsell.dev/docs/getting_started/overview#turbo-mode-zsh--53">turbo mode</a></p>
+ <a href="https://wiki.zshell.dev/docs/getting_started/overview#turbo-mode-zsh--53">turbo mode</a></p>
 <p>i.e.: speeding up the Zsh startup by loading the plugin right after the first prompt, in background: </p>
 
   <pre><code class="lang-zsh">zi wait lucid <span class="hljs-keyword">for</span> <span class="hljs-string">\</span>
