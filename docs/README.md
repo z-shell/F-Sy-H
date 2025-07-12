@@ -342,7 +342,7 @@ alt="image could not be loaded"
 style="color: red; background-color: black; font-weight: bold" />
 </div>
 
-<p>The <a href="https://github.com/z-shell/F-Sy-H/tree/main/%E2%86%92chroma">chromas</a> that are enabled by default can be found <a href="https://github.com/z-shell/F-Sy-H/blob/main/functions/fast-highlight#L172">here</a>.</p>
+<p>The <a href="https://github.com/z-shell/F-Sy-H/tree/main/chroma">chromas</a> that are enabled by default can be found <a href="https://github.com/z-shell/F-Sy-H/blob/main/functions/fast-highlight#L172">here</a>.</p>
 
   <hr /><h3 align="left">Math-mode highlighting</h3>
 
