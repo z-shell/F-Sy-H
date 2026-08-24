@@ -7,6 +7,13 @@
 
 FAST_HIGHLIGHT[-zi.ch-chroma-def]=1
 
+# Canonical list of `zi' subcommands lives in zi's own ZI[cmd-list] (zi.zsh);
+# read it here instead of hand-maintaining a second copy that silently drifts
+# (e.g. #31, and the `version' subcommand added in z-shell/zi@b8248aa never
+# reaching this file). The literal fallback below is a frozen snapshot for
+# the rare case this chroma loads before `zi' has populated $ZI.
+local __zi_subcommands="${ZI[cmd-list]:-help|subcmds|icemods|analytics|man|self-update|times|zstatus|load|light|unload|snippet|ls|ice|<ice|specification>|update|status|report|delete|loaded|list|cd|create|edit|glance|stress|changes|recently|clist|completions|cclear|cdisable|cenable|creinstall|cuninstall|csearch|compinit|dtrace|dstart|dstop|dunload|dreport|dclear|compile|uncompile|compiled|cdlist|cdreplay|cdclear|srv|recall|env-whitelist|bindkeys|module|add-fpath|run}"
+
 typeset -gA fsh__zi__chroma__def
 fsh__zi__chroma__def=(
     ##
@@ -17,7 +24,7 @@ fsh__zi__chroma__def=(
     subcmd:NULL "NULL_0_opt"
     NULL_0_opt "(-help|--help|-h)
                    <<>> NO-OP // ::chroma/main-chroma-std-aopt-action"
-    "subcommands" "(help|subcmds|icemods|analytics|man|self-update|times|zstatus|load|light|unload|snippet|ls|ice|<ice|specification>|update|status|report|delete|loaded|list|cd|create|edit|glance|stress|changes|recently|clist|completions|cclear|cdisable|cenable|creinstall|cuninstall|csearch|compinit|dtrace|dstart|dstop|dunload|dreport|dclear|compile|uncompile|compiled|cdlist|cdreplay|cdclear|srv|recall|env-whitelist|bindkeys|module|add-fpath|run)"
+    "subcommands" "(${__zi_subcommands})"
 
     ## }}}
 
