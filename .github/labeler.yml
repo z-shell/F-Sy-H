@@ -1,16 +1,15 @@
-documentation 📝:
+type:docs:
   - "docs/**/*.md"
   - "community/**/*.md"
   - "ecosystem/**/*.md"
-dependencies 📦:
+area:dependencies:
   - "package.json"
   - "pnpm-lock.yaml"
   - "yarn.lock"
-enhancement ✨:
+type:maintenance:
   - "functions/**"
   - "src/**"
   - "lib/**"
-maintenance 📈:
   - ".editorconfig"
   - ".gitattributes"
   - ".gitignore"
@@ -31,15 +30,7 @@ maintenance 📈:
   - "crowdin.yml"
   - "netlify.toml"
   - "tsconfig.json"
-i18n 🌐:
-  - "i18n/**"
-  - "docs/i18n/**"
-#annex 🌀:
-#  - "*"
-#package 📦:
-#  - 'ecosystem/packages/**/*.md'
-#  - 'i18n/**/docusaurus-plugin-content-ecosystem/**/packages/**/*.md'
-plugin ⚙️:
+area:plugin:
   - "*.zsh"
-ci 🤖:
+area:ci:
   - ".github/workflows/*"
