@@ -2,16 +2,12 @@
 name: ZUnit
 
 on:
-  workflow_dispatch: {}
   push:
-    paths:
-      - "**/*.ch"
-      - "**/*.zsh"
-      - "tests/*"
-      - "share/*"
-      - "themes/*"
-      - "functions/*"
-  pull_request: {}
+    branches: [main]
+    tags: ["v*.*.*"]
+  pull_request:
+    branches: [main]
+  workflow_dispatch: {}
 
 permissions:
   contents: read
@@ -23,14 +19,17 @@ concurrency:
 jobs:
   test:
     name: ZUnit (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
         os: [macos-latest, ubuntu-latest]
-    runs-on: ${{ matrix.os }}
     steps:
       - name: Check out code
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
       - name: Install Zsh on Linux
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -yq zsh

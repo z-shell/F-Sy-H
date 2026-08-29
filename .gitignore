@@ -1,28 +1,15 @@
+# Generated theme state
 current_theme.zsh
 secondary_theme.zsh
 theme_overlay.zsh
-*.txt
-.trunk/out
-test/out.parse
-test/res
-hold/*
+
+# Zsh generated files
 *.zwc
+*.zwc.old
+*zcompdump*
+
+# Plugin-manager and local test state
 ._zi
-out.parse
-
-### Vim
-# Swap
-[._]*.s[a-v][a-z]
-[._]*.sw[a-p]
-[._]s[a-v][a-z]
-[._]sw[a-p]
-
-# Session
-Session.vim
-
-# Temporary
-.netrwhist
-*~
-# Auto-generated tag files
-tags
-.history
+/.zunit-tool/
+/tests/_output/
+/zunit.git/
