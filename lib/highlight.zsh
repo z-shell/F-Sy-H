@@ -84,7 +84,7 @@ typeset -gA _fsh_styles
 : ${_fsh_styles[back-dollar-quoted-argument]:=fg=cyan}
 : ${_fsh_styles[assign]:=none}
 : ${_fsh_styles[redirection]:=none}
-: ${_fsh_styles[comment]:=fg=black,bold}
+: ${_fsh_styles[comment]:=fg=243}
 : ${_fsh_styles[variable]:=fg=113}
 : ${_fsh_styles[mathvar]:=fg=blue,bold}
 : ${_fsh_styles[mathnum]:=fg=magenta}
