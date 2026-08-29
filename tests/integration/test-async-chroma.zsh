@@ -136,10 +136,11 @@ zpty -b "$pty_name" \
   [[ -e $FSH_GIT_COMMAND_MARKER ]]
   command sleep 0.3
 
-  # Option discovery depends on the completed command cache. Trigger the next
-  # ordinary edit event explicitly instead of assuming a callback repaint will
-  # recursively start the dependent provider on every ZLE implementation.
-  zpty -w -n "$pty_name" ' '
+  # Option discovery depends on the completed command cache. Exercise a fresh
+  # buffer explicitly instead of assuming a callback repaint or incremental
+  # edit will recursively start the dependent provider on every platform.
+  zpty -w -n "$pty_name" $'\C-U'
+  zpty -w -n "$pty_name" 'git commit --future-mode'
   deadline=$(( SECONDS + 10 ))
   while [[ ! -e $FSH_GIT_OPTION_MARKER ]] && (( SECONDS < deadline )); do
     command sleep 0.02
