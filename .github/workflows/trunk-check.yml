@@ -7,8 +7,6 @@ on:
     tags: ["v*.*.*"]
   pull_request:
     types: [opened, synchronize, reopened]
-  schedule:
-    - cron: "0 05 * * 5"
   workflow_dispatch: {}
 
 permissions:
@@ -25,6 +23,6 @@ jobs:
       actions: read
       checks: write
       contents: read
-    uses: z-shell/.github/.github/workflows/trunk.yml@main
+    uses: z-shell/.github/.github/workflows/trunk.yml@2a6edcbf14017df18cfac6309e434e24cc345891
     with:
       arguments: --no-progress
