@@ -1,40 +1,23 @@
-# Pull request template
+# Pull request
 
-<!--- Please provide a general summary of your changes in the title above -->
+## Summary
 
-## Type of changes
+-
 
-<!-- Please try to limit your pull request to one type; submit multiple pull requests if needed. -->
+Closes #
 
-- [ ] CI
-- [ ] Bugfix
-- [ ] Feature
-- [ ] Generic maintenance tasks
-- [ ] Documentation content changes
-- [ ] Code style update (formatting, renaming)
-- [ ] Refactoring (no functional changes, no URL changes)
-- [ ] Improving the performance of the project (not introducing new features)
-- [ ] Other (please describe):
+## Verification
 
-Issue Number: N/A
+-
 
-## What is the current behavior?
+## Compatibility and lifecycle
 
-<!-- Please describe the current behavior that you are modifying or linking to a relevant issue. -->
+Describe any effect on the public entrypoint, supported Zsh versions, plugin
+manager compatibility, hooks, widgets, aliases, parameters, modules, `fpath`,
+or unload behavior. Write `No compatibility or lifecycle impact` when none.
 
-## What is the new behavior?
+## Agent handoff
 
-<!-- Please describe the behavior or changes that are being added by this PR. -->
-
-### Does this introduce a breaking change?
-
-- [ ] Yes
-- [ ] No
-
-<!-- If this does introduce a breaking change, please describe the impact and migration path for existing applications below. -->
-
-## Other information
-
-<!-- Any other information that is important to this PR, such as screenshots of how the component looks before and after the change. -->
-
-N/A
+If this pull request is unfinished, blocked, or expected to be resumed, include
+its current state, blockers, next steps, and related tracker items. Otherwise
+write `No handoff needed.`

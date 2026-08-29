@@ -6,6 +6,7 @@ on:
     branches: [main]
     tags: ["v*.*.*"]
   pull_request:
+    branches: [main]
     types: [opened, synchronize, reopened]
   workflow_dispatch: {}
 
@@ -19,10 +20,6 @@ concurrency:
 jobs:
   check:
     name: Trunk Code Quality
-    permissions:
-      actions: read
-      checks: write
-      contents: read
-    uses: z-shell/.github/.github/workflows/trunk.yml@2a6edcbf14017df18cfac6309e434e24cc345891
+    uses: z-shell/.github/.github/workflows/trunk.yml@aa802adb4713acee89d4b95b04b04a1abf9a9377 # main
     with:
       arguments: --no-progress

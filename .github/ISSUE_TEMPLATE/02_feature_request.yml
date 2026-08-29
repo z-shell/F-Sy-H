@@ -1,58 +1,42 @@
-name: "💡 Feature request"
-description: Suggest an idea for this project
-title: "[feat]: "
+name: Feature request
+description: Propose an improvement to F-Sy-H
+title: "feat: "
 labels: ["type:feature", "area:plugin", "status:triage"]
 body:
-  - type: markdown
+  - type: textarea
+    id: problem
     attributes:
-      value: |
-        First off, thanks for taking the time to contribute! Contributions are what make the open-source community such an amazing place to learn, inspire, and create. Any contributions you make will benefit everybody else and are greatly appreciated.
-  - type: input
-    id: description
-    attributes:
-      label: Feature description
-      description: A clear and concise description of what the feature request is. Please include if your feature request is related to a problem
+      label: Problem or use case
+      description: What user need or limitation should this proposal address?
     validations:
       required: true
   - type: textarea
-    id: code-snippet
+    id: proposal
     attributes:
-      label: Related Code
-      description: "If you are able to illustrate the bug or feature request with an example, please provide it here"
+      label: Proposed behavior
+      description: Describe the desired behavior and include an example when useful.
     validations:
-      required: false
+      required: true
   - type: textarea
-    id: additional
+    id: alternatives
     attributes:
-      label: Additional Context
-      description: "List any other information that is relevant to your issue. Stack traces, related issues, suggestions on how to add, use case, Stack Overflow links, forum links, screenshots, OS if applicable, etc."
-    validations:
-      required: false
+      label: Alternatives considered
+      description: Describe current workarounds or other designs you considered.
+  - type: textarea
+    id: compatibility
+    attributes:
+      label: Compatibility considerations
+      description: Note any expected effect on themes, chroma functions, plugin managers, or supported Zsh versions.
   - type: checkboxes
+    id: self_service
     attributes:
-      label: Self-service
-      description: |
-        If you feel like you could contribute to this issue, please check the box below. This would tell us and other people looking for contributions that someone's working on it.
-        If you do check this box, please send a pull request within 7 days so we can still delegate this to someone else.
+      label: Contribution
       options:
-        - label: I'd be willing to address this documentation request myself.
+        - label: I am willing to help implement this proposal.
   - type: checkboxes
+    id: guidelines
     attributes:
-      label: Have you read the Contributing Guidelines?
+      label: Contribution guidelines
       options:
-        - label: I have read the [Contributing Guidelines](https://github.com/z-shell/.github/blob/main/.github/CONTRIBUTING.md).
+        - label: I have read the [contribution guidelines](https://github.com/z-shell/.github/blob/main/.github/CONTRIBUTING.md).
           required: true
-  - type: checkboxes
-    attributes:
-      label: Are you familiar with Contributor Covenant Code of Conduct?
-      options:
-        - label: I have read the [Contributor Covenant Code of Conduct](https://github.com/z-shell/.github/blob/main/.github/CODE_OF_CONDUCT.md).
-          required: true
-  - type: input
-    id: contact
-    attributes:
-      label: Contact Details
-      description: How can we get in touch with you if we need more info?
-      placeholder: ex. email@example.com
-    validations:
-      required: false

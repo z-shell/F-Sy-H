@@ -175,6 +175,7 @@ zsh -f scripts/test-plugin-entrypoint.zsh
 zsh -f scripts/test-plugin-lifecycle.zsh noninteractive
 zsh -f -i scripts/test-plugin-lifecycle.zsh interactive
 zsh -f scripts/test-function-completion.zsh
+zsh -f scripts/test-git-chroma-regions.zsh
 zunit
 ```
 
@@ -183,9 +184,7 @@ The ZUnit command requires the repository's pinned ZUnit toolchain.
 ## Documentation and support
 
 - [F-Sy-H wiki guide](https://wiki.zshell.dev/ecosystem/plugins/f-sy-h)
-- [Theme guide](docs/THEME_GUIDE.md)
-- [Chroma guide](docs/CHROMA_GUIDE.adoc)
-- [Changelog](docs/CHANGELOG.md)
+- [Release history](https://github.com/z-shell/F-Sy-H/releases)
 - [Zsh Plugin Standard](https://wiki.zshell.dev/community/zsh_plugin_standard)
 - [Zsh documentation](https://zsh.sourceforge.io/Doc/)
 - [Report an issue](https://github.com/z-shell/F-Sy-H/issues)
