@@ -341,7 +341,11 @@ fi
   builtin print -r -- "$@" >>! /tmp/reply
 }
 
-typeset -g ZSH_HIGHLIGHT_MAXLENGTH=10000
+# Respect a value the user set before loading; only supply the default when
+# unset. This is the documented knob for capping highlighting on long buffers,
+# so overwriting it removes the user's only mitigation.
+typeset -g ZSH_HIGHLIGHT_MAXLENGTH
+: ${ZSH_HIGHLIGHT_MAXLENGTH:=10000}
 
 # Load zsh/parameter module if available
 zmodload zsh/parameter 2>/dev/null
