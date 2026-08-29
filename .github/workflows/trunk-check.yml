@@ -20,6 +20,6 @@ concurrency:
 jobs:
   check:
     name: Trunk Code Quality
-    uses: z-shell/.github/.github/workflows/trunk.yml@aa802adb4713acee89d4b95b04b04a1abf9a9377 # main
+    uses: z-shell/.github/.github/workflows/trunk.yml@f09e2cc9cbad2d587eaebfba690f7aad2b3ee80e # main
     with:
       arguments: --no-progress
