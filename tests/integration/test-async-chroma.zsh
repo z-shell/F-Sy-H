@@ -3,6 +3,18 @@
 emulate -R zsh
 setopt err_exit no_unset no_function_argzero posix_argzero
 
+# Bare conditions under err_exit abort with no diagnostic, which reduces a CI
+# failure to an exit status. Report the failing line so platform-specific
+# failures are actionable from the log alone. Only failures raised directly by
+# this file are reported; handled non-zero statuses inside the plugin are not
+# test failures and must not reach standard error.
+typeset -g _fsh_test_file=${${(%):-%N}:A}
+TRAPZERR() {
+  [[ ${funcfiletrace[1]%:*} == $_fsh_test_file ]] || return 0
+  builtin print -u2 -r -- \
+    "f-sy-h: async chroma check failed at line ${funcfiletrace[1]##*:}"
+}
+
 zmodload zsh/datetime
 
 typeset -r plugin_root=${${(%):-%N}:A:h:h:h}
@@ -77,7 +89,7 @@ typeset chunk output=
 integer deadline
 
 zpty -b "$pty_name" \
-  "ZDOTDIR=${(q)fixture_root}/interactive-zdotdir FSH_DOCKER_MARKER=${(q)FSH_DOCKER_MARKER} PATH=${(q)fixture_root}/bin:\$PATH zsh -f"
+  "ZDOTDIR=${(q)fixture_root}/interactive-zdotdir FSH_DOCKER_MARKER=${(q)FSH_DOCKER_MARKER} PATH=${(q)fixture_root}/bin:\$PATH zsh -f -i"
 {
   zpty -w "$pty_name" "PS1='FSH_ASYNC> '; unsetopt prompt_cr prompt_sp; zstyle ':fsh:config' work-dir ${(q)fixture_root}/interactive-work; source ${(q)plugin_root}/F-Sy-H.plugin.zsh; print -r -- FSH_ASYNC_LOADED"
 
