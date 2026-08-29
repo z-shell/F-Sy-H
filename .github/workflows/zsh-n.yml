@@ -48,19 +48,21 @@ jobs:
             zsh -f -c 'zcompile -U -z "$1" "$2"' zsh \
               "$RUNNER_TEMP/source-${index}.zwc" "$file"
           done < <(
-            find F-Sy-H.plugin.zsh chroma functions lib scripts share \
-              -type f \( -name '*.ch' -o -name '*.zsh' -o -path 'functions/*' \) \
+            find F-Sy-H.plugin.zsh chroma functions completions lib tests share \
+              -type f \( -name '*.zsh' -o -path 'functions/*' -o -path 'chroma/*' -o -path 'completions/*' \) \
               -print0 | sort -z
           )
           test "$index" -gt 0
 
       - name: Run integration checks
         run: |
-          zsh -f scripts/test-plugin-entrypoint.zsh
-          zsh -f scripts/test-plugin-lifecycle.zsh noninteractive
-          zsh -f -i scripts/test-plugin-lifecycle.zsh interactive
-          zsh -f scripts/test-function-completion.zsh
-          zsh -f scripts/test-git-chroma-regions.zsh
+          zsh -f tests/integration/test-plugin-entrypoint.zsh
+          zsh -f tests/integration/test-plugin-lifecycle.zsh noninteractive
+          zsh -f -i tests/integration/test-plugin-lifecycle.zsh interactive
+          zsh -f tests/integration/test-function-completion.zsh
+          zsh -f tests/integration/test-git-chroma-regions.zsh
+          zsh -f tests/integration/test-passive-safety.zsh
+          zsh -f tests/integration/test-hostile-autoloads.zsh
 
   current:
     name: Zsh 5.9.2
@@ -104,19 +106,21 @@ jobs:
             zsh -f -c 'zcompile -U -z "$1" "$2"' zsh \
               "$RUNNER_TEMP/source-${index}.zwc" "$file"
           done < <(
-            find F-Sy-H.plugin.zsh chroma functions lib scripts share \
-              -type f \( -name '*.ch' -o -name '*.zsh' -o -path 'functions/*' \) \
+            find F-Sy-H.plugin.zsh chroma functions completions lib tests share \
+              -type f \( -name '*.zsh' -o -path 'functions/*' -o -path 'chroma/*' -o -path 'completions/*' \) \
               -print0 | sort -z
           )
           test "$index" -gt 0
 
       - name: Run integration checks
         run: |
-          zsh -f scripts/test-plugin-entrypoint.zsh
-          zsh -f scripts/test-plugin-lifecycle.zsh noninteractive
-          zsh -f -i scripts/test-plugin-lifecycle.zsh interactive
-          zsh -f scripts/test-function-completion.zsh
-          zsh -f scripts/test-git-chroma-regions.zsh
+          zsh -f tests/integration/test-plugin-entrypoint.zsh
+          zsh -f tests/integration/test-plugin-lifecycle.zsh noninteractive
+          zsh -f -i tests/integration/test-plugin-lifecycle.zsh interactive
+          zsh -f tests/integration/test-function-completion.zsh
+          zsh -f tests/integration/test-git-chroma-regions.zsh
+          zsh -f tests/integration/test-passive-safety.zsh
+          zsh -f tests/integration/test-hostile-autoloads.zsh
 
   required:
     name: Zsh

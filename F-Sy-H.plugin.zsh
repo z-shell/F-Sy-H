@@ -29,19 +29,19 @@
 
 () {
 builtin emulate -L zsh
-builtin setopt extended_glob typeset_silent no_short_loops rc_quotes no_auto_pushd
+builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc_quotes no_auto_pushd
 
-local source_path plugin_dir load_status
-local -a lifecycle_collisions lifecycle_modules
+local -r source_path=${1:a}
+local -r plugin_dir=${source_path:h}
+local load_status configured_value configured_pattern
+local -a lifecycle_collisions lifecycle_modules configured_patterns
 
 lifecycle_modules=( ${(f)"$(zmodload)"} )
-source_path="${${(M)1:#/*}:-$PWD/$1}"
-plugin_dir=${source_path:a:h}
 
 (( ${+_fsh_lifecycle_loaded} && _fsh_lifecycle_loaded )) && return 0
 
 lifecycle_collisions=(
-  ${(M)${(k)functions}:#(_fsh_lifecycle_*|f-sy-h_plugin_unload)}
+  ${(M)${(k)functions}:#(_fsh_lifecycle_*|fsh_plugin_unload)}
 )
 (( ${+_fsh_lifecycle_started} )) && lifecycle_collisions+=( _fsh_lifecycle_started )
 (( ${+_fsh_lifecycle_loaded} )) && lifecycle_collisions+=( _fsh_lifecycle_loaded )
@@ -51,37 +51,51 @@ if (( $#lifecycle_collisions )); then
   return 2
 fi
 
-builtin source "$plugin_dir/lib/lifecycle.zsh" || return
+builtin source -- "$plugin_dir/lib/lifecycle.zsh" || return
 _fsh_lifecycle_begin "${lifecycle_modules[@]}" || return
 
 #
 # Resolve the entrypoint without assigning to special parameter 0. Plugin
 # managers may provide ZERO as the entrypoint path.
-typeset -g FAST_BASE_DIR=$plugin_dir
+typeset -g _fsh_base_dir=$plugin_dir
 
 # Portable autoload paths. Managers may add the same paths first; exact checks
 # keep direct and managed loading idempotent.
-(( ${fpath[(Ie)$FAST_BASE_DIR]} )) || fpath+=( "$FAST_BASE_DIR" )
-(( ${fpath[(Ie)$FAST_BASE_DIR/functions]} )) || fpath+=( "$FAST_BASE_DIR/functions" )
+(( ${fpath[(Ie)$_fsh_base_dir/functions]} )) || fpath+=( "$_fsh_base_dir/functions" )
+(( ${fpath[(Ie)$_fsh_base_dir/completions]} )) || fpath+=( "$_fsh_base_dir/completions" )
+(( ${fpath[(Ie)$_fsh_base_dir/chroma]} )) || fpath+=( "$_fsh_base_dir/chroma" )
 
 # Default global variables
-typeset -g FAST_HIGHLIGHT_VERSION=1.67.1
-typeset -ga _FAST_MAIN_CACHE
+typeset -g _fsh_version=1.67.1
+typeset -ga _fsh_main_cache
 
 # Holds list of indices pointing at brackets that are complex, i.e. e.g. part of "[[" in [[ ... ]]
-typeset -ga _FAST_COMPLEX_BRACKETS
+typeset -ga _fsh_complex_brackets
 
-# Allow user to override the working directory,
-# but default to $XDG_CACHE_HOME/f-sy-h and fall back to $FAST_BASE_DIR.
-typeset -g FAST_WORK_DIR=${FAST_WORK_DIR:-${XDG_CACHE_HOME:-~/.cache}/f-sy-h}
-: ${FAST_WORK_DIR:=$FAST_BASE_DIR}
-FAST_WORK_DIR=${~FAST_WORK_DIR}
+# Resolve public configuration through the single :fsh:config zstyle context.
+if zstyle -s ':fsh:config' work-dir configured_value; then
+  typeset -g _fsh_work_dir=$configured_value
+else
+  typeset -g _fsh_work_dir=${XDG_CACHE_HOME:-~/.cache}/f-sy-h
+fi
+_fsh_work_dir=${~_fsh_work_dir}
+
+configured_value=10000
+zstyle -s ':fsh:config' max-length configured_value || configured_value=10000
+[[ $configured_value == <-> ]] || {
+  builtin print -u2 -r -- 'f-sy-h: :fsh:config max-length must be a non-negative integer'
+  _fsh_lifecycle_abort 2
+  return $?
+}
+typeset -gi _fsh_max_length=$configured_value
 
 # Invokes each highlighter that needs updating.
 # This function is supposed to be called whenever the ZLE state changes.
-_zsh_highlight() {
+_fsh_zle_highlight() {
   # Store the previous command return code to restore it whatever happens.
   local ret=$?
+  builtin emulate -L zsh ${=${options[xtrace]:#off}:+-o xtrace}
+  builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc_quotes no_auto_pushd localtraps
 
   # Remove all highlighting in isearch, so that only the underlining done by zsh itself remains.
   # For details see FAQ entry 'Why does syntax highlighting not work while searching history?'.
@@ -90,35 +104,32 @@ _zsh_highlight() {
     return $ret
   fi
 
-  builtin emulate -L zsh ${=${options[xtrace]:#off}:+-o xtrace}
-  builtin setopt extended_glob typeset_silent no_short_loops rc_quotes no_auto_pushd
-
   local REPLY # don't leak $REPLY into global scope
   local -a reply
 
   # Do not highlight if there are more than 300 chars in the buffer. It's most
   # likely a pasted command or a huge list of files in that case..
-  [[ -n ${ZSH_HIGHLIGHT_MAXLENGTH:-} ]] && [[ $#BUFFER -gt $ZSH_HIGHLIGHT_MAXLENGTH ]] && return $ret
+  [[ -n ${_fsh_max_length:-} ]] && [[ $#BUFFER -gt $_fsh_max_length ]] && return $ret
 
   # Do not highlight if there are pending inputs (copy/paste).
   [[ $PENDING -gt 0 ]] && return $ret
 
   # Reset region highlight to build it from scratch
   # may need to remove path_prefix highlighting when the line ends
-  if [[ $WIDGET == zle-line-finish ]] || _zsh_highlight_buffer_modified; then
+  if [[ $WIDGET == zle-line-finish ]] || _fsh_buffer_modified; then
     _fsh_highlight_init
     _fsh_highlight_process "$PREBUFFER" "$BUFFER" 0
-    (( FAST_HIGHLIGHT[use_brackets] )) && {
-      _FAST_MAIN_CACHE=( $reply )
+    (( _fsh_state[use_brackets] )) && {
+      _fsh_main_cache=( $reply )
       _fsh_highlight_string_process "$PREBUFFER" "$BUFFER"
     }
     region_highlight=( $reply )
   else
     local char="${BUFFER[CURSOR+1]}"
-    if [[ "$char" = ["{([])}"] || "${FAST_HIGHLIGHT[prev_char]}" = ["{([])}"] ]]; then
-      FAST_HIGHLIGHT[prev_char]="$char"
-      (( FAST_HIGHLIGHT[use_brackets] )) && {
-        reply=( $_FAST_MAIN_CACHE )
+    if [[ "$char" = ["{([])}"] || "${_fsh_state[prev_char]}" = ["{([])}"] ]]; then
+      _fsh_state[prev_char]="$char"
+      (( _fsh_state[use_brackets] )) && {
+        reply=( $_fsh_main_cache )
         _fsh_highlight_string_process "$PREBUFFER" "$BUFFER"
         region_highlight=( $reply )
       }
@@ -133,7 +144,7 @@ _zsh_highlight() {
 
     # region
     if (( REGION_ACTIVE == 1 )); then
-      _zsh_highlight_apply_zle_highlight region standout "$MARK" "$CURSOR"
+      _fsh_apply_zle_highlight region standout "$MARK" "$CURSOR"
     elif (( REGION_ACTIVE == 2 )); then
       () {
         local needle=$'\n'
@@ -145,28 +156,28 @@ _zsh_highlight() {
         fi
         (( min = ${${BUFFER[1,$min]}[(I)$needle]} ))
         (( max += ${${BUFFER:($max-1)}[(i)$needle]} - 1 ))
-        _zsh_highlight_apply_zle_highlight region standout "$min" "$max"
+        _fsh_apply_zle_highlight region standout "$min" "$max"
       }
     fi
 
     # yank / paste (zsh-5.1.1 and newer)
     (( $+YANK_ACTIVE )) && (( YANK_ACTIVE )) && \
-    _zsh_highlight_apply_zle_highlight paste standout "$YANK_START" "$YANK_END"
+    _fsh_apply_zle_highlight paste standout "$YANK_START" "$YANK_END"
 
     # isearch
     (( $+ISEARCHMATCH_ACTIVE )) && (( ISEARCHMATCH_ACTIVE )) && \
-    _zsh_highlight_apply_zle_highlight isearch underline "$ISEARCHMATCH_START" "$ISEARCHMATCH_END"
+    _fsh_apply_zle_highlight isearch underline "$ISEARCHMATCH_START" "$ISEARCHMATCH_END"
 
     # suffix
     (( $+SUFFIX_ACTIVE )) && (( SUFFIX_ACTIVE )) && \
-    _zsh_highlight_apply_zle_highlight suffix bold "$SUFFIX_START" "$SUFFIX_END"
+    _fsh_apply_zle_highlight suffix bold "$SUFFIX_START" "$SUFFIX_END"
 
     return $ret
 
   } always {
-    typeset -g _ZSH_HIGHLIGHT_PRIOR_BUFFER="$BUFFER"
-    typeset -g _ZSH_HIGHLIGHT_PRIOR_RACTIVE="$REGION_ACTIVE"
-    typeset -gi _ZSH_HIGHLIGHT_PRIOR_CURSOR=$CURSOR
+    typeset -g _fsh_prior_buffer="$BUFFER"
+    typeset -g _fsh_prior_region_active="$REGION_ACTIVE"
+    typeset -gi _fsh_prior_cursor=$CURSOR
   }
 }
 
@@ -177,7 +188,10 @@ _zsh_highlight() {
 # 2. The default highlighting that should be applied if the entry is unset
 # 3. and 4. Two integer values describing the beginning and end of the
 #    range. The order does not matter.
-_zsh_highlight_apply_zle_highlight() {
+_fsh_apply_zle_highlight() {
+  builtin emulate -L zsh ${=${options[xtrace]:#off}:+-o xtrace}
+  builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc_quotes no_auto_pushd
+
   local entry="$1" default="$2"
   integer first="$3" second="$4"
 
@@ -213,41 +227,52 @@ _zsh_highlight_apply_zle_highlight() {
 
 # Whether the command line buffer has been modified or not.
 #
-# Returns 0 if the buffer has changed since _zsh_highlight was last called.
-_zsh_highlight_buffer_modified() {
-  [[ "${_ZSH_HIGHLIGHT_PRIOR_BUFFER:-}" != "$BUFFER" ]] || \
-  [[ "$REGION_ACTIVE" != "$_ZSH_HIGHLIGHT_PRIOR_RACTIVE" ]] || \
-  { _zsh_highlight_cursor_moved && [[ "$REGION_ACTIVE" = 1 || "$REGION_ACTIVE" = 2 ]] }
+# Returns 0 if the buffer has changed since _fsh_zle_highlight was last called.
+_fsh_buffer_modified() {
+  builtin emulate -L zsh ${=${options[xtrace]:#off}:+-o xtrace}
+  builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc_quotes no_auto_pushd
+
+  [[ "${_fsh_prior_buffer:-}" != "$BUFFER" ]] || \
+  [[ "$REGION_ACTIVE" != "$_fsh_prior_region_active" ]] || \
+  { _fsh_cursor_moved && [[ "$REGION_ACTIVE" = 1 || "$REGION_ACTIVE" = 2 ]] }
 }
 
 # Whether the cursor has moved or not.
 #
-# Returns 0 if the cursor has moved since _zsh_highlight was last called.
-_zsh_highlight_cursor_moved() {
-  [[ -n $CURSOR ]] && [[ -n ${_ZSH_HIGHLIGHT_PRIOR_CURSOR-} ]] && (($_ZSH_HIGHLIGHT_PRIOR_CURSOR != $CURSOR))
+# Returns 0 if the cursor has moved since _fsh_zle_highlight was last called.
+_fsh_cursor_moved() {
+  builtin emulate -L zsh ${=${options[xtrace]:#off}:+-o xtrace}
+  builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc_quotes no_auto_pushd
+
+  [[ -n $CURSOR ]] && [[ -n ${_fsh_prior_cursor-} ]] && (($_fsh_prior_cursor != $CURSOR))
 }
 
 # -------------------------------------------------------------------------------------------------
 # Setup functions
 # -------------------------------------------------------------------------------------------------
 
-# Helper for _zsh_highlight_bind_widgets
+# Helper for _fsh_bind_widgets
 # $1 is name of widget to call
-_zsh_highlight_call_widget() {
+_fsh_call_widget() {
+  builtin emulate -L zsh ${=${options[xtrace]:#off}:+-o xtrace}
+  builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc_quotes no_auto_pushd
+
   integer ret
   builtin zle "$@"
   ret=$?
-  _zsh_highlight
+  _fsh_zle_highlight
   return $ret
 }
 
-# Rebind all ZLE widgets to make them invoke _zsh_highlights.
-_zsh_highlight_bind_widgets() {
-  builtin setopt local_options no_ksh_arrays
-  local -F2 SECONDS
-  local prefix=orig-s${SECONDS/./}-r$(( RANDOM % 1000 )) # unique each time, in case we're sourced more than once
+# Rebind all ZLE widgets to invoke the F-Sy-H highlighter.
+_fsh_bind_widgets() {
+  builtin emulate -L zsh ${=${options[xtrace]:#off}:+-o xtrace}
+  builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc_quotes no_auto_pushd no_ksh_arrays
 
-  # Override ZLE widgets to make them invoke _zsh_highlight.
+  local -F2 SECONDS
+  local prefix=fsh-orig-s${SECONDS/./}-r$(( RANDOM % 1000 )) # unique for each load
+
+  # Override ZLE widgets to make them invoke _fsh_zle_highlight.
   local -U widgets_to_bind
   widgets_to_bind=(${${(k)widgets}:#(.*|run-help|which-command|beep|set-local-history|yank|zle-line-pre-redraw|zle-keymap-select)})
 
@@ -265,33 +290,33 @@ _zsh_highlight_bind_widgets() {
     case $widgets[$cur_widget] in
 
     # Already rebound event: do nothing.
-    user:_zsh_highlight_widget_*);;
+    user:_fsh_widget_*);;
 
     # The "eval"'s are required to make $cur_widget a closure: the value of the parameter at function
     # definition time is used.
     #
-    # We can't use ${0/_zsh_highlight_widget_} because these widgets are always invoked with
+    # We can't use ${0/_fsh_widget_} because these widgets are always invoked with
     # NO_function_argzero, regardless of the option's setting here.
 
-    # User defined widget: override and rebind old one with prefix "orig-".
+    # User defined widget: override and rebind the old one with a private prefix.
     user:*) zle -N -- $prefix-$cur_widget ${widgets[$cur_widget]#*:}
-      eval "_zsh_highlight_widget_${(q)prefix}-${(q)cur_widget}() { _zsh_highlight_call_widget ${(q)prefix}-${(q)cur_widget} -- \"\$@\" }"
-      zle -N -- $cur_widget _zsh_highlight_widget_$prefix-$cur_widget;;
+      eval "_fsh_widget_${(q)prefix}-${(q)cur_widget}() { _fsh_call_widget ${(q)prefix}-${(q)cur_widget} -- \"\$@\" }"
+      zle -N -- $cur_widget _fsh_widget_$prefix-$cur_widget;;
 
-    # Completion widget: override and rebind old one with prefix "orig-".
+    # Completion widget: override and rebind old one with private prefix.
     completion:*) zle -C $prefix-$cur_widget ${${(s.:.)widgets[$cur_widget]}[2,3]}
-      eval "_zsh_highlight_widget_${(q)prefix}-${(q)cur_widget}() { _zsh_highlight_call_widget ${(q)prefix}-${(q)cur_widget} -- \"\$@\" }"
-      zle -N -- $cur_widget _zsh_highlight_widget_$prefix-$cur_widget;;
+      eval "_fsh_widget_${(q)prefix}-${(q)cur_widget}() { _fsh_call_widget ${(q)prefix}-${(q)cur_widget} -- \"\$@\" }"
+      zle -N -- $cur_widget _fsh_widget_$prefix-$cur_widget;;
 
     # Builtin widget: override and make it call the builtin ".widget".
-    builtin) eval "_zsh_highlight_widget_${(q)prefix}-${(q)cur_widget}() { _zsh_highlight_call_widget .${(q)cur_widget} -- \"\$@\" }"
-      zle -N -- $cur_widget _zsh_highlight_widget_$prefix-$cur_widget;;
+    builtin) eval "_fsh_widget_${(q)prefix}-${(q)cur_widget}() { _fsh_call_widget .${(q)cur_widget} -- \"\$@\" }"
+      zle -N -- $cur_widget _fsh_widget_$prefix-$cur_widget;;
 
     # Incomplete or nonexistent widget: Bind to z-sy-h directly.
     *)
       if [[ $cur_widget == zle-* ]] && [[ -z $widgets[$cur_widget] ]]; then
-        _zsh_highlight_widget_${cur_widget}() { :; _zsh_highlight }
-        zle -N -- $cur_widget _zsh_highlight_widget_$cur_widget
+        _fsh_widget_${cur_widget}() { :; _fsh_zle_highlight }
+        zle -N -- $cur_widget _fsh_widget_$cur_widget
       else
         # Default: unhandled case.
         builtin print -r -- >&2 "zsh-syntax-highlighting: unhandled ZLE widget ${(qq)cur_widget}"
@@ -305,11 +330,14 @@ _zsh_highlight_bind_widgets() {
 # -------------------------------------------------------------------------------------------------
 
 # Reset scratch variables when command line is done.
-_zsh_highlight_preexec_hook() {
-  typeset -g _ZSH_HIGHLIGHT_PRIOR_BUFFER=
-  typeset -gi _ZSH_HIGHLIGHT_PRIOR_CURSOR=0
-  typeset -ga _FAST_MAIN_CACHE
-  _FAST_MAIN_CACHE=()
+_fsh_preexec_hook() {
+  builtin emulate -L zsh ${=${options[xtrace]:#off}:+-o xtrace}
+  builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc_quotes no_auto_pushd
+
+  typeset -g _fsh_prior_buffer=
+  typeset -gi _fsh_prior_cursor=0
+  typeset -ga _fsh_main_cache
+  _fsh_main_cache=()
 }
 
 if [[ -o interactive ]]; then
@@ -323,104 +351,106 @@ if [[ -o interactive ]]; then
     _fsh_lifecycle_abort 1
     return $?
   }
-  _zsh_highlight_bind_widgets || {
+  _fsh_bind_widgets || {
     builtin print -u2 -r -- 'f-sy-h: failed binding ZLE widgets'
     _fsh_lifecycle_abort 1
     return $?
   }
 
-  autoload -Uz add-zsh-hook
-  add-zsh-hook preexec _zsh_highlight_preexec_hook 2>/dev/null || {
+  builtin autoload -Uz add-zsh-hook
+  add-zsh-hook preexec _fsh_preexec_hook 2>/dev/null || {
     builtin print -u2 -r -- 'f-sy-h: failed registering the preexec hook'
     _fsh_lifecycle_abort 1
     return $?
   }
 fi
 
-/f-sy-h-debug() {
-  builtin print -r -- "$@" >>! /tmp/reply
-}
-
-typeset -g ZSH_HIGHLIGHT_MAXLENGTH=10000
-
 # Load zsh/parameter module if available
 zmodload zsh/parameter 2>/dev/null
 zmodload zsh/system 2>/dev/null
 
-autoload -Uz -- is-at-least \
-  .fast-read-ini-file .fast-run-git-command \
-  .fast-make-targets .fast-run-command .fast-zts-read-all
+builtin autoload -Uz -- is-at-least \
+  _fsh_read_ini _fsh_run_git_command \
+  _fsh_make_targets _fsh_run_command _fsh_read_all
 
-# Disabled: chroma/-vim.ch chroma/-which.ch
-autoload -Uz -- \
-  chroma/-alias.ch \
-  chroma/-autoload.ch \
-  chroma/-autorandr.ch \
-  chroma/-awk.ch \
-  chroma/-docker.ch \
-  chroma/-fpath_peq.ch \
-  chroma/-git.ch \
-  chroma/-grep.ch \
-  chroma/-hub.ch \
-  chroma/-ionice.ch \
-  chroma/-lab.ch \
-  chroma/-make.ch \
-  chroma/-nice.ch \
-  chroma/-nmcli.ch \
-  chroma/-node.ch \
-  chroma/-ogit.ch \
-  chroma/-perl.ch \
-  chroma/-precommand.ch \
-  chroma/-printf.ch \
-  chroma/-ruby.ch \
-  chroma/-scp.ch \
-  chroma/-sh.ch \
-  chroma/-source.ch \
-  chroma/-ssh.ch \
-  chroma/-subcommand.ch \
-  chroma/-subversion.ch \
-  chroma/-whatis.ch \
-  chroma/-zi.ch \
-  chroma/main-chroma.ch
+# Disabled: _fsh_chroma_vim _fsh_chroma_which
+builtin autoload -Uz -- \
+  _fsh_chroma_alias \
+  _fsh_chroma_autoload \
+  _fsh_chroma_autorandr \
+  _fsh_chroma_awk \
+  _fsh_chroma_docker \
+  _fsh_chroma_fpath_assignment \
+  _fsh_chroma_git \
+  _fsh_chroma_grep \
+  _fsh_chroma_hub \
+  _fsh_chroma_ionice \
+  _fsh_chroma_lab \
+  _fsh_chroma_make \
+  _fsh_chroma_nice \
+  _fsh_chroma_nmcli \
+  _fsh_chroma_node \
+  _fsh_chroma_ogit \
+  _fsh_chroma_perl \
+  _fsh_chroma_precommand \
+  _fsh_chroma_printf \
+  _fsh_chroma_ruby \
+  _fsh_chroma_scp \
+  _fsh_chroma_shell \
+  _fsh_chroma_source \
+  _fsh_chroma_ssh \
+  _fsh_chroma_subcommand \
+  _fsh_chroma_subversion \
+  _fsh_chroma_whatis \
+  _fsh_chroma_zi \
+  _fsh_chroma_main
 
-if (( FAST_THEME_MANAGER_DISABLED )) {
-  unset '_comps[fast-theme]' 2>/dev/null
-  unset -f chroma/-fast-theme.ch 2>/dev/null
-} else {
-  autoload -Uz -- fast-theme chroma/-fast-theme.ch chroma/-example.ch
-  alias f-sy-h=fast-theme
-}
+configured_value=enabled
+zstyle -s ':fsh:config' theme-manager configured_value || configured_value=enabled
+if [[ $configured_value == (disabled|false|no|off|0) ]]; then
+  unset '_comps[fsh_theme]' 2>/dev/null
+  unset -f _fsh_chroma_theme 2>/dev/null
+else
+  builtin autoload -Uz -- fsh_theme _fsh_chroma_theme _fsh_chroma_example
+fi
 
-builtin source "$FAST_BASE_DIR/functions/fast-highlight" || {
+builtin source -- "$_fsh_base_dir/lib/highlight.zsh" || {
   load_status=$?
   _fsh_lifecycle_abort "$load_status"
   return $?
 }
-builtin source "$FAST_BASE_DIR/functions/fast-string-highlight" || {
+builtin source -- "$_fsh_base_dir/lib/string-highlight.zsh" || {
   load_status=$?
   _fsh_lifecycle_abort "$load_status"
   return $?
 }
 
-local __fsyh_theme
-zstyle -s :plugin:fast-syntax-highlighting theme __fsyh_theme
+configured_value=enabled
+zstyle -s ':fsh:config' bracket-highlighting configured_value || configured_value=enabled
+[[ $configured_value == (disabled|false|no|off|0) ]] &&
+  _fsh_state[use_brackets]=0 || _fsh_state[use_brackets]=1
 
-[[ ( "${+termcap}" != 1 || "${termcap[Co]}" != <-> || "${termcap[Co]}" -lt "256" ) && "$__fsyh_theme" = (default|) ]] && {
-  FAST_HIGHLIGHT_STYLES[defaultvariable]="none"
-  FAST_HIGHLIGHT_STYLES[defaultglobbing-ext]="fg=blue,bold"
-  FAST_HIGHLIGHT_STYLES[defaulthere-string-text]="bg=blue"
-  FAST_HIGHLIGHT_STYLES[defaulthere-string-var]="fg=cyan,bg=blue"
-  FAST_HIGHLIGHT_STYLES[defaultcorrect-subtle]="bg=blue"
-  FAST_HIGHLIGHT_STYLES[defaultsubtle-bg]="bg=blue"
-  [[ "${FAST_HIGHLIGHT_STYLES[variable]}" = "fg=113" ]] && FAST_HIGHLIGHT_STYLES[variable]="none"
-  [[ "${FAST_HIGHLIGHT_STYLES[globbing-ext]}" = "fg=13" ]] && FAST_HIGHLIGHT_STYLES[globbing-ext]="fg=blue,bold"
-  [[ "${FAST_HIGHLIGHT_STYLES[here-string-text]}" = "bg=18" ]] && FAST_HIGHLIGHT_STYLES[here-string-text]="bg=blue"
-  [[ "${FAST_HIGHLIGHT_STYLES[here-string-var]}" = "fg=cyan,bg=18" ]] && FAST_HIGHLIGHT_STYLES[here-string-var]="fg=cyan,bg=blue"
-  [[ "${FAST_HIGHLIGHT_STYLES[correct-subtle]}" = "fg=12" ]] && FAST_HIGHLIGHT_STYLES[correct-subtle]="bg=blue"
-  [[ "${FAST_HIGHLIGHT_STYLES[subtle-bg]}" = "bg=18" ]] && FAST_HIGHLIGHT_STYLES[subtle-bg]="bg=blue"
+if zstyle -a ':fsh:config' path-blocklist configured_patterns; then
+  _fsh_blocklist_patterns=()
+  for configured_pattern in "${configured_patterns[@]}"; do
+    _fsh_blocklist_patterns[$configured_pattern]=1
+  done
+fi
+
+[[ ( "${+termcap}" != 1 || "${termcap[Co]}" != <-> || "${termcap[Co]}" -lt "256" ) && "${_fsh_theme_name:-default}" = default ]] && {
+  _fsh_styles[defaultvariable]="none"
+  _fsh_styles[defaultglobbing-ext]="fg=blue,bold"
+  _fsh_styles[defaulthere-string-text]="bg=blue"
+  _fsh_styles[defaulthere-string-var]="fg=cyan,bg=blue"
+  _fsh_styles[defaultcorrect-subtle]="bg=blue"
+  _fsh_styles[defaultsubtle-bg]="bg=blue"
+  [[ "${_fsh_styles[variable]}" = "fg=113" ]] && _fsh_styles[variable]="none"
+  [[ "${_fsh_styles[globbing-ext]}" = "fg=13" ]] && _fsh_styles[globbing-ext]="fg=blue,bold"
+  [[ "${_fsh_styles[here-string-text]}" = "bg=18" ]] && _fsh_styles[here-string-text]="bg=blue"
+  [[ "${_fsh_styles[here-string-var]}" = "fg=cyan,bg=18" ]] && _fsh_styles[here-string-var]="fg=cyan,bg=blue"
+  [[ "${_fsh_styles[correct-subtle]}" = "fg=12" ]] && _fsh_styles[correct-subtle]="bg=blue"
+  [[ "${_fsh_styles[subtle-bg]}" = "bg=18" ]] && _fsh_styles[subtle-bg]="bg=blue"
 }
-
-unset __fsyh_theme
 
 _fsh_highlight_fill_option_variables
 

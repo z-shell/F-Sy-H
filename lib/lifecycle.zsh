@@ -9,7 +9,7 @@ _fsh_lifecycle_function_owned() {
 
   case $1 in
     (_fsh_lifecycle_*) return 1 ;;
-    (_fsh_*|_zsh_highlight*|/f-sy-h-*|fast-theme|.fast-*|chroma/*) return 0 ;;
+    (_fsh_*|fsh_theme|add-zsh-hook|is-at-least|colors) return 0 ;;
     (*) return 1 ;;
   esac
 }
@@ -19,7 +19,7 @@ _fsh_lifecycle_parameter_owned() {
 
   case $1 in
     (_fsh_lifecycle_*) return 1 ;;
-    (FAST_*|_FAST_*|FSH_*|ZSH_HIGHLIGHT_MAXLENGTH|_ZSH_HIGHLIGHT_*|ZLAST_COMMANDS|__FAST_*|__fast_*) return 0 ;;
+    (_fsh_*) return 0 ;;
     (*) return 1 ;;
   esac
 }
@@ -43,10 +43,48 @@ _fsh_lifecycle_arrays_equal() {
   done
 }
 
+_fsh_lifecycle_register_fd() {
+  builtin emulate -L zsh
+
+  local fd=$1 handler=${2-} pid=${3-}
+  [[ $fd == <-> ]] || return 1
+  _fsh_lifecycle_owned_fd_handlers[$fd]=$handler
+  _fsh_lifecycle_owned_fd_pids[$fd]=$pid
+}
+
+_fsh_lifecycle_release_fd() {
+  builtin emulate -L zsh
+
+  local fd=$1
+  builtin unset "_fsh_lifecycle_owned_fd_handlers[$fd]"
+  builtin unset "_fsh_lifecycle_owned_fd_pids[$fd]"
+}
+
+_fsh_lifecycle_cleanup_fds() {
+  builtin emulate -L zsh
+
+  local fd pid
+  integer owned_fd
+  for fd in ${(k)_fsh_lifecycle_owned_fd_handlers}; do
+    pid=${_fsh_lifecycle_owned_fd_pids[$fd]-}
+    if (( ${+builtins[zle]} )); then
+      zle -F -w "$fd" 2>/dev/null || zle -F "$fd" 2>/dev/null || true
+    fi
+    if [[ $pid == <-> ]] && (( pid > 1 && pid != $$ )); then
+      builtin kill -TERM "$pid" 2>/dev/null || true
+      builtin wait "$pid" 2>/dev/null || true
+    fi
+    owned_fd=$fd
+    { exec {owned_fd}<&- } 2>/dev/null || true
+  done
+  _fsh_lifecycle_owned_fd_handlers=()
+  _fsh_lifecycle_owned_fd_pids=()
+}
+
 _fsh_lifecycle_begin() {
   builtin emulate -L zsh
 
-  local name module
+  local name module REPLY
   local -a loaded_modules
 
   typeset -gA _fsh_lifecycle_original_function_set=()
@@ -59,10 +97,6 @@ _fsh_lifecycle_begin() {
   typeset -gA _fsh_lifecycle_applied_parameter_set=()
   typeset -gA _fsh_lifecycle_applied_parameters=()
   typeset -gA _fsh_lifecycle_touched_parameters=()
-  typeset -gA _fsh_lifecycle_original_alias_set=()
-  typeset -gA _fsh_lifecycle_original_aliases=()
-  typeset -gA _fsh_lifecycle_applied_alias_set=()
-  typeset -gA _fsh_lifecycle_applied_aliases=()
   typeset -gA _fsh_lifecycle_original_module_set=()
   typeset -ga _fsh_lifecycle_owned_modules=()
   typeset -ga _fsh_lifecycle_original_fpath=( "${fpath[@]}" )
@@ -73,6 +107,8 @@ _fsh_lifecycle_begin() {
   typeset -gA _fsh_lifecycle_applied_widget_set=()
   typeset -gA _fsh_lifecycle_applied_widgets=()
   typeset -gA _fsh_lifecycle_touched_widgets=()
+  typeset -gA _fsh_lifecycle_owned_fd_handlers=()
+  typeset -gA _fsh_lifecycle_owned_fd_pids=()
   typeset -gi _fsh_lifecycle_widgets_captured=0
   typeset -gi _fsh_lifecycle_started=1
   typeset -gi _fsh_lifecycle_loaded=0
@@ -95,10 +131,6 @@ _fsh_lifecycle_begin() {
     _fsh_lifecycle_original_parameters[$name]=$REPLY
   done
 
-  if (( ${+aliases[f-sy-h]} )); then
-    _fsh_lifecycle_original_alias_set[f-sy-h]=1
-    _fsh_lifecycle_original_aliases[f-sy-h]=${aliases[f-sy-h]}
-  fi
 }
 
 _fsh_lifecycle_capture_widgets() {
@@ -118,7 +150,7 @@ _fsh_lifecycle_capture_widgets() {
 _fsh_lifecycle_finalize() {
   builtin emulate -L zsh
 
-  local name module path declaration
+  local name module path declaration REPLY
   local -a names loaded_modules
 
   (( _fsh_lifecycle_started )) || return 1
@@ -163,17 +195,6 @@ _fsh_lifecycle_finalize() {
     _fsh_lifecycle_touched_parameters[$name]=1
   done
 
-  if (( ${+aliases[f-sy-h]} )); then
-    if (( ! ${+_fsh_lifecycle_original_alias_set[f-sy-h]} )) ||
-      [[ ${aliases[f-sy-h]} != "${_fsh_lifecycle_original_aliases[f-sy-h]-}" ]]; then
-      _fsh_lifecycle_applied_alias_set[f-sy-h]=1
-      _fsh_lifecycle_applied_aliases[f-sy-h]=${aliases[f-sy-h]}
-    fi
-  elif (( ${+_fsh_lifecycle_original_alias_set[f-sy-h]} )); then
-    _fsh_lifecycle_applied_alias_set[f-sy-h]=0
-    _fsh_lifecycle_applied_aliases[f-sy-h]=
-  fi
-
   _fsh_lifecycle_applied_fpath=( "${fpath[@]}" )
   for path in "${_fsh_lifecycle_applied_fpath[@]}"; do
     (( ${_fsh_lifecycle_original_fpath[(Ie)$path]} )) ||
@@ -208,11 +229,18 @@ _fsh_lifecycle_finalize() {
   _fsh_lifecycle_loaded=1
 }
 
+_fsh_lifecycle_refresh() {
+  builtin emulate -L zsh
+
+  (( ${+parameters[_fsh_lifecycle_started]} && _fsh_lifecycle_started )) || return 0
+  _fsh_lifecycle_finalize
+}
+
 _fsh_lifecycle_restore_widget() {
   builtin emulate -L zsh
 
   local name=$1 descriptor=$2 rest widget_type function_name
-  integer was_set=$3
+  integer was_set="${3:-0}"
 
   if (( ! was_set )) || [[ -z $descriptor ]]; then
     zle -D "$name" 2>/dev/null || true
@@ -250,9 +278,9 @@ _fsh_lifecycle_restore_widgets() {
   for pass in 1 2; do
     for name in ${(k)_fsh_lifecycle_touched_widgets}; do
       if (( pass == 1 )); then
-        [[ $name == orig-* ]] && continue
+        [[ $name == fsh-orig-* ]] && continue
       else
-        [[ $name == orig-* ]] || continue
+        [[ $name == fsh-orig-* ]] || continue
       fi
 
       applied_set=${_fsh_lifecycle_applied_widget_set[$name]:-0}
@@ -299,7 +327,7 @@ _fsh_lifecycle_restore_functions() {
 _fsh_lifecycle_restore_parameters() {
   builtin emulate -L zsh
 
-  local name current applied original
+  local name current applied original REPLY
   integer applied_set original_set
 
   for name in ${(k)_fsh_lifecycle_touched_parameters}; do
@@ -324,26 +352,6 @@ _fsh_lifecycle_restore_parameters() {
       builtin unset "$name" 2>/dev/null || true
     fi
   done
-}
-
-_fsh_lifecycle_restore_alias() {
-  builtin emulate -L zsh
-
-  local current=${aliases[f-sy-h]-}
-  integer applied_set=${_fsh_lifecycle_applied_alias_set[f-sy-h]:-0}
-
-  if (( applied_set )); then
-    (( ${+aliases[f-sy-h]} )) &&
-      [[ $current == "${_fsh_lifecycle_applied_aliases[f-sy-h]}" ]] || return 0
-  else
-    (( ${+aliases[f-sy-h]} )) && return 0
-  fi
-
-  if (( ${+_fsh_lifecycle_original_alias_set[f-sy-h]} )); then
-    aliases[f-sy-h]=${_fsh_lifecycle_original_aliases[f-sy-h]}
-  else
-    builtin unalias f-sy-h 2>/dev/null || true
-  fi
 }
 
 _fsh_lifecycle_restore_fpath() {
@@ -375,23 +383,23 @@ _fsh_lifecycle_abort() {
 
   local load_status=${1:-1}
   _fsh_lifecycle_finalize 2>/dev/null || true
-  f-sy-h_plugin_unload 2>/dev/null || true
+  fsh_plugin_unload 2>/dev/null || true
   return "$load_status"
 }
 
-f-sy-h_plugin_unload() {
+fsh_plugin_unload() {
   builtin emulate -L zsh
 
   local module helper
   local -a helpers
 
   if (( ${+parameters[_fsh_lifecycle_started]} && _fsh_lifecycle_started )); then
+    _fsh_lifecycle_cleanup_fds
     if (( ${+functions[add-zsh-hook]} )); then
-      add-zsh-hook -d preexec _zsh_highlight_preexec_hook 2>/dev/null || true
+      add-zsh-hook -d preexec _fsh_preexec_hook 2>/dev/null || true
     fi
 
     _fsh_lifecycle_restore_widgets
-    _fsh_lifecycle_restore_alias
     _fsh_lifecycle_restore_fpath
     _fsh_lifecycle_restore_functions
     _fsh_lifecycle_restore_parameters
@@ -406,14 +414,17 @@ f-sy-h_plugin_unload() {
     _fsh_lifecycle_parameter_owned
     _fsh_lifecycle_parameter_declaration
     _fsh_lifecycle_arrays_equal
+    _fsh_lifecycle_register_fd
+    _fsh_lifecycle_release_fd
+    _fsh_lifecycle_cleanup_fds
     _fsh_lifecycle_begin
     _fsh_lifecycle_capture_widgets
     _fsh_lifecycle_finalize
+    _fsh_lifecycle_refresh
     _fsh_lifecycle_restore_widget
     _fsh_lifecycle_restore_widgets
     _fsh_lifecycle_restore_functions
     _fsh_lifecycle_restore_parameters
-    _fsh_lifecycle_restore_alias
     _fsh_lifecycle_restore_fpath
     _fsh_lifecycle_abort
   )
@@ -428,10 +439,6 @@ f-sy-h_plugin_unload() {
   builtin unset _fsh_lifecycle_applied_parameter_set
   builtin unset _fsh_lifecycle_applied_parameters
   builtin unset _fsh_lifecycle_touched_parameters
-  builtin unset _fsh_lifecycle_original_alias_set
-  builtin unset _fsh_lifecycle_original_aliases
-  builtin unset _fsh_lifecycle_applied_alias_set
-  builtin unset _fsh_lifecycle_applied_aliases
   builtin unset _fsh_lifecycle_original_module_set
   builtin unset _fsh_lifecycle_owned_modules
   builtin unset _fsh_lifecycle_original_fpath
@@ -442,6 +449,8 @@ f-sy-h_plugin_unload() {
   builtin unset _fsh_lifecycle_applied_widget_set
   builtin unset _fsh_lifecycle_applied_widgets
   builtin unset _fsh_lifecycle_touched_widgets
+  builtin unset _fsh_lifecycle_owned_fd_handlers
+  builtin unset _fsh_lifecycle_owned_fd_pids
   builtin unset _fsh_lifecycle_widgets_captured
   builtin unset _fsh_lifecycle_started
   builtin unset _fsh_lifecycle_loaded
@@ -449,5 +458,5 @@ f-sy-h_plugin_unload() {
   for helper in "${helpers[@]}"; do
     builtin unfunction "$helper" 2>/dev/null || true
   done
-  builtin unfunction f-sy-h_plugin_unload
+  builtin unfunction fsh_plugin_unload
 }

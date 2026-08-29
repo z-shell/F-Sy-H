@@ -1,0 +1,88 @@
+# -*- mode: zsh; sh-indentation: 2; indent-tabs-mode: nil; sh-basic-offset: 2; -*-
+#
+# Highlights the special sequences like "%s" in string passed to `printf'.
+#
+# $1 - 0 or 1, denoting if it's first call to the chroma, or following one
+#
+# $2 - the current token, also accessible by $__arg from the above scope -
+#      basically a private copy of $__arg; the token can be eg.: "grep"
+#
+# $3 - a private copy of $_start_pos, i.e. the position of the token in the
+#      command line buffer, used to add region_highlight entry (see man),
+#      because Zsh colorizes by *ranges* in command line buffer
+#
+# $4 - a private copy of $_end_pos from the above scope
+#
+
+builtin emulate -L zsh
+builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc_quotes no_auto_pushd no_nomatch
+
+(( next_word = 2 | 8192 ))
+
+local __first_call="$1" __wrd="$2" __start_pos="$3" __end_pos="$4"
+local __style __val
+integer __idx1 __idx2
+
+# First call, i.e. command starts, i.e. "grep" token etc.
+(( __first_call )) && {
+    _fsh_state[chroma-printf-counter]=0
+    _fsh_state[chroma-printf-counter-all]=1
+    _fsh_state[chroma-printf-message]=""
+    _fsh_state[chroma-printf-skip-two]=0
+    return 1
+# Following call (not first one).
+} || {
+    if (( in_redirection > 0 || this_word & 128 )) || [[ $__wrd == "<<<" ]]; then
+        return 1
+    fi
+    (( _fsh_state[chroma-printf-counter-all] += 1, __idx2 = _fsh_state[chroma-printf-counter-all] ))
+
+    # Check if chroma should end – test if token is of type
+    # "starts new command", if so pass-through – chroma ends
+    [[ "$__arg_type" = 3 ]] && return 2
+
+    if [[ "$__wrd" = -* ]]; then
+        if [[ "$__wrd" = "-v" ]]; then
+            _fsh_state[chroma-printf-skip-two]=1
+        fi
+        return 1
+    else
+        # Count non-option tokens.
+        if (( _fsh_state[chroma-printf-skip-two] )); then
+            _fsh_state[chroma-printf-skip-two]=0
+            return 1
+        else
+            (( _fsh_state[chroma-printf-counter] += 1, __idx1 = _fsh_state[chroma-printf-counter] ))
+            if [[ "$__idx1" -eq 1 ]]; then
+                [[ "$__wrd" = \"* ]] && (( __start=__start_pos-${#PREBUFFER}, __end=__end_pos-${#PREBUFFER}, __start >= 0 )) \
+                    && reply+=("$__start $__end ${_fsh_styles[${_fsh_theme_name}double-quoted-argument]}")
+                [[ "$__wrd" = \'* ]] && (( __start=__start_pos-${#PREBUFFER}, __end=__end_pos-${#PREBUFFER}, __start >= 0 )) \
+                    && reply+=("$__start $__end ${_fsh_styles[${_fsh_theme_name}single-quoted-argument]}")
+                _fsh_style_ranges=() # use fsh_sy_h_append function to write to _fsh_style_ranges
+                : "${__wrd//(#m)\%[\#\+\ 0-]#[0-9]#([.][0-9]#)(#c0,1)[diouxXfFeEgGaAcsb]/$(( fsh_sy_h_append($MBEGIN, $MEND) ))}";
+                for __val in "${_fsh_style_ranges[@]}" ; do
+                    __idx1=$(( __start_pos + ${__val%%;;*} ))
+                    __idx2=__idx1+${__val##*;;}-${__val%%;;*}+1
+                    (( __start=__idx1-${#PREBUFFER}, __end=__idx2-${#PREBUFFER}-1, __start >= 0 )) && \
+                        reply+=("$__start $__end ${_fsh_styles[${_fsh_theme_name}mathnum]}")
+                done
+            else
+                return 1
+            fi
+        fi
+    fi
+}
+
+# Add region_highlight entry (via `reply' array).
+#
+# This is a common place of adding such entry, but any above code
+# can do it itself and skip setting __style to disable this code.
+[[ -n "$__style" ]] && (( __start=__start_pos-${#PREBUFFER}, __end=__end_pos-${#PREBUFFER}, __start >= 0 )) && reply+=("$__start $__end ${_fsh_styles[$__style]}")
+
+# We aren't passing-through (no return 1 occured), do obligatory things ourselves.
+(( this_word = next_word ))
+_start_pos=$_end_pos
+
+return 0
+
+# vim: ft=zsh sw=2 ts=2 et

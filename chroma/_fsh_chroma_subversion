@@ -1,0 +1,253 @@
+# -*- mode: zsh; sh-indentation: 2; indent-tabs-mode: nil; sh-basic-offset: 2; -*-
+# vim: ft=zsh sw=2 ts=2 et
+#
+# -------------------------------------------------------------------------------------------------
+# Copyright (c) 2018 Sebastian Gniazdowski
+# Copyright (C) 2019 by Philippe Troin (F-i-f on GitHub)
+# All rights reserved.
+#
+# The only licensing for this file follows.
+#
+# Redistribution and use in source and binary forms, with or without modification, are permitted
+# provided that the following conditions are met:
+#
+#  * Redistributions of source code must retain the above copyright notice, this list of conditions
+#    and the following disclaimer.
+#  * Redistributions in binary form must reproduce the above copyright notice, this list of
+#    conditions and the following disclaimer in the documentation and/or other materials provided
+#    with the distribution.
+#  * Neither the name of the zsh-syntax-highlighting contributors nor the names of its contributors
+#    may be used to endorse or promote products derived from this software without specific prior
+#    written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR
+# IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND
+# FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
+# CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+# IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
+# OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+# -------------------------------------------------------------------------------------------------
+
+builtin emulate -L zsh
+builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc_quotes no_auto_pushd no_nomatch
+
+_fsh_chroma_subversion_parse_revision() {
+    builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc_quotes no_auto_pushd local_options
+    local __wrd="$1" __start_pos="$2" __end_pos="$3" __style __start __end
+    case $__wrd in
+        (r|)[0-9]##)               __style=${_fsh_theme_name}mathnum          ;;
+        (HEAD|BASE|COMITTED|PREV)) __style=${_fsh_theme_name}correct-subtle   ;;
+        '{'[^}]##'}')              __style=${_fsh_theme_name}subtle-bg        ;;
+        *)                         __style=${_fsh_theme_name}incorrect-subtle ;;
+    esac
+    (( __start=__start_pos-${#PREBUFFER}, __end=__end_pos-${#PREBUFFER}, __start >= 0 )) && reply+=("$__start $__end ${_fsh_styles[$__style]}")
+}
+
+_fsh_chroma_subversion_parse_target() {
+    builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc_quotes no_auto_pushd local_options
+    local __wrd="$1" __start_pos="$2" __end_pos="$3" __style __start __end
+    if [[ $__wrd == *@[^/]# ]]
+    then
+        local place=${__wrd%@[^/]#}
+        local rev=$__wrd[$(($#place+2)),$#__wrd]
+        if [[ -e $place ]]; then
+            local __style
+            [[ -d $place ]] && __style="${_fsh_theme_name}path-to-dir"  ||  __style="${_fsh_theme_name}path"
+            (( __start=__start_pos-${#PREBUFFER}, __end=__end_pos-${#PREBUFFER}-$#rev-1, __start >= 0 )) \
+                && reply+=("$__start $__end ${_fsh_styles[$__style]}")
+        fi
+        (( __start=__start_pos-${#PREBUFFER}+$#place, __end=__end_pos-${#PREBUFFER}-$#rev, __start >= 0 )) \
+            && reply+=("$__start $__end ${_fsh_styles[${_fsh_theme_name}for-loop-separator]}")
+        _fsh_chroma_subversion_parse_revision $rev $((__start_pos+$#place+1)) $__end_pos
+    else
+        return 1
+    fi
+}
+
+  builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc_quotes no_auto_pushd local_options
+
+# Keep chroma-takever state meaning: until ;, handle highlighting via chroma.
+# So the below 8192 assignment takes care that next token will be routed to chroma.
+(( next_word = 2 | 8192 ))
+
+local __first_call="$1" __wrd="$2" __start_pos="$3" __end_pos="$4"
+local __style
+integer __idx1 __idx2
+
+(( __first_call )) && {
+    # Called for the first time - new command.
+    # _fsh_state is used because it survives between calls, and
+    # allows to use a single global hash only, instead of multiple
+    # global string variables.
+    _fsh_state[subversion-command]=$__wrd
+    _fsh_state[subversion-option-argument]=
+    _fsh_state[subversion-subcommand]=
+    _fsh_state[subversion-subcommand-arguments]=0
+
+    # Set style for region_highlight entry. It is used below in
+    # '[[ -n "$__style" ]] ...' line, which adds highlight entry,
+    # like "10 12 fg=green", through `reply' array.
+    #
+    # Could check if command `example' exists and set `unknown-token'
+    # style instead of `command'
+    __style=${_fsh_theme_name}command
+
+} || {
+    # Following call, i.e. not the first one
+
+    # Check if chroma should end – test if token is of type
+    # "starts new command", if so pass-through – chroma ends
+    [[ "$__arg_type" = 3 ]] && return 2
+
+    if (( in_redirection > 0 || this_word & 128 )) || [[ $__wrd == "<<<" ]]; then
+        return 1
+    fi
+
+    if [[ "$__wrd" = -* ]]; then
+        # Detected option, add style for it.
+        [[ "$__wrd" = --* ]] && __style=${_fsh_theme_name}double-hyphen-option || \
+                                __style=${_fsh_theme_name}single-hyphen-option
+        case $_fsh_state[subversion-command]/$_fsh_state[subversion-subcommand] in
+            svn/)
+                case $__wrd in
+                    --username|-u)         _fsh_state[subversion-option-argument]=any;;
+                    --password|-p)         _fsh_state[subversion-option-argument]=any;;
+                    --config-(dir|option)) _fsh_state[subversion-option-argument]=any;;
+                esac
+                ;;
+            svn/?*)
+                case $__wrd in
+                    --accept)          _fsh_state[subversion-option-argument]=accept;;
+                    --change|-c)       _fsh_state[subversion-option-argument]=revision;;
+                    --changelist|--cl) _fsh_state[subversion-option-argument]=any;;
+                    --(set-|)depth)    _fsh_state[subversion-option-argument]=depth;;
+                    --diff(3|)-cmd)    _fsh_state[subversion-option-argument]=cmd;;
+                    --editor-cmd)      _fsh_state[subversion-option-argument]=cmd;;
+                    --encoding)        _fsh_state[subversion-option-argument]=any;;
+                    --file)            _fsh_state[subversion-option-argument]=any;;
+                    --limit|-l)        _fsh_state[subversion-option-argument]=number;;
+                    --message|-m)      _fsh_state[subversion-option-argument]=any;;
+                    --native-eol)      _fsh_state[subversion-option-argument]=eol;;
+                    --new|--old)       _fsh_state[subversion-option-argument]=target;;
+                    --revision|-r)     _fsh_state[subversion-option-argument]=revision-pair;;
+                    --show-revs)       _fsh_state[subversion-option-argument]=show-revs;;
+                    --strip)           _fsh_state[subversion-option-argument]=number;;
+                    --with-revprop)    _fsh_state[subversion-option-argument]=revprop;;
+                esac
+                ;;
+            svnadmin/*)
+                case $__wrd in
+                    --config-dir)           _fsh_state[subversion-option-argument]=any;;
+                    --fs-type)              _fsh_state[subversion-option-argument]=any;;
+                    --memory-cache-size|-M) _fsh_state[subversion-option-argument]=number;;
+                    --parent-dir)           _fsh_state[subversion-option-argument]=any;;
+                    --revision|-r)          _fsh_state[subversion-option-argument]=revision-pair;;
+                esac
+                ;;
+            svndumpfilter/*)
+                case $__wrd in
+                    --targets) _fsh_state[subversion-option-argument]=any;;
+                esac
+                ;;
+        esac
+    elif [[ -n $_fsh_state[subversion-option-argument] ]]; then
+        case $_fsh_state[subversion-option-argument] in
+            any)
+                _fsh_state[subversion-option-argument]=
+                return 1
+                ;;
+            accept)
+                [[ $__wrd = (p(|ostpone)|e(|dit)|l(|aunch)|base|working|recommended|[mt][cf]|(mine|theirs)-(conflict|full)) ]] \
+                    && __style=${_fsh_theme_name}correct-subtle \
+                    || __style=${_fsh_theme_name}incorrect-subtle
+                ;;
+            depth)
+                [[ $__wrd = (empty|files|immediates|infinity) ]] \
+                    && __style=${_fsh_theme_name}correct-subtle \
+                    || __style=${_fsh_theme_name}incorrect-subtle
+                ;;
+            number)
+                [[ $__wrd = [0-9]## ]] \
+                    && __style=${_fsh_theme_name}mathnum \
+                    || __style=${_fsh_theme_name}incorrect-subtle
+                ;;
+            eol)
+                [[ $__wrd = (CR(|LF)|LF) ]] \
+                    && __style=${_fsh_theme_name}correct-subtle \
+                    || __style=${_fsh_theme_name}incorrect-subtle
+                ;;
+            show-revs)
+                [[ $__wrd = (merged|eligible) ]] \
+                    && __style=${_fsh_theme_name}correct-subtle \
+                    || __style=${_fsh_theme_name}incorrect-subtle
+                ;;
+            revision)
+                _fsh_chroma_subversion_parse_revision $__wrd $__start_pos $__end_pos
+                ;;
+            revision-pair)
+                local -a match mbegin mend
+                if [[ $__wrd = (#b)(\{[^}]##\}|[^:]##)(:)(*) ]]; then
+                    _fsh_chroma_subversion_parse_revision $match[1] $__start_pos $(( __end_pos - ( mend[3]-mend[2] ) - 1 ))
+                    _fsh_chroma_subversion_parse_revision $match[3] $(( __start_pos + ( mbegin[3]-mbegin[1] ) )) $__end_pos
+                    (( __start=__start_pos-${#PREBUFFER}+(mbegin[2]-mbegin[1]), __end=__end_pos-${#PREBUFFER}-(mend[3]-mend[2]), __start >= 0 )) \
+                        && reply+=("$__start $__end ${_fsh_styles[${_fsh_theme_name}for-loop-separator]}")
+                else
+                    _fsh_chroma_subversion_parse_revision $__wrd $__start_pos $__end_pos
+                fi
+                ;;
+            target)
+                _fsh_chroma_subversion_parse_target $__wrd $__start_pos $__end_pos || return $?
+                ;;
+            cmd)
+                this_word=1
+                return 1
+                ;;
+        esac
+        _fsh_state[subversion-option-argument]=
+    elif [[ -z $_fsh_state[subversion-subcommand] ]]
+    then
+        _fsh_state[subversion-subcommand]=$__wrd
+        local subcmds
+        case $_fsh_state[subversion-command] in
+            svn) subcmds='(add|auth|blame|praise|annotate|ann|cat|changelist|cl|checkout|co|cleanup|commit|ci|copy|cp|delete|del|remove|rm|diff|di|export|help|\?|h|import|info|list|ls|lock|log|merge|mergeinfo|mkdir|move|mv|rename|ren|patch|propdel|pdel|pd|propedit|pedit|pe|propget|pget|pg|proplist|plist|pl|propset|pset|ps|relocate|resolve|resolved|revert|status|stat|st|switch|sw|unlock|update|up|upgrade|x-shelf-diff|x-shelf-drop|x-shelf-list|x-shelves|x-shelf-list-by-paths|x-shelf-log|x-shelf-save|x-shelve|x-unshelve)' ;;
+            svnadmin) subcmds="(crashtest|create|delrevprop|deltify|dump|dump-revprops|freeze|help|\?|h|hotcopy|info|list-dblogs|list-unused-dblogs|load|load-revprops|lock|lslocks|lstxns|pack|recover|rmlocks|rmtxns|setlog|setrevprop|setuuid|unlock|upgrade|verify)";;
+            svndumpfilter) subcmds='(include|exclude|help|\?)';;
+        esac
+        [[ $_fsh_state[subversion-subcommand] = $~subcmds ]] \
+            && __style=${_fsh_theme_name}subcommand \
+            || __style=${_fsh_theme_name}incorrect-subtle
+        _fsh_state[subversion-subcommand-arguments]=0
+    else
+        (( _fsh_state[subversion-subcommand-arguments]+=1 ))
+        if [[ ( $_fsh_state[subversion-subcommand] == (checkout|co|export|log|merge|switch|sw) && $_fsh_state[subversion-subcommand-arguments] -eq 1 ) \
+                  || $_fsh_state[subversion-subcommand] == (blame|praise|annotate|ann|cat|copy|cp|diff|info|list|ls|mergeinfo) ]]; then
+            _fsh_chroma_subversion_parse_target $__wrd $__start_pos $__end_pos || return $?
+        else
+            return 1
+        fi
+    fi
+}
+
+# Add region_highlight entry (via `reply' array).
+# If 1 will be added to __start_pos, this will highlight "oken".
+# If 1 will be subtracted from __end_pos, this will highlight "toke".
+# $PREBUFFER is for specific situations when users does command \<ENTER>
+# i.e. when multi-line command using backslash is entered.
+#
+# This is a common place of adding such entry, but any above code can do
+# it itself (and it does in other chromas) and skip setting __style to
+# this way disable this code.
+[[ -n "$__style" ]] && (( __start=__start_pos-${#PREBUFFER}, __end=__end_pos-${#PREBUFFER}, __start >= 0 )) && reply+=("$__start $__end ${_fsh_styles[$__style]}")
+
+# We aren't passing-through, do obligatory things ourselves.
+# _start_pos=$_end_pos advances pointers in command line buffer.
+#
+# To pass through means to `return 1'. The highlighting of
+# this single token is then done by fast-syntax-highlighting's
+# main code and chroma doesn't have to do anything.
+(( this_word = next_word ))
+_start_pos=$_end_pos
+
+return 0

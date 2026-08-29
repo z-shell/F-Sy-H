@@ -5,9 +5,12 @@
 *.yaml text
 *.ini text
 
-*.ch text diff=zsh
 *.zsh text diff=zsh
 functions/* text diff=zsh
+chroma/* text diff=zsh
+completions/* text diff=zsh
+lib/* text diff=zsh
+tests/integration/* text diff=zsh
 
 *.gif binary
 *.png binary

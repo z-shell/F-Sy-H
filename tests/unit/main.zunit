@@ -1,0 +1,171 @@
+#!/usr/bin/env zunit
+@setup {
+    load "../../F-Sy-H.plugin.zsh"
+    setopt interactive_comments
+    _fsh_highlight_fill_option_variables
+}
+
+@test 'ls /usr/bin' {
+reply=()
+    PREBUFFER=""
+    BUFFER="ls /usr/bin"
+    evl _fsh_highlight_process "$PREBUFFER" "$BUFFER" 0
+
+    assert "$reply[1]" same_as "0 2 ${_fsh_styles[${_fsh_theme_name}command]}"
+    assert "$reply[2]" same_as "3 11 ${_fsh_styles[${_fsh_theme_name}path-to-dir]}"
+    assert "$reply[3]" same_as ""
+}
+
+@test 'ls /bin/df' {
+    reply=()
+    PREBUFFER=""
+    BUFFER="ls /bin/df"
+    evl _fsh_highlight_process "$PREBUFFER" "$BUFFER" 0
+
+    assert "$reply[1]" same_as "0 2 ${_fsh_styles[${_fsh_theme_name}command]}"
+    assert "$reply[2]" same_as "3 10 ${_fsh_styles[${_fsh_theme_name}path]}"
+    assert "$reply[3]" same_as ""
+}
+
+
+@test 'ls /bin/ls\\n # a comment\\nls /usr/bin' {
+    reply=()
+    PREBUFFER=""
+    BUFFER=$'ls /bin/df\n # a comment\nls /usr/bin'
+    evl _fsh_highlight_process "$PREBUFFER" "$BUFFER" 0
+
+    assert "$reply[1]" same_as "0 2 ${_fsh_styles[${_fsh_theme_name}command]}"
+    assert "$reply[2]" same_as "3 10 ${_fsh_styles[${_fsh_theme_name}path]}"
+    assert "$reply[3]" same_as "12 23 ${_fsh_styles[${_fsh_theme_name}comment]}"
+    assert "$reply[4]" same_as "24 26 ${_fsh_styles[${_fsh_theme_name}command]}"
+    assert "$reply[5]" same_as "27 35 ${_fsh_styles[${_fsh_theme_name}path-to-dir]}"
+    assert "$reply[6]" same_as ""
+}
+
+
+@test 'exec {FD}< <( ls /bin )' {
+    reply=()
+    PREBUFFER=""
+    BUFFER=$'exec {FD}< <( ls /bin )'
+    evl _fsh_highlight_process "$PREBUFFER" "$BUFFER" 0
+
+    assert "$reply[1]" same_as "0 4 ${_fsh_styles[${_fsh_theme_name}precommand]}"
+    assert "$reply[2]" same_as "5 9 ${_fsh_styles[${_fsh_theme_name}exec-descriptor]}"
+    assert "$reply[3]" same_as ""
+}
+
+
+@test 'case x in x) a;; (y) ;; esac' {
+    reply=()
+    PREBUFFER=""
+    BUFFER=$'case x in\nx) a;;\n(y)\n;;\nesac'
+    evl _fsh_highlight_process "$PREBUFFER" "$BUFFER" 0
+
+    assert "$reply[1]" same_as "0 4 ${_fsh_styles[${_fsh_theme_name}reserved-word]}"
+    assert "$reply[2]" same_as "5 6 ${_fsh_styles[${_fsh_theme_name}case-input]}"
+    assert "$reply[3]" same_as "7 9 ${_fsh_styles[${_fsh_theme_name}case-parentheses]}"
+    assert "$reply[4]" same_as "10 11 ${_fsh_styles[${_fsh_theme_name}case-condition]}"
+    assert "$reply[5]" same_as "11 12 ${_fsh_styles[${_fsh_theme_name}case-parentheses]}"
+    assert "$reply[6]" same_as "13 14 ${_fsh_styles[${_fsh_theme_name}unknown-token]}"
+    assert "$reply[7]" same_as "17 18 ${_fsh_styles[${_fsh_theme_name}case-parentheses]}"
+    assert "$reply[8]" same_as "18 19 ${_fsh_styles[${_fsh_theme_name}case-condition]}"
+    assert "$reply[9]" same_as "19 20 ${_fsh_styles[${_fsh_theme_name}case-parentheses]}"
+    assert "$reply[10]" same_as "24 28 ${_fsh_styles[${_fsh_theme_name}reserved-word]}"
+    assert "$reply[11]" same_as ""
+}
+
+@test '_fsh_highlight_process "$PREBUFFER" "$BUFFER" 0' {
+    reply=()
+    PREBUFFER=""
+    BUFFER='_fsh_highlight_process "$PREBUFFER" "$BUFFER" 0'
+    evl _fsh_highlight_process "\$PREBUFFER" "\$BUFFER" 0
+
+    assert "$reply[1]" same_as "0 22 ${_fsh_styles[${_fsh_theme_name}function]}"
+    assert "$reply[2]" same_as "23 35 ${_fsh_styles[${_fsh_theme_name}double-quoted-argument]}"
+    assert "$reply[3]" same_as "24 34 ${_fsh_styles[${_fsh_theme_name}back-or-dollar-double-quoted-argument]}"
+    assert "$reply[4]" same_as "36 45 ${_fsh_styles[${_fsh_theme_name}double-quoted-argument]}"
+    assert "$reply[5]" same_as "37 44 ${_fsh_styles[${_fsh_theme_name}back-or-dollar-double-quoted-argument]}"
+    assert "$reply[6]" same_as ""
+}
+
+@test 'tr : \\\\n <<<$PATH' {
+    reply=()
+    PREBUFFER=""
+    BUFFER='command tr : \\n <<<test$PATH'
+    evl _fsh_highlight_process "\$PREBUFFER" "\$BUFFER" 0
+
+    assert "$reply[1]" same_as "0 7 ${_fsh_styles[${_fsh_theme_name}precommand]}"
+    assert "$reply[2]" same_as "8 10 ${_fsh_styles[${_fsh_theme_name}command]}"
+    assert "$reply[3]" same_as "16 19 ${_fsh_styles[${_fsh_theme_name}here-string-tri]}"
+    # BUG?: the text spans over non-text (i.e. var) part
+    assert "$reply[4]" same_as "19 28 ${_fsh_styles[${_fsh_theme_name}here-string-text]}"
+    assert "$reply[5]" same_as "23 28 ${_fsh_styles[${_fsh_theme_name}here-string-var]}"
+    assert "$reply[6]" same_as ""
+}
+
+@test 'local var1; (( var + var1 + $var + $var1 + 123 ))' {
+    reply=()
+    PREBUFFER=""
+    BUFFER='local var1; (( var + var1 + $var + $var1 + 123 ))'
+    evl _fsh_highlight_process "\$PREBUFFER" "\$BUFFER" 0
+
+    # Should actually be `reserved-word', but the type -w call returns `builtin'…
+    assert "$reply[1]" same_as "0 5 ${_fsh_styles[${_fsh_theme_name}builtin]}"
+    assert "$reply[2]" same_as "12 14 ${_fsh_styles[${_fsh_theme_name}double-paren]}"
+    assert "$reply[3]" same_as "15 18 ${_fsh_styles[${_fsh_theme_name}matherr]}"
+    assert "$reply[4]" same_as "21 25 ${_fsh_styles[${_fsh_theme_name}mathvar]}"
+    assert "$reply[5]" same_as "28 32 ${_fsh_styles[${_fsh_theme_name}matherr]}"
+    assert "$reply[6]" same_as "35 40 ${_fsh_styles[${_fsh_theme_name}back-or-dollar-double-quoted-argument]}"
+    assert "$reply[7]" same_as "43 46 ${_fsh_styles[${_fsh_theme_name}mathnum]}"
+    assert "$reply[8]" same_as "47 49 ${_fsh_styles[${_fsh_theme_name}double-paren]}"
+    assert "$reply[9]" same_as ""
+}
+
+@test 'private functions do not pollute dash completion' {
+    run zsh -f ./tests/integration/test-function-completion.zsh
+
+    assert "$output" is_empty
+    assert "$state" same_as "0"
+}
+
+@test 'entrypoint is passive, option-safe, and repeatable' {
+    run zsh -f ./tests/integration/test-plugin-entrypoint.zsh
+
+    assert "$output" is_empty
+    assert "$state" same_as "0"
+}
+
+@test 'entrypoint unload restores non-interactive and partial-load state' {
+    run zsh -f ./tests/integration/test-plugin-lifecycle.zsh noninteractive
+
+    assert "$output" is_empty
+    assert "$state" same_as "0"
+}
+
+@test 'entrypoint unload restores interactive ZLE state' {
+    run zsh -f -i ./tests/integration/test-plugin-lifecycle.zsh interactive
+
+    assert "$output" is_empty
+    assert "$state" same_as "0"
+}
+
+@test 'git chroma preserves region_highlight contract on first use' {
+    run zsh -f ./tests/integration/test-git-chroma-regions.zsh
+
+    assert "$output" is_empty
+    assert "$state" same_as "0"
+}
+
+@test 'passive highlighting never executes interpreters or fixed temp paths' {
+    run zsh -f ./tests/integration/test-passive-safety.zsh
+
+    assert "$output" is_empty
+    assert "$state" same_as "0"
+}
+
+@test 'autoload functions isolate hostile caller options' {
+    run zsh -f ./tests/integration/test-hostile-autoloads.zsh
+
+    assert "$output" is_empty
+    assert "$state" same_as "0"
+}
