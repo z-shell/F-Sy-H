@@ -1,0 +1,386 @@
+# -*- mode: zsh; sh-indentation: 2; indent-tabs-mode: nil; sh-basic-offset: 2; -*-
+#
+# Copyright (c) 2018 plexigras
+#
+# The old chroma function for command `git'. It colorizes the part of command
+# line that holds `git' invocation.
+#
+# $1 - 0 or 1, denoting if it's first call to the chroma, or following one
+# $2 - the current token, also accessible by $__arg from the above scope -
+#      basically a private copy of $__arg
+# $3 - a private copy of $_start_pos, i.e. the position of the token in the
+#      command line buffer, used to add region_highlight entry (see man),
+#      because Zsh colorizes by *ranges* in command line buffer
+# $4 - a private copy of $_end_pos from the above scope
+#
+
+builtin emulate -L zsh
+builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc_quotes no_auto_pushd no_nomatch
+
+(( next_word = 2 | 8192 ))
+
+local __first_call="$1" __wrd="$2" __start_pos="$3" __end_pos="$4"
+local __style
+integer __idx1 __idx2
+local -a _fsh_command_output chroma_git_remote_subcommands
+chroma_git_remote_subcommands=(add rename remove set-head set-branches get-url set-url set-url set-url show prune update)
+
+if (( __first_call )); then
+    # Called for the first time - new command
+    # _fsh_state is used because it survives between calls, and
+    # allows to use a single global hash only, instead of multiple
+    # global variables
+    _fsh_state[chroma-git-counter]=0
+    _fsh_state[chroma-git-got-subcommand]=0
+    _fsh_state[chroma-git-subcommand]=""
+    _fsh_state[chrome-git-got-msg1]=0
+    _fsh_state[chrome-git-got-anymsg]=0
+    _fsh_state[chrome-git-occurred-double-hyphen]=0
+    _fsh_state[chroma-git-checkout-new]=0
+    _fsh_state[chroma-git-fetch-multiple]=0
+    _fsh_state[chroma-git-branch-change]=0
+    _fsh_state[chroma-git-option-with-argument-active]=0
+    return 1
+else
+    # Following call, i.e. not the first one
+
+    # Check if chroma should end – test if token is of type
+    # "starts new command", if so pass-through – chroma ends
+    [[ "$__arg_type" = 3 ]] && return 2
+
+    if [[ "$__wrd" = "--" ]]; then
+        _fsh_state[chrome-git-occurred-double-hyphen]=1
+        __style=${_fsh_theme_name}double-hyphen-option
+    elif [[ "$__wrd" = -* && ${_fsh_state[chroma-git-got-subcommand]} -eq 0 ]]; then
+        # Options occuring before a subcommand
+        if (( _fsh_state[chroma-git-option-with-argument-active] == 0 )); then
+            if [[ "$__wrd" = -[^[:space:]-]#C ]]; then
+                _fsh_state[chroma-git-option-with-argument-active]=2
+            elif [[ "$__wrd" = -[^[:space:]-]#c ]]; then
+                _fsh_state[chroma-git-option-with-argument-active]=1
+            fi
+        fi
+        return 1
+    else
+        # If at e.g. '>' or destination/source spec (of the redirection)
+        if (( in_redirection > 0 || this_word & 128 )) || [[ $__wrd == "<<<" ]]; then
+            return 1
+        # If at main git option taking argument in a separate word (-C and -c)
+        elif (( _fsh_state[chroma-git-option-with-argument-active] > 0 && \
+            0 == _fsh_state[chroma-git-got-subcommand] ))
+        then
+            # Remember the value
+            __idx2=${_fsh_state[chroma-git-option-with-argument-active]}
+            # Reset the is-argument mark-field
+            _fsh_state[chroma-git-option-with-argument-active]=0
+
+            (( __idx2 == 2 )) && return 1
+            # Other options' args (i.e. arg of -c) aren't routed to the big-loop
+            # as they aren't paths and aren't handled in any special way there
+        elif (( _fsh_state[chroma-git-got-subcommand] == 0 )); then
+            _fsh_state[chroma-git-got-subcommand]=1
+
+            # Check if the command is an alias - we want to highlight the
+            # aliased command just like the target command of the alias
+            _fsh_run_command "git config --get-regexp 'alias.*'" chroma-git-alias-list "" $(( 10 * 60 ))
+            # Grep for line: alias.{user-entered-subcmd}[[:space:]], and remove alias. prefix
+            _fsh_command_output=( ${${(M)_fsh_command_output[@]:#alias.${__wrd}[[:space:]]##*}#alias.} )
+
+            if (( ${#_fsh_command_output} > 0 )); then
+                # (*)
+                # First remove alias name (#*[[:space:]]) and the space after it, then
+                # remove any leading spaces from what's left (##[[:space:]]##), then
+                # remove everything except the first word that's in the left line
+                # (%%[[:space:]]##*, i.e.: "everything from right side up to any space")
+                _fsh_state[chroma-git-subcommand]="${${${_fsh_command_output[1]#*[[:space:]]}##[[:space:]]##}%%[[:space:]]##*}"
+            else
+                _fsh_state[chroma-git-subcommand]="$__wrd"
+            fi
+            if (( __start_pos >= 0 )); then
+                # if subcommand exists
+                LANG=C _fsh_run_command "git help -a" chroma-git-subcmd-list "" $(( 10 * 60 ))
+                # (s: :) will split on every space, but because the expression
+                # isn't double-quoted, the empty elements will be eradicated
+                # Some further knowledge-base: s-flag is special, it skips
+                # empty elements and creates an array (not a concatenated
+                # string) even when double-quoted. The normally needed @-flag
+                # that logically breaks the concaetnated string back into array
+                # in case of double-quoting has additional effect for s-flag:
+                # it finally blocks empty-elements eradication.
+                if [[ "${_fsh_command_output[1]}" = See* ]]; then
+                    # (**)
+                    # git >= v2.20
+                    _fsh_command_output=( ${(M)${${${(M)_fsh_command_output[@]:# [[:blank:]]#[a-z]*}##[[:blank:]]##}%%[[:blank:]]##*}:#${_fsh_state[chroma-git-subcommand]}} )
+                else
+                    # (**)
+                    # git < v2.20
+                    _fsh_command_output=( ${(M)${(s: :)${(M)_fsh_command_output[@]:#  [a-z]*}}:#${_fsh_state[chroma-git-subcommand]}} )
+                fi
+
+                # Above we've checked:
+                # 1) If given subcommand is an alias (*)
+                # 2) If the command, or command pointed by the alias, exists (**)
+                # 3) There's little problem, git v2.20 outputs aliases in git help -a,
+                #    which means that alias will be recognized as correct if it will
+                #    point at another alias or on itself. That's a minor problem, a
+                #    TODO for future planned optimization for v2.20 Git
+                # 4) Notice that the above situation is better than the previous - the
+                #    alias is being verified to point to a valid git subcommand
+                # That's all that's needed to decide on the correctnes:
+                if (( ${#_fsh_command_output} > 0 )); then
+                    __style=${_fsh_theme_name}subcommand
+                else
+                    __style=${_fsh_theme_name}incorrect-subtle
+                fi
+            fi
+            # The counter includes the subcommand itself
+            (( _fsh_state[chroma-git-counter] += 1 ))
+        else
+            __wrd="${__wrd//\`/x}"
+            __arg="${__arg//\`/x}"
+            __wrd="${(Q)__wrd}"
+            if [[ "${_fsh_state[chroma-git-subcommand]}" = "push" \
+                || "${_fsh_state[chroma-git-subcommand]}" = "pull" \
+                || "${_fsh_state[chroma-git-subcommand]}" = "fetch" ]] \
+                && (( ${_fsh_state[chroma-git-fetch-multiple]} == 0 )); then
+                # if not option
+                if [[ "$__wrd" != -* || "${_fsh_state[chrome-git-occurred-double-hyphen]}" -eq 1 ]]; then
+                    (( _fsh_state[chroma-git-counter] += 1, __idx1 = _fsh_state[chroma-git-counter] ))
+                    if (( __idx1 == 2 )); then
+                        _fsh_run_git_command "git remote" "chroma-git-remotes" ""
+                    else
+                        __wrd="${__wrd%%:*}"
+                        _fsh_run_git_command "git for-each-ref --format='%(refname:short)' refs/heads" "chroma-git-branches" "refs/heads"
+                    fi
+                    # if remote/ref exists
+                    if [[ -n ${_fsh_command_output[(r)$__wrd]} ]]; then
+                        (( __start=__start_pos-${#PREBUFFER}, __end=__start_pos+${#__wrd}-${#PREBUFFER}, __start >= 0 )) && \
+                            reply+=("$__start $__end ${_fsh_styles[${_fsh_theme_name}correct-subtle]}")
+                    # if ref (__idx1 == 3) does not exist and subcommand is push
+                    elif (( __idx1 != 2 )) && [[ "${_fsh_state[chroma-git-subcommand]}" = "push" ]]; then
+                        (( __start=__start_pos-${#PREBUFFER}, __end=__start_pos+${#__wrd}-${#PREBUFFER}, __start >= 0 )) && \
+                            reply+=("$__start $__end ${_fsh_styles[${_fsh_theme_name}incorrect-subtle]}")
+                    # if not existing remote name, because not an URL (i.e. no colon)
+                    elif [[ $__idx1 -eq 2 && $__wrd != *:* ]]; then
+                        (( __start=__start_pos-${#PREBUFFER}, __end=__start_pos+${#__wrd}-${#PREBUFFER}, __start >= 0 )) && \
+                            reply+=("$__start $__end ${_fsh_styles[${_fsh_theme_name}incorrect-subtle]}")
+                    fi
+                # if option
+                else
+                    if [[ "$__wrd" = "--multiple" && "${_fsh_state[chroma-git-subcommand]}" = "fetch" ]]; then
+                        _fsh_state[chroma-git-fetch-multiple]=1
+                        __style=${_fsh_theme_name}double-hyphen-option
+                    else
+                        return 1
+                    fi
+                fi
+            elif (( ${_fsh_state[chroma-git-fetch-multiple]} )) \
+                && [[ "$__wrd" != -* || "${_fsh_state[chrome-git-occurred-double-hyphen]}" -eq 1 ]]; then
+                _fsh_run_git_command "git remote" "chroma-git-remotes" ""
+                if [[ -n ${_fsh_command_output[(r)$__wrd]} ]]; then
+                    __style=${_fsh_theme_name}correct-subtle
+                fi
+            elif [[ "${_fsh_state[chroma-git-subcommand]}" = "commit" ]]; then
+                match[1]=""
+                match[2]=""
+                # if previous argument is -m or current argument is --message=something
+                if (( _fsh_state[chrome-git-got-msg1] == 1 && ! _fsh_state[chrome-git-got-anymsg] )) \
+                    || [[ "$__wrd" = (#b)(--message=)(*) && "${_fsh_state[chrome-git-occurred-double-hyphen]}" = 0 ]]; then
+                    _fsh_state[chrome-git-got-msg1]=0
+                    _fsh_state[chrome-git-got-anymsg]=1
+                    if [[ -n "${match[1]}" ]]; then
+                        __wrd="${(Q)${match[2]//\`/x}}"
+                        # highlight (--message=)something
+                        (( __start=__start_pos-${#PREBUFFER}, __end=__start_pos-${#PREBUFFER}+10, __start >= 0 )) && \
+                            reply+=("$__start $__end ${_fsh_styles[${_fsh_theme_name}double-hyphen-option]}")
+                        # highlight --message=(something)
+                        (( __start=__start_pos-${#PREBUFFER}+10, __end=__end_pos-${#PREBUFFER}, __start >= 0 )) && \
+                            reply+=("$__start $__end ${_fsh_styles[${_fsh_theme_name}double-quoted-argument]}")
+                    else
+                        (( __start=__start_pos-${#PREBUFFER}, __end=__end_pos-${#PREBUFFER}, __start >= 0 )) && \
+                            reply+=("$__start $__end ${_fsh_styles[${_fsh_theme_name}double-quoted-argument]}")
+                    fi
+                    local __firstline=${__wrd%%$'\n'*}
+                    if (( ${#__firstline} > 50 )); then
+                        for (( __idx1 = 1, __idx2 = 1; __idx1 <= 50; ++ __idx1, ++ __idx2 )); do
+                            while [[ "${__arg[__idx2]}" != "${__firstline[__idx1]}" ]]; do
+                                (( ++ __idx2 ))
+                                (( __idx2 > __asize )) && { __idx2=-1; break; }
+                            done
+                            (( __idx2 == -1 )) && break
+                        done
+                        if (( __idx2 != -1 )); then
+                            if [[ -n "${match[1]}" ]]; then
+                                (( __start=__start_pos-${#PREBUFFER}+__idx2, __end=__end_pos-${#PREBUFFER}-$#__wrd+$#__firstline-1, __start >= 0 )) && \
+                                    reply+=("$__start $__end ${_fsh_styles[${_fsh_theme_name}incorrect-subtle]}")
+                            else
+                                (( __start=__start_pos-${#PREBUFFER}+__idx2-1, __end=__end_pos-${#PREBUFFER}-$#__wrd+$#__firstline-1, __start >= 0 )) && \
+                                    reply+=("$__start $__end ${_fsh_styles[${_fsh_theme_name}incorrect-subtle]}")
+                            fi
+                        fi
+                    fi
+                # if before --
+                elif [[ "${_fsh_state[chrome-git-occurred-double-hyphen]}" = 0 ]]; then
+                    if [[ "$__wrd" = -[^[:space:]-]#m ]]; then
+                        _fsh_state[chrome-git-got-msg1]=1
+                        __style=${_fsh_theme_name}single-hyphen-option
+                    else
+                        return 1
+                    fi
+                # if after -- is file
+                elif [[ -e "$__wrd" ]]; then
+                    __style=${_fsh_theme_name}path
+                else
+                    __style=${_fsh_theme_name}incorrect-subtle
+                fi
+            elif [[ "${_fsh_state[chroma-git-subcommand]}" = "checkout" ]] \
+                || [[ "${_fsh_state[chroma-git-subcommand]}" = "revert" ]] \
+                || [[ "${_fsh_state[chroma-git-subcommand]}" = "merge" ]] \
+                || [[ "${_fsh_state[chroma-git-subcommand]}" = "diff" ]] \
+                || [[ "${_fsh_state[chroma-git-subcommand]}" = "reset" ]] \
+                || [[ "${_fsh_state[chroma-git-subcommand]}" = "rebase" ]]; then
+
+                # if doing `git checkout -b ...'
+                if [[ "$__wrd" = -[^[:space:]-]#b && "${_fsh_state[chroma-git-subcommand]}" = "checkout" ]]; then
+                    _fsh_state[chroma-git-checkout-new]=1
+                    __style=${_fsh_theme_name}single-hyphen-option
+                # if command is not checkout -b something
+                elif [[ "${_fsh_state[chroma-git-checkout-new]}" = 0 ]]; then
+                    # if not option
+                    if [[ "$__wrd" != -* || "${_fsh_state[chrome-git-occurred-double-hyphen]}" = 1 ]]; then
+                        (( _fsh_state[chroma-git-counter] += 1, __idx1 = _fsh_state[chroma-git-counter] ))
+                        if (( __idx1 == 2 )) || \
+                            [[ "$__idx1" = 3 && "${_fsh_state[chroma-git-subcommand]}" = "diff" ]]; then
+                            # if is ref
+                            if command git rev-parse --verify --quiet "$__wrd" >/dev/null 2>&1; then
+                                __style=${_fsh_theme_name}correct-subtle
+                            # if is file and subcommand is checkout or diff
+                            elif [[ "${_fsh_state[chroma-git-subcommand]}" = "checkout" \
+                                || "${_fsh_state[chroma-git-subcommand]}" = "reset" \
+                                || "${_fsh_state[chroma-git-subcommand]}" = "diff" ]] && [[ -e ${~__wrd} ]]; then
+                                __style=${_fsh_theme_name}path
+                            elif [[ "${_fsh_state[chroma-git-subcommand]}" = "checkout" && \
+                                    "1" = "$(command git rev-list --count --no-walk --glob="refs/remotes/${$(git \
+                                        config --get checkout.defaultRemote):-*}/$__wrd")" ]]
+                            then
+                                __style=${_fsh_theme_name}correct-subtle
+                            else
+                                __style=${_fsh_theme_name}incorrect-subtle
+                            fi
+                        fi
+                    # if option
+                    else
+                        return 1
+                    fi
+                # if option
+                elif [[ "${_fsh_state[chrome-git-occurred-double-hyphen]}" = 0 && "$__wrd" = -* ]]; then
+                    return 1
+                fi
+            elif [[ "${_fsh_state[chroma-git-subcommand]}" = "remote" && "$__wrd" != -* ]]; then
+                (( _fsh_state[chroma-git-counter] += 1, __idx1 = _fsh_state[chroma-git-counter] ))
+                if [[ "$__idx1" = 2 ]]; then
+                    if (( ${chroma_git_remote_subcommands[(I)$__wrd]} )); then
+                        _fsh_state[chroma-git-remote-subcommand]="$__wrd"
+                        __style=${_fsh_theme_name}subcommand
+                    else
+                        __style=${_fsh_theme_name}incorrect-subtle
+                    fi
+                elif [[ "$__idx1" = 3 && "$_fsh_state[chroma-git-remote-subcommand]" = "add" ]]; then
+                    _fsh_run_git_command "git remote" "chroma-git-remotes" ""
+                    if [[ -n ${_fsh_command_output[(r)$__wrd]} ]]; then
+                        __style=${_fsh_theme_name}incorrect-subtle
+                    fi
+                elif [[ "$__idx1" = 3 && -n "$_fsh_state[chroma-git-remote-subcommand]" ]]; then
+                    _fsh_run_git_command "git remote" "chroma-git-remotes" ""
+                    if [[ -n ${_fsh_command_output[(r)$__wrd]} ]]; then
+                        __style=${_fsh_theme_name}correct-subtle
+                    else
+                        __style=${_fsh_theme_name}incorrect-subtle
+                    fi
+                fi
+            elif [[ "${_fsh_state[chroma-git-subcommand]}" = "branch" ]]; then
+                if [[ "$__wrd" = --delete \
+                    ||  "$__wrd" = --edit-description \
+                    ||  "$__wrd" = --set-upstream-to=* \
+                    ||  "$__wrd" = --unset-upstream \
+                    ||  "$__wrd" = -[^[:space:]-]#d \
+                    ||  "$__wrd" = -[^[:space:]-]#D ]]; then
+                    _fsh_state[chroma-git-branch-change]=1
+                    return 1
+                elif [[ "$__wrd" != -* ]]; then
+                    _fsh_run_git_command "git for-each-ref --format='%(refname:short)' refs/heads" "chroma-git-branches" "refs/heads"
+                    if [[ -n ${_fsh_command_output[(r)$__wrd]} ]]; then
+                        __style=${_fsh_theme_name}correct-subtle
+                    elif (( _fsh_state[chroma-git-branch-change] )); then
+                        __style=${_fsh_theme_name}incorrect-subtle
+                    fi
+                else
+                    return 1
+                fi
+            elif [[ "${_fsh_state[chroma-git-subcommand]}" = "tag" ]]; then
+                if [[ "${_fsh_state[chroma-git-option-with-argument-active]}" -le 0 ]]; then
+                    if [[ "$__wrd" =  -[^[:space:]-]#(u|m) ]]; then
+                        _fsh_state[chroma-git-option-with-argument-active]=1
+                    elif [[ "$__wrd" = -[^[:space:]-]#F ]]; then
+                        _fsh_state[chroma-git-option-with-argument-active]=2
+                    elif [[ "$__wrd" = -[^[:space:]-]#d ]]; then
+                        _fsh_state[chroma-git-option-with-argument-active]=3
+                    elif [[ "$__wrd" = (--contains|--no-contains|--points-at|--merged|--no-merged) ]]; then
+                        _fsh_state[chroma-git-option-with-argument-active]=4
+                    fi
+                    if [[ "$__wrd" != -* ]]; then
+                        (( _fsh_state[chroma-git-counter] += 1, __idx1 = _fsh_state[chroma-git-counter] ))
+                        if [[ ${_fsh_state[chroma-git-counter]} -eq 2 ]]; then
+                            _fsh_run_git_command "git for-each-ref --format='%(refname:short)' refs/heads" "chroma-git-branches" "refs/heads"
+                            _fsh_run_git_command "+git tag" "chroma-git-tags" ""
+                            [[ -n ${_fsh_command_output[(r)$__wrd]} ]] && __style=${_fsh_theme_name}incorrect-subtle
+                        elif [[ ${_fsh_state[chroma-git-counter]} -eq 3 ]]; then
+                        fi
+                    else
+                        return 1
+                    fi
+                else
+                    case "${_fsh_state[chroma-git-option-with-argument-active]}" in
+                        (1)
+                            __style=${_fsh_theme_name}optarg-string
+                            ;;
+                        (2)
+                            _fsh_state[chroma-git-option-with-argument-active]=0
+                            return 1;
+                            ;;
+                        (3)
+                            _fsh_run_git_command "git tag" "chroma-git-tags" ""
+                            [[ -n ${_fsh_command_output[(r)$__wrd]} ]] && \
+                                __style=${_fsh_theme_name}correct-subtle || \
+                                __style=${_fsh_theme_name}incorrect-subtle
+                            ;;
+                        (4)
+                            if git rev-parse --verify --quiet "$__wrd" >/dev/null 2>&1; then
+                                __style=${_fsh_theme_name}correct-subtle
+                            else
+                                __style=${_fsh_theme_name}incorrect-subtle
+                            fi
+                            ;;
+                    esac
+                    _fsh_state[chroma-git-option-with-argument-active]=0
+                fi
+            else
+                return 1
+            fi
+        fi
+    fi
+fi
+
+# Add region_highlight entry (via `reply' array)
+if [[ -n "$__style" ]]; then
+    (( __start=__start_pos-${#PREBUFFER}, __end=__end_pos-${#PREBUFFER}, __start >= 0 )) \
+        && reply+=("$__start $__end ${_fsh_styles[$__style]}")
+fi
+
+# We aren't passing-through, do obligatory things ourselves
+(( this_word = next_word ))
+_start_pos=$_end_pos
+
+return 0
+
+# vim: ft=zsh sw=2 ts=2 et

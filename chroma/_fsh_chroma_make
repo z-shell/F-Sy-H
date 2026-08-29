@@ -1,0 +1,107 @@
+# -*- mode: zsh; sh-indentation: 2; indent-tabs-mode: nil; sh-basic-offset: 2; -*-
+#
+# Chroma function for command `make'.
+#
+# $1 - 0 or 1, denoting if it's first call to the chroma, or following one
+# $2 - the current token, also accessible by $__arg from the above scope -
+#      basically a private copy of $__arg
+# $3 - a private copy of $_start_pos, i.e. the position of the token in the
+#      command line buffer, used to add region_highlight entry (see man),
+#      because Zsh colorizes by *ranges* in command line buffer
+# $4 - a private copy of $_end_pos from the above scope
+#
+
+builtin emulate -L zsh
+builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc_quotes no_auto_pushd no_nomatch
+
+(( next_word = 2 | 8192 ))
+
+local __first_call="$1" __wrd="$2" __start_pos="$3" __end_pos="$4"
+local __style
+integer __idx1 __idx2
+local -a _fsh_command_output reply2
+
+(( __first_call )) && {
+    # Called for the first time - new command.
+    # _fsh_state is used because it survives between calls, and
+    # allows to use a single global hash only, instead of multiple
+    # global variables.
+    _fsh_state[chroma-make-counter]=0
+    _fsh_state[chroma-make-skip-two]=0
+    _fsh_state[chroma-make-custom-dir]="./"
+    _fsh_state[chroma-make-custom-file]="Makefile"
+    _fsh_state[chroma-make-got-custom-dir-opt]=0
+    _fsh_state[chroma-make-got-custom-file-opt]=0
+    return 1
+} || {
+    # Following call, i.e. not the first one.
+
+    # Check if chroma should end – test if token is of type
+    # "starts new command", if so pass-through – chroma ends
+    [[ "$__arg_type" = 3 ]] && return 2
+
+    if (( in_redirection > 0 || this_word & 128 )) || [[ $__wrd == "<<<" ]]; then
+        return 1
+    fi
+
+    if [[ "$__wrd" = -* || "$__wrd" = *=* ]]; then
+        [[ "$__wrd" = *=* ]] && {
+            __style=${_fsh_theme_name}variable
+        } || {
+            __style=${_fsh_theme_name}${${${__wrd:#--*}:+single-hyphen-option}:-double-hyphen-option}
+        }
+
+        if [[ "$__wrd" = (-I|-o|-W) ]]; then
+            _fsh_state[chroma-make-skip-two]=1
+        elif [[ "$__wrd" = "-C" ]]; then
+            _fsh_state[chroma-make-got-custom-dir-opt]=1
+        elif [[ "$__wrd" = "-f" ]]; then
+            _fsh_state[chroma-make-got-custom-file-opt]=1
+        fi
+    else
+        if (( _fsh_state[chroma-make-skip-two] )); then
+            _fsh_state[chroma-make-skip-two]=0
+        elif (( _fsh_state[chroma-make-got-custom-dir-opt] )); then
+            _fsh_state[chroma-make-got-custom-dir-opt]=0
+            _fsh_state[chroma-make-custom-dir]="$__wrd"
+        elif (( _fsh_state[chroma-make-got-custom-file-opt] )); then
+            _fsh_state[chroma-make-got-custom-file-opt]=0
+            _fsh_state[chroma-make-custom-file]="$__wrd"
+        else
+            # Count non-option tokens.
+            (( _fsh_state[chroma-make-counter] += 1, __idx1 = _fsh_state[chroma-make-counter] ))
+            if (( _fsh_state[chroma-make-counter] == 1 )); then
+                __wrd="${__wrd//\`/x}"
+                __wrd="${(Q)__wrd}"
+
+                if [[ -f "${_fsh_state[chroma-make-custom-dir]%/}/${_fsh_state[chroma-make-custom-file]}" ]] && \
+                        _fsh_make_targets < "${_fsh_state[chroma-make-custom-dir]%/}/${_fsh_state[chroma-make-custom-file]}"
+                then
+                    if [[ "${reply2[(r)$__wrd]}" ]]; then
+                        (( __start=__start_pos-${#PREBUFFER}, __end=__end_pos-${#PREBUFFER}, __start >= 0 )) && reply+=("$__start $__end ${_fsh_styles[${_fsh_theme_name}correct-subtle]}")
+                    else
+                        (( __start=__start_pos-${#PREBUFFER}, __end=__end_pos-${#PREBUFFER}, __start >= 0 )) && reply+=("$__start $__end ${_fsh_styles[${_fsh_theme_name}incorrect-subtle]}")
+                    fi
+                fi
+            else
+                # Pass-through to the big-loop outside
+                return 1
+            fi
+        fi
+    fi
+}
+
+# Add region_highlight entry (via `reply' array)
+#
+# This is a common place of adding such entry, but any above
+# code can do it itself (and it does) and skip setting __style
+# to disable this code.
+[[ -n "$__style" ]] && (( __start=__start_pos-${#PREBUFFER}, __end=__end_pos-${#PREBUFFER}, __start >= 0 )) && reply+=("$__start $__end ${_fsh_styles[$__style]}")
+
+# We aren't passing-through, do obligatory things ourselves
+(( this_word = next_word ))
+_start_pos=$_end_pos
+
+return 0
+
+# vim: ft=zsh sw=2 ts=2 et

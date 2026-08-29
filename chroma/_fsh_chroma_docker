@@ -1,0 +1,90 @@
+# -*- mode: zsh; sh-indentation: 2; indent-tabs-mode: nil; sh-basic-offset: 2; -*-
+# vim: ft=zsh sw=2 ts=2 et
+#
+# Chroma function for command `docker'. It verifies command line, by denoting
+# wrong and good arguments by color. Currently implemented: verification of
+# image IDs passed to: docker image rm <ID>.
+#
+# $1 - 0 or 1, denoting if it's first call to the chroma, or following one
+# $2 - the current token, also accessible by $__arg from the above scope -
+#      basically a private copy of $__arg
+# $3 - a private copy of $_start_pos, i.e. the position of the token in the
+#      command line buffer, used to add region_highlight entry (see man),
+#      because Zsh colorizes by *ranges* in command line buffer
+# $4 - a private copy of $_end_pos from the above scope
+#
+
+builtin emulate -L zsh
+builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc_quotes no_auto_pushd no_nomatch
+
+(( next_word = 2 | 8192 ))
+
+local __first_call="$1" __wrd="$2" __start_pos="$3" __end_pos="$4"
+local __style
+integer __idx1 __idx2
+local -a _fsh_command_output
+
+(( __first_call )) && {
+    # Called for the first time - new command
+    # _fsh_state is used because it survives between calls, and
+    # allows to use a single global hash only, instead of multiple
+    # global variables
+    _fsh_state[chroma-docker-counter]=0
+    _fsh_state[chroma-docker-got-subcommand]=0
+    _fsh_state[chroma-docker-subcommand]=""
+    _fsh_state[chrome-docker-got-msg1]=0
+    return 1
+} || {
+    # Following call, i.e. not the first one
+
+    # Check if chroma should end – test if token is of type
+    # "starts new command", if so pass-through – chroma ends
+    [[ "$__arg_type" = 3 ]] && return 2
+
+    if (( in_redirection > 0 || this_word & 128 )) || [[ $__wrd == "<<<" ]]; then
+        return 1
+    fi
+
+    if [[ "$__wrd" = -* && ${_fsh_state[chroma-docker-got-subcommand]} -eq 0 ]]; then
+        __style=${_fsh_theme_name}${${${__wrd:#--*}:+single-hyphen-option}:-double-hyphen-option}
+    else
+        if (( _fsh_state[chroma-docker-got-subcommand] == 0 )); then
+            _fsh_state[chroma-docker-got-subcommand]=1
+            _fsh_state[chroma-docker-subcommand]="$__wrd"
+            __style=${_fsh_theme_name}subcommand
+            (( _fsh_state[chroma-docker-counter] += 1 ))
+        else
+            __wrd="${__wrd//\`/x}"
+            __arg="${__arg//\`/x}"
+            __wrd="${(Q)__wrd}"
+            if [[ "${_fsh_state[chroma-docker-subcommand]}" = "image" ]]; then
+                [[ "$__wrd" != -* ]] && {
+                    (( _fsh_state[chroma-docker-counter] += 1, __idx1 = _fsh_state[chroma-docker-counter] ))
+                    if (( __idx1 == 2 )); then
+                        __style=${_fsh_theme_name}subcommand
+                    elif (( __idx1 == 3 )); then
+                        _fsh_run_command "docker images -q" chroma-docker-list ""
+                        [[ -n "${_fsh_command_output[(r)$__wrd]}" ]] && {
+                            (( __start=__start_pos-${#PREBUFFER}, __end=__end_pos-${#PREBUFFER}, __start >= 0 )) && \
+                                reply+=("$__start $__end ${_fsh_styles[${_fsh_theme_name}correct-subtle]}")
+                        } || {
+                            (( __start=__start_pos-${#PREBUFFER}, __end=__end_pos-${#PREBUFFER}, __start >= 0 )) && \
+                                reply+=("$__start $__end ${_fsh_styles[${_fsh_theme_name}incorrect-subtle]}")
+                        }
+                    fi
+                } || __style=${_fsh_theme_name}${${${__wrd:#--*}:+single-hyphen-option}:-double-hyphen-option}
+            else
+                return 1
+            fi
+        fi
+    fi
+}
+
+# Add region_highlight entry (via `reply' array)
+[[ -n "$__style" ]] && (( __start=__start_pos-${#PREBUFFER}, __end=__end_pos-${#PREBUFFER}, __start >= 0 )) && reply+=("$__start $__end ${_fsh_styles[$__style]}")
+
+# We aren't passing-through, do obligatory things ourselves
+(( this_word = next_word ))
+_start_pos=$_end_pos
+
+return 0

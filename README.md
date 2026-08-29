@@ -32,7 +32,7 @@
 - Highlights Zsh syntax as a command line is edited.
 - Provides command-specific chroma highlighters for tools such as Git, Docker,
   grep, and make.
-- Supports shipped and user-defined themes through `fast-theme`.
+- Supports shipped and user-defined themes through `fsh_theme`.
 - Highlights nested command substitutions, arithmetic, strings, paths, and
   shell control structures.
 
@@ -45,39 +45,42 @@
 
 ## Portable shell contract
 
-- Project identifier: `f-sy-h`
+- Project identifier: `fsh`
 - Authoritative entrypoint: `F-Sy-H.plugin.zsh`
-- Public command: `fast-theme`
-- Public alias: `f-sy-h` (an alias for `fast-theme`)
-- Unload function: `f-sy-h_plugin_unload`
-- Autoload paths: the repository root and `functions/`
+- Public functions: `fsh_theme` and `fsh_plugin_unload`
+- Public configuration context: `:fsh:config`
+- Autoload paths: `functions/`, `completions/`, and the private `chroma/`
 
-The existing compatibility configuration surface uses the
-`:plugin:fast-syntax-highlighting` `zstyle` context and the documented
-`FAST_WORK_DIR`, `FAST_HIGHLIGHT`, `FAST_HIGHLIGHT_STYLES`,
-`FAST_THEME_NAME`, `ZSH_HIGHLIGHT_MAXLENGTH`, and `ZLAST_COMMANDS` parameters.
-These names are retained for existing users. New lifecycle state is private and
-uses the `_fsh_` prefix.
+The plugin has no public aliases or public parameters. Persistent implementation
+state and callbacks use the private `_fsh_` prefix. Native completion naming is
+the one required exception: the completion for `fsh_theme` is `_fsh_theme`.
+
+### Repository layout
+
+- `F-Sy-H.plugin.zsh` is the only entrypoint.
+- `lib/` contains private code sourced eagerly by the entrypoint and is not on
+  `fpath`.
+- `functions/` contains one autoload function per file.
+- `chroma/` contains private command-specific autoload functions.
+- `completions/` contains native completion functions. The plugin makes this
+  directory available on `fpath` but never calls `compinit`.
+- `themes/` and `share/` contain declarative INI data.
+- `tests/integration/` and `tests/unit/` contain executable integration profiles
+  and ZUnit specifications, respectively.
 
 ### Owned shell state
 
-- Public functions: `fast-theme` and `f-sy-h_plugin_unload`
-- Public alias: `f-sy-h=fast-theme`
-- Public parameters: `FAST_BASE_DIR`, `FAST_HIGHLIGHT_VERSION`,
-  `FAST_WORK_DIR`, `FAST_HIGHLIGHT`, `FAST_HIGHLIGHT_STYLES`,
-  `FAST_THEME_NAME`, `ZSH_HIGHLIGHT_MAXLENGTH`, and `ZLAST_COMMANDS`
+- Public functions: `fsh_theme` and `fsh_plugin_unload`
+- Private persistent functions and parameters: names beginning with `_fsh_`
 - Direct module requests: `zsh/parameter`, `zsh/system`, optional
   `zsh/nearcolor`, and interactive-only `zsh/zleparameter`
-- Hook: `_zsh_highlight_preexec_hook` in `preexec_functions`
-- Widgets: `fast-highlight-check-path-handler` plus wrappers around existing
-  widgets, excluding dot-prefixed widgets and ZLE helper widgets documented in
-  `_zsh_highlight_bind_widgets`
+- Hook: `_fsh_preexec_hook` in `preexec_functions`
+- Widgets: `_fsh_check_path_handler_widget`, `_fsh_widget_*` wrappers, and
+  temporary `fsh-orig-*` saved-widget names
 
-Other `_fsh_*`, `_zsh_highlight*`, `/f-sy-h-*`, `.fast-*`, and `chroma/*`
-functions, plus other matching `FAST_*`, `_FAST_*`, `FSH_*`,
-`_ZSH_HIGHLIGHT_*`, `__FAST_*`, and `__fast_*` parameters, are implementation
-details. The unload function also tracks modules loaded transitively during
-initialization and only claims modules that were not loaded before the plugin.
+The unload function tracks modules loaded transitively during initialization
+and lazy plugin operations. It only claims modules that were not loaded before
+the plugin.
 
 ## Installation
 
@@ -102,80 +105,111 @@ Managers that source conventional `*.plugin.zsh` entrypoints can load
 `z-shell/F-Sy-H`. Detailed manager-specific examples live in the
 [F-Sy-H wiki guide](https://wiki.zshell.dev/ecosystem/plugins/f-sy-h).
 
+### Version 2 migration
+
+This layout intentionally uses the Zsh Plugin Standard version 2 contract as a
+clean interface. Existing configurations need these changes:
+
+- Replace `fast-theme` and the `f-sy-h` alias with `fsh_theme`.
+- Replace `FAST_WORK_DIR` with `zstyle ':fsh:config' work-dir ...`.
+- Replace `ZSH_HIGHLIGHT_MAXLENGTH` with
+  `zstyle ':fsh:config' max-length ...`.
+- Replace `FAST_THEME_MANAGER_DISABLED=1` with
+  `zstyle ':fsh:config' theme-manager disabled`.
+- Replace direct mutation of plugin globals with the documented settings below.
+- Reapply a theme with `fsh_theme`; executable legacy theme cache files are not
+  loaded.
+
+Legacy functions, aliases, parameters, and executable cache formats are not
+retained as a second compatibility interface.
+
 ## Configuration
 
-Select the startup theme before loading the plugin:
+All ordinary settings use `:fsh:config`. Set them before loading the plugin:
 
 ```zsh
-zstyle ':plugin:fast-syntax-highlighting' theme default
+zstyle ':fsh:config' work-dir "${XDG_CACHE_HOME:-$HOME/.cache}/f-sy-h"
+zstyle ':fsh:config' max-length 10000
+zstyle ':fsh:config' theme-manager enabled
+zstyle ':fsh:config' bracket-highlighting enabled
+zstyle ':fsh:config' path-blocklist '/private/*' '/mnt/slow/**'
 zi light z-shell/F-Sy-H
 ```
 
-Set a custom work directory before loading when the default XDG cache location
-is unsuitable:
+The settings are:
 
-```zsh
-typeset -g FAST_WORK_DIR=${XDG_CACHE_HOME:-$HOME/.cache}/f-sy-h
-```
+- `work-dir`: scalar path, default
+  `${XDG_CACHE_HOME:-$HOME/.cache}/f-sy-h`.
+- `max-length`: non-negative integer, default `10000`.
+- `theme-manager`: boolean-like scalar, default `enabled`.
+- `bracket-highlighting`: boolean-like scalar, default `enabled`.
+- `path-blocklist`: array of Zsh patterns excluded from path probing, empty by
+  default.
 
-Theme files and the full compatibility configuration surface are documented in
-the [wiki guide](https://wiki.zshell.dev/ecosystem/plugins/f-sy-h).
+For boolean-like settings, `disabled`, `false`, `no`, `off`, and `0` disable
+the feature; any other value enables it.
+
+Theme file examples and additional usage guidance are documented in the
+[wiki guide](https://wiki.zshell.dev/ecosystem/plugins/f-sy-h).
 
 ## Usage
 
 List available themes:
 
 ```zsh
-fast-theme --list
+fsh_theme --list
 ```
 
 Test a theme for the current session:
 
 ```zsh
-fast-theme --test clean
+fsh_theme --test clean
 ```
 
 Apply a theme:
 
 ```zsh
-fast-theme clean
+fsh_theme clean
 ```
 
 ## Lifecycle and side effects
 
 Interactive loading:
 
-- adds the repository root and `functions/` to `fpath` when absent;
+- adds `functions/`, `completions/`, and `chroma/` to `fpath` when absent;
 - wraps existing ZLE widgets and creates the path-check handler widget;
-- registers `_zsh_highlight_preexec_hook` in `preexec_functions`;
+- registers `_fsh_preexec_hook` in `preexec_functions`;
 - loads the Zsh modules needed by highlighting; and
-- defines the documented functions, parameters, and alias above.
+- defines the documented functions and private state above.
 
 Non-interactive loading defines the shell API but does not change widgets or
 install the `preexec` hook. Repeated sourcing is a no-op after a successful
 load.
 
-`f-sy-h_plugin_unload` removes plugin-owned hooks, widgets, functions,
-parameters, aliases, modules, and `fpath` entries. It restores state captured
+`fsh_plugin_unload` removes plugin-owned hooks, widgets, functions,
+parameters, modules, and `fpath` entries. It restores state captured
 before the first load only while the installed value remains unchanged. A
-widget, alias, function, or parameter changed after loading is preserved.
+widget, function, or parameter changed after loading is preserved.
 
 Loading performs no network request and does not create the cache directory.
-The explicit `fast-theme` command creates storage only when it needs to write
-theme state. Existing theme files under `FAST_WORK_DIR` are treated as
-user-managed configuration.
+The explicit `fsh_theme` command creates storage only when it needs to write
+theme state. Saved state uses `current_theme.ini`, `theme_overlay.ini`, and
+`secondary_theme.local.ini`. These files are parsed as data. Legacy writable
+`*.zsh` theme caches are deliberately ignored and never sourced.
 
 ## Verification
 
 From the repository root:
 
 ```bash
-zsh -f -n F-Sy-H.plugin.zsh lib/lifecycle.zsh
-zsh -f scripts/test-plugin-entrypoint.zsh
-zsh -f scripts/test-plugin-lifecycle.zsh noninteractive
-zsh -f -i scripts/test-plugin-lifecycle.zsh interactive
-zsh -f scripts/test-function-completion.zsh
-zsh -f scripts/test-git-chroma-regions.zsh
+zsh -f -n F-Sy-H.plugin.zsh lib/*.zsh functions/* completions/* chroma/*
+zsh -f tests/integration/test-plugin-entrypoint.zsh
+zsh -f tests/integration/test-plugin-lifecycle.zsh noninteractive
+zsh -f -i tests/integration/test-plugin-lifecycle.zsh interactive
+zsh -f tests/integration/test-function-completion.zsh
+zsh -f tests/integration/test-git-chroma-regions.zsh
+zsh -f tests/integration/test-passive-safety.zsh
+zsh -f tests/integration/test-hostile-autoloads.zsh
 zunit
 ```
 

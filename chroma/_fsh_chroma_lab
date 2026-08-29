@@ -1,0 +1,63 @@
+# -*- mode: zsh; sh-indentation: 2; indent-tabs-mode: nil; sh-basic-offset: 2; -*-
+# vim: ft=zsh sw=2 ts=2 et
+#
+# The `lab' tool after which this chroma is modeled after:
+# https://github.com/zaquestion/lab
+#
+builtin emulate -L zsh
+builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc_quotes no_auto_pushd no_nomatch
+
+(( next_word = 2 | 8192 ))
+local __first_call="$1" __wrd="$2" __start_pos="$3" __end_pos="$4"
+
+if (( __first_call )); then
+    _fsh_chroma_git "$@"
+    return 1
+fi
+[[ "$__arg_type" = 3 ]] && return 2
+
+if (( in_redirection > 0 || this_word & 128 )) || [[ $__wrd == "<<<" ]]; then
+    return 1
+fi
+
+if [[ "$__wrd" != -* ]] && (( _fsh_state[chroma-git-got-subcommand] == 0 )); then
+    _fsh_run_command "git config --get-regexp 'alias.*'" chroma-git-alias-list "" $(( 5 * 60 ))
+    # Grep for line: alias.{user-entered-subcmd}[[:space:]], and remove alias. prefix
+    _fsh_command_output=( ${${(M)_fsh_command_output[@]:#alias.${__wrd}[[:space:]]##*}#alias.} )
+
+    if (( ${#_fsh_command_output} > 0 )); then
+        # (*)
+        # First remove alias name (#*[[:space:]]) and the space after it, then
+        # remove any leading spaces from what's left (##[[:space:]]##), then
+        # remove everything except the first word that's in the left line
+        # (%%[[:space:]]##*, i.e.: "everything from right side up to any space")
+        _fsh_state[chroma-git-subcommand]="${${${_fsh_command_output[1]#*[[:space:]]}##[[:space:]]##}%%[[:space:]]##*}"
+    else
+        _fsh_state[chroma-git-subcommand]="$__wrd"
+    fi
+    if [[ "${_fsh_state[chroma-git-subcommand]}" = "browse" \
+        || "${_fsh_state[chroma-git-subcommand]}" = "ci" \
+        || "${_fsh_state[chroma-git-subcommand]}" = "mr" \
+        || "${_fsh_state[chroma-git-subcommand]}" = "project" \
+        || "${_fsh_state[chroma-git-subcommand]}" = "snippet" \
+        || "${_fsh_state[chroma-git-subcommand]}" = "ci-status" \
+        || "${_fsh_state[chroma-git-subcommand]}" = "compare" \
+        || "${_fsh_state[chroma-git-subcommand]}" = "create" \
+        || "${_fsh_state[chroma-git-subcommand]}" = "delete" \
+        || "${_fsh_state[chroma-git-subcommand]}" = "fork" \
+        || "${_fsh_state[chroma-git-subcommand]}" = "issue" \
+        || "${_fsh_state[chroma-git-subcommand]}" = "pr" \
+        || "${_fsh_state[chroma-git-subcommand]}" = "pull-request" \
+        || "${_fsh_state[chroma-git-subcommand]}" = "release" \
+        || "${_fsh_state[chroma-git-subcommand]}" = "sync" ]]; then
+            _fsh_state[chroma-git-got-subcommand]=1
+            (( __start=__start_pos-${#PREBUFFER}, __end=__end_pos-${#PREBUFFER}, __start >= 0 )) \
+                && reply+=("$__start $__end ${_fsh_styles[${_fsh_theme_name}subcommand]}")
+            (( _fsh_state[chroma-git-counter] += 1 ))
+            (( this_word = next_word ))
+            _start_pos=$4
+            return 0
+    fi
+fi
+
+_fsh_chroma_git "$@"

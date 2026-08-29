@@ -1,0 +1,469 @@
+#----------------------------------------------------------------------------------------------------------------------
+# -*- mode: zsh; sh-indentation: 2; indent-tabs-mode: nil; sh-basic-offset: 2; -*-
+# vim: ft=zsh sw=2 ts=2 et
+#----------------------------------------------------------------------------------------------------------------------
+#
+# Copyright (c) 2018, 2019 Philippe Troin (F-i-f on GitHub)
+#
+# Theme support using INI files.
+#
+
+# Standard Recommended Options
+# https://wiki.zshell.dev/community/zsh_plugin_standard/#standard-recommended-options
+
+builtin emulate -L zsh ${=${options[xtrace]:#off}:+-o xtrace}
+builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc_quotes no_auto_pushd localtraps
+
+local color_name color_declaration
+local -A _fsh_theme_color_declarations=()
+integer colors_function_was_set=${+functions[colors]}
+local colors_function_definition=${functions[colors]-}
+for color_name in color colour fg fg_bold fg_no_bold bg bg_bold bg_no_bold reset_color bold_color; do
+  color_declaration=$(builtin typeset -p "$color_name" 2>/dev/null) || continue
+  _fsh_theme_color_declarations[$color_name]=$color_declaration
+done
+
+zmodload zsh/zutil 2>/dev/null || {
+  builtin print -u2 -r -- 'f-sy-h: zsh/zutil is required by fsh_theme'
+  return 1
+}
+builtin autoload -Uz colors || return 1
+colors || return 1
+
+# The distributed `colors` helper creates generic global parameters. They are
+# transient implementation detail here, so the `always` block restores their
+# exact prior declarations for every return path.
+{
+
+typeset -g _fsh_work_dir
+: ${_fsh_work_dir:=$_fsh_base_dir}
+_fsh_work_dir=${~_fsh_work_dir}
+
+local -A map
+map=( "CONFIG:" "${XDG_CONFIG_HOME:-$HOME/.config}/f-sy-h/"
+      "CACHE:"  "${XDG_CACHE_HOME:-$HOME/.cache}/f-sy-h/"
+      "LOCAL:"  "/usr/local/share/f-sy-h/"
+      "HOME:" "$HOME/.f-sy-h/"
+      "OPT:"  "/opt/local/share/f-sy-h/"
+)
+
+_fsh_work_dir=${${_fsh_work_dir/(#m)(#s)(CONFIG|CACHE|LOCAL|HOME|OPT):(#c0,1)/${map[${MATCH%:}:]}}%/}
+
+[[ -d $_fsh_work_dir ]] || command mkdir -p -- "$_fsh_work_dir" || {
+  print -u2 "f-sy-h: cannot create working directory $_fsh_work_dir"
+  return 1
+}
+
+local OPT_HELP OPT_INFO OPT_VERBOSE OPT_QUIET OPT_RESET OPT_LIST OPT_TEST OPT_SECONDARY OPT_SHOW OPT_COPY OPT_OV_RESET
+local OPT_PALETTE OPT_CDWD OPT_XCHG OPT_OV_XCHG
+local -A opthash
+zparseopts -E -D -A opthash h -help v -verbose q -quiet i -info r -reset l -list t -test -secondary s -show \
+-copy-shipped-theme: R -ov-reset p -palette w -workdir x -xchg y -ov-xchg || return 1
+
+(( ${+opthash[-h]} + ${+opthash[--help]} ))    && OPT_HELP="-h"
+(( ${+opthash[-i]} + ${+opthash[--info]} ))    && OPT_INFO="-i"
+(( ${+opthash[-v]} + ${+opthash[--verbose]} )) && OPT_VERBOSE="-v"
+(( ${+opthash[-q]} + ${+opthash[--quiet]} ))   && OPT_QUIET="-q"
+(( ${+opthash[-r]} + ${+opthash[--reset]} ))   && OPT_RESET="-r"
+(( ${+opthash[-l]} + ${+opthash[--list]} ))    && OPT_LIST="-l"
+(( ${+opthash[-t]} + ${+opthash[--test]} ))    && OPT_TEST="-t"
+(( ${+opthash[--secondary]} ))                 && OPT_SECONDARY="--secondary"
+(( ${+opthash[-s]} + ${+opthash[--show]} ))    && OPT_SHOW="-s"
+(( ${+opthash[--copy-shipped-theme]} ))        && OPT_COPY="${opthash[--copy-shipped-theme]}"
+(( ${+opthash[-R]} + ${+opthash[--ov-reset]} )) && OPT_OV_RESET="-R"
+(( ${+opthash[-p]} + ${+opthash[--palette]} )) && OPT_PALETTE="-p"
+(( ${+opthash[-w]} + ${+opthash[--workdir]} )) && OPT_CDWD="-w"
+(( ${+opthash[-x]} + ${+opthash[--xchg]} ))    && OPT_XCHG="-x"
+(( ${+opthash[-y]} + ${+opthash[--ov-xchg]} )) && OPT_OV_XCHG="-y"
+
+local -a match mbegin mend
+local MATCH; integer MBEGIN MEND
+
+if [[ -n "$OPT_CDWD" ]]; then
+  builtin cd $_fsh_work_dir
+  return 0
+fi
+
+if [[ -n "$OPT_INFO" ]]; then
+  print -r -- "The default ${fg[green]}fsh_theme$reset_color command can be used to switch current and future sessions to a new different theme."
+  print -r -- ""
+  print -r -- "The theme path can use one of the shorthands below to point ~/.config/f-sy-h/<theme>.ini."
+  print -r -- "If the INI file pointed in the path is \"*overlay*\", then it is not a full theme,"
+  print -r -- "but an additional theme-snippet that overwrites only selected styles of the main theme."
+  print -r -- ""
+  print -r -- "${fg[yellow]}Shorthands$reset_color:"
+  print -r -- ""
+  print -r -- "CONFIG: = ${XDG_CONFIG_HOME:-$HOME/.config}/f-sy-h/"
+  print -r -- "CACHE: = ${XDG_CACHE_HOME:-$HOME/.cache}/f-sy-h/"
+  print -r -- "LOCAL: = /usr/local/share/f-sy-h/"
+  print -r -- "HOME: = $HOME/.f-sy-h/"
+  print -r -- "OPT: = /opt/local/share/f-sy-h/"
+  print -r -- ""
+  print -r -- "${fg[yellow]}Example$reset_color:"
+  print -r -- ""
+  print -r -- "${fg[green]}fsh_theme ${fg[cyan]}-w$reset_color"
+  print -r -- "${fg[green]}fsh_theme ${fg[cyan]}--copy-shipped-theme$reset_color clean z-shell"
+  print -r -- ""
+  print -r -- "This allows easy copying of one of the shipped themes into set directory."
+  print -r -- "The shipped themes are located in ${fg_bold[green]}$_fsh_base_dir/themes$reset_color."
+  return 0
+fi
+
+if [[ -n "$OPT_PALETTE" ]]; then
+  local n
+  local -a __colors
+  for n in {000..255}
+  do
+    __colors+=("%F{$n}$n%f")
+  done
+  print -cP $__colors
+  return
+fi
+
+if [[ -n "$OPT_SHOW" ]]; then
+  local -A saved_theme
+  print -r -- "Currently active theme: ${fg_bold[green]}$_fsh_theme_name$reset_color"
+  if [[ -r "$_fsh_work_dir/current_theme.ini" ]] &&
+    _fsh_read_ini "$_fsh_work_dir/current_theme.ini" saved_theme ''; then
+    print -r -- "Main theme (session startup): ${fg_bold[green]}${saved_theme[<theme>_name]}$reset_color"
+  else
+    print -r -- 'No main theme is set'
+  fi
+  return 0
+fi
+
+if [[ -n "$OPT_COPY" ]]; then
+  [[ ! -f "$_fsh_base_dir"/themes/"${OPT_COPY%.ini}.ini" ]] && { print -r -- "Theme ${fg_bold[green]}\`$OPT_COPY'$reset_color doesn't exist in F-Sy-H plugin dir ($_fsh_base_dir/themes)"; return 1; }
+  [[ ! -r "$_fsh_base_dir"/themes/"${OPT_COPY%.ini}.ini" ]] && { print -r -- "Theme ${fg_bold[green]}\`$OPT_COPY'$reset_color isn't readable in F-Sy-H plugin dir ($_fsh_base_dir/themes)"; return 1; }
+  [[ -n "$1" ]] && {
+    [[ ! -e "$1" && ! -e ${1:h} ]] && { print "Destination path doesn't exist, aborting"; return 1; }
+  }
+  command cp -vf "$_fsh_base_dir"/themes/"${OPT_COPY%.ini}.ini" "${${1:-.}%.ini}.ini" || return 1
+  return 0
+fi
+
+[[ -n "$OPT_RESET" ]] && { command rm -f "$_fsh_work_dir"/{current_theme.ini,secondary_theme.local.ini,current_theme.zsh,secondary_theme.zsh,secondary_theme.local.zsh}{,.zwc}; [[ -z "$OPT_QUIET" ]] && print -r -- "${fg[yellow]}Reset done$reset_color (${fg[red]}restart is required$reset_color)"; return 0; }
+[[ -n "$OPT_OV_RESET" ]] && { command rm -f "$_fsh_work_dir"/{theme_overlay.ini,theme_overlay.zsh}; [[ -z "$OPT_QUIET" ]] && print -r -- "${fg[yellow]}Overlay-reset done$reset_color (${fg[red]}restart is required$reset_color)"; return 0; }
+
+if [[ -n "$OPT_LIST" ]]; then
+  if [[ -z "$OPT_QUIET" ]]; then
+    print -r -- "${fg_bold[yellow]}Available themes$reset_color:"
+    print -r -- ""
+    print -rl -- "$_fsh_base_dir"/themes/*.ini(:t:r)
+    print -r -- ""
+  fi
+  return 0
+fi
+
+if [[ -n "$OPT_HELP" ]]; then
+  print -r -- "${fg_bold[yellow]}Usage$reset_color:"
+  print -r -- "   ${fg[green]}fsh_theme$reset_color [-h/--help] [-v/--verbose] [-q/--quiet] [-t/--test] <theme-name|theme-path>"
+  print -r -- "   ${fg[green]}fsh_theme$reset_color [-r/--reset] [-l/--list] [-s/--show] [-p/--palette] [-w/--workdir]"
+  print -r -- "   ${fg[green]}fsh_theme$reset_color --copy-shipped-theme {theme-name} [destination-path]"
+  print -r -- ""
+  print -r -- "${fg_bold[yellow]}Flags$reset_color:"
+  print -r -- "   ${fg[cyan]}-R, --ov-reset$reset_color  - unset overlay, use styles only from main-theme (requires restart)"
+  print -r -- "   ${fg[cyan]}-p, --palette$reset_color   - just print all 256 colors and exit (useful when creating a theme)"
+  print -r -- "   ${fg[cyan]}-r, --reset$reset_color     - unset any theme, use default highlighting (requires restart)"
+  print -r -- "   ${fg[cyan]}-t, --test$reset_color      - show test block of code after switching theme"
+  print -r -- "   ${fg[cyan]}-s, --show$reset_color      - get and display the theme currently being set"
+  print -r -- "   ${fg[cyan]}-w, --workdir$reset_color   - cd into the configured theme work directory"
+  print -r -- "   ${fg[cyan]}-l, --list$reset_color      - list names of available themes"
+  print -r -- "   ${fg[cyan]}-v, --verbose$reset_color   - more messages during operation"
+  print -r -- "   ${fg[cyan]}-i, --info$reset_color      - additional usage information"
+  print -r -- "   ${fg[cyan]}-q, --quiet$reset_color     - no default messages"
+  print -r -- "   ${fg[cyan]}-h, --help$reset_color      - this help message"
+  print -r -- ""
+  return 0
+fi
+
+[[ -z "$1" ]] && { print -u2 "${fg[yellow]}Show help$reset_color: ${fg[cyan]}-h, --help$reset_color"; return 1; }
+
+# _fsh_styles key onto ini-file key
+map=(
+    default                     "-"
+    unknown-token               "-"
+    reserved-word               "-"
+    subcommand                  "- reserved-word"
+    alias                       "- command builtin"
+    suffix-alias                "- alias command builtin"
+    builtin                     "-"
+    function                    "- builtin command"
+    command                     "-"
+    precommand                  "- command"
+    commandseparator            "-"
+    hashed-command              "- command"
+    path                        "-"
+    path_pathseparator          "pathseparator"
+    globbing                    "- back-or-dollar-double-quoted-argument" # fallback: variable in string "text $var text"
+    globbing-ext                "- double-quoted-argument" # fallback: the string "abc..."
+    history-expansion           "-"
+    single-hyphen-option        "- single-quoted-argument"
+    double-hyphen-option        "- double-quoted-argument"
+    back-quoted-argument        "-"
+    single-quoted-argument      "-"
+    double-quoted-argument      "-"
+    dollar-quoted-argument      "-"
+    back-or-dollar-double-quoted-argument   "- back-dollar-quoted-argument"
+    back-dollar-quoted-argument             "- back-or-dollar-double-quoted-argument"
+    assign                      "- reserved-word"
+    redirection                 "- reserved-word"
+    comment                     "-"
+    variable                    "-"
+    mathvar                     "- forvar variable"
+    mathnum                     "- fornum"
+    matherr                     "- incorrect-subtle"
+    assign-array-bracket        "-"
+    for-loop-variable           "forvar mathvar variable"
+    for-loop-number             "fornum mathnum"
+    for-loop-operator           "foroper reserved-word"
+    for-loop-separator          "forsep commandseparator"
+    exec-descriptor             "- reserved-word"
+    here-string-tri             "-"
+    here-string-text            "- subtle-bg"
+    here-string-var             "- back-or-dollar-double-quoted-argument"
+    secondary                   "-"
+    recursive-base              "- default"
+    case-input                  "- variable"
+    case-parentheses            "- reserved-word"
+    case-condition              "- correct-subtle"
+    correct-subtle              "-"
+    incorrect-subtle            "-"
+    subtle-separator            "- commandseparator"
+    subtle-bg                   "- correct-subtle"
+    path-to-dir                 "- path"
+    paired-bracket              "- subtle-bg correct-subtle"
+    bracket-level-1             "-"
+    bracket-level-2             "-"
+    bracket-level-3             "-"
+    global-alias                "- alias suffix-alias"
+    single-sq-bracket           "-"
+    double-sq-bracket           "-"
+    double-paren                "-"
+    optarg-string               "- double-quoted-argument"
+    optarg-number               "- mathnum"
+)
+
+# In which order to generate entries
+local -a order
+order=(
+  default unknown-token reserved-word alias suffix-alias builtin function command precommand
+  commandseparator hashed-command path path_pathseparator globbing globbing-ext history-expansion
+  single-hyphen-option double-hyphen-option back-quoted-argument single-quoted-argument
+  double-quoted-argument dollar-quoted-argument back-or-dollar-double-quoted-argument
+  back-dollar-quoted-argument assign redirection comment variable mathvar
+  mathnum matherr assign-array-bracket for-loop-variable for-loop-number for-loop-operator
+  for-loop-separator exec-descriptor here-string-tri here-string-text here-string-var secondary
+  case-input case-parentheses case-condition correct-subtle incorrect-subtle subtle-separator subtle-bg
+  path-to-dir paired-bracket bracket-level-1 bracket-level-2 bracket-level-3
+  global-alias subcommand single-sq-bracket double-sq-bracket double-paren
+  optarg-string optarg-number recursive-base
+)
+
+[[ -n "$OPT_VERBOSE" ]] && print "Number of styles available for customization: ${#order}"
+
+# Named colors
+local -a style_colors
+style_colors=( red green blue yellow cyan magenta black white default )
+
+#
+# Execution starts here
+#
+
+local -A out
+local THEME_NAME THEME_PATH="$1"
+if [[ "$1" = */* || "$1" = (CONFIG|CACHE|LOCAL|HOME|OPT):* ]]; then
+  1="${${1/(#s)CONFIG:/${${XDG_CONFIG_HOME:-$HOME/.config}%/}/f-sy-h/}%.ini}.ini"
+  1="${${1/(#s)CACHE:/${${XDG_CACHE_HOME:-$HOME/.cache}%/}/f-sy-h/}%.ini}.ini"
+  1="${${1/(#s)LOCAL://usr/local/share/f-sy-h/}%.ini}.ini"
+  1="${${1/(#s)HOME:/$HOME/.f-sy-h/}%.ini}.ini"
+  1="${${1/(#s)OPT://opt/local/share/f-sy-h/}%.ini}.ini"
+  1=${~1} # allow user to quote ~
+
+  [[ ! -f "$1" ]] && { print -u2 "${fg[yellow]}No such theme$reset_color \`$1'${fg[yellow]}, aborting$reset_color"; return 1; }
+  [[ ! -r "$1" ]] && { print -u2 "${fg[yellow]}Theme$reset_color \`$1' ${fg[yellow]}unreadable, aborting$reset_color"; return 1; }
+
+  THEME_NAME="${1:t:r}"
+  _fsh_read_ini "$1" out ""
+else
+  [[ ! -f "$_fsh_base_dir/themes/$1.ini" ]] && { print -u2 "${fg[yellow]}No such theme$reset_color \`$1'${fg[yellow]}, aborting$reset_color"; return 1; }
+  [[ ! -r "$_fsh_base_dir/themes/$1.ini" ]] && { print -u2 "${fg[yellow]}Theme$reset_color \`$1' ${fg[yellow]}unreadable, aborting$reset_color"; return 1; }
+
+  THEME_NAME="$1"
+  _fsh_read_ini "$_fsh_base_dir/themes/$1.ini" out ""
+fi
+
+local outfile output_path temp_output_path=
+[[ -z "$OPT_SECONDARY" ]] && { [[ "$THEME_NAME" = *"overlay"* ]] && outfile="theme_overlay.ini" || outfile="current_theme.ini"; } || outfile="secondary_theme.local.ini"
+
+# Set the runtime theme name. Persisted theme state is written as INI data.
+if [[ -z "$OPT_SECONDARY" && -z "$OPT_XCHG" && -z "$OPT_OV_XCHG" ]]; then
+  [[ "$THEME_NAME" != *"overlay"* ]] && {
+    typeset -g _fsh_theme_name="$THEME_NAME"
+  }
+elif [[ -z "$OPT_XCHG" && -z "$OPT_OV_XCHG" ]]; then
+  local _fsh_theme_name="$THEME_NAME"
+fi
+
+# Store from which file the theme or overlay is being loaded
+[[ "$THEME_NAME" != *"overlay" && -z "$OPT_OV_XCHG" ]] && _fsh_styles[${_fsh_theme_name}-path]="$THEME_PATH" || _fsh_styles[${_fsh_theme_name}-ov-path]="$THEME_PATH"
+
+if [[ -z "$OPT_XCHG$OPT_OV_XCHG" ]]; then
+  output_path="$_fsh_work_dir/$outfile"
+  temp_output_path=$(command mktemp "$_fsh_work_dir/.${outfile}.XXXXXXXX") || return 1
+  {
+    print -r -- '[theme]'
+    print -r -- "name=$THEME_NAME"
+    print -r -- "path=$THEME_PATH"
+    print -r -- '[styles]'
+  } >| "$temp_output_path" || return 1
+fi
+
+# Generate the selected main, overlay, or local secondary theme.
+local k kk
+local inikey inival result result2 first_val isbg
+integer ov_counter=0 first
+
+for k in "${order[@]}"; do
+  first=1
+  for kk in ${(s. .)map[$k]} default; do
+    [[ "$kk" = "-" ]] && kk="$k"
+    (( first )) && first_val="$kk"
+    inikey="${out[(i)<*>_${kk}]}"
+    [[ -n "$inikey" ]] && {
+      (( !first )) && [[ -z "$OPT_QUIET" ]] && {
+        [[ $kk = default ]] && {
+          [[ "$THEME_NAME" != *"overlay"* ]] && print "Missing style: $first_val"
+        } || print "For style $first_val, went for fallback style $kk"
+      }
+      break
+    }
+    first=0
+    [[ "$THEME_NAME" = *"overlay"* ]] && break
+  done
+
+  # ORIG: Clear orig-style when loading a new theme, not overlay
+  [[ -z "$OPT_OV_XCHG" ]] && unset "_fsh_styles[orig-style-$k]"
+  # ORIG: Restore orig-style when loading a new overlay
+  [[ -n "$OPT_OV_XCHG" && -n "${_fsh_styles[orig-style-$k]}" ]] && { _fsh_styles[${_fsh_theme_name}$k]="${_fsh_styles[orig-style-$k]}"; unset "_fsh_styles[orig-style-$k]"; }
+  # Set only the keys provided in theme
+  [[ -z "$inikey" ]] && { [[ -z "$OPT_QUIET" && "$THEME_NAME" != *"overlay"* ]] && print "Missing style $first_val"; continue; }
+
+  inival="${out[$inikey]}"
+  if [[ "$k" = "secondary" && -z "$OPT_SECONDARY" && -n "$inival" ]]; then
+    fsh_theme -q --secondary "$inival"
+  fi
+
+  result=""
+  if [[ $k = secondary ]]; then
+    result="$inival"
+  else
+    for kk in ${(s:,:)inival}
+    do
+      if [[ $kk = (none|(no-|)(bold|blink|conceal|reverse|standout|underline)) ]]; then
+        result+="${result:+,}$kk"
+      else
+        isbg=0
+        if [[ $kk = bg:* ]]; then
+          isbg=1
+          kk=${kk#bg:}
+        fi
+        if [[ $kk = (${(~j:|:)style_colors}) || $kk = [0-9]## || $kk = \#[0-9a-fA-F](#c6,6) ]]; then
+          result+="${result:+,}"
+          (( isbg )) && result+="bg=" || result+="fg="
+          result+="$kk"
+        else
+          print "cannot parse style $k: unknown color or style element $kk"
+        fi
+    fi
+    done
+  fi
+
+  if [[ "$THEME_NAME" = *"overlay"* || -n "$OPT_OV_XCHG" ]]; then
+    (( ++ ov_counter ))
+    if [[ -z "$OPT_XCHG$OPT_OV_XCHG" ]]; then
+      print -r -- "${_fsh_theme_name}${k}=$result" >>! "$temp_output_path" || return 1
+    fi
+    # ORIG: Save original value of the overwritten style
+    _fsh_styles[orig-style-$k]=${_fsh_styles[${_fsh_theme_name}$k]}
+    # Overwrite theme's style
+    _fsh_styles[${_fsh_theme_name}$k]="$result"
+  else
+    if [[ -z "$OPT_XCHG$OPT_OV_XCHG" ]]; then
+      print -r -- "${_fsh_theme_name}${k}=$result" >>! "$temp_output_path" || return 1
+    fi
+    _fsh_styles[${_fsh_theme_name}$k]="$result"
+  fi
+done
+
+if [[ -n $temp_output_path ]]; then
+  command mv -f -- "$temp_output_path" "$output_path" || return 1
+  temp_output_path=
+fi
+
+# This can overwrite some of *_STYLES fields
+# Re-apply overlay on top of the theme we switched to
+[[ "$THEME_NAME" != *"overlay"* ]] && [[ -r "$_fsh_work_dir/theme_overlay.ini" ]] &&
+  _fsh_theme_load_data "$_fsh_work_dir/theme_overlay.ini" 0
+
+if [[ -z "$OPT_QUIET" ]]; then
+  if [[ "$THEME_NAME" != *"overlay"* ]]; then
+    print "Switched to theme \`$THEME_NAME' (current session, and future sessions)" || \
+  else
+    print "Processed the overlay ($ov_counter keys found), it is now active (for current session, and future sessions)"
+  fi
+fi
+
+if [[ -n "$OPT_TEST" ]]; then
+  print -zr '
+    # Sub-shell, assignments, math-mode
+    echo $(cat /etc/hosts |& grep -i "hello337")
+    local param1="text ${+variable[test]} text ${var} text"; typeset param2='"'"'other $variable'"'"'
+    math=$(( 10 + HISTSIZ + HISTSIZE + $SAVEHIST )) size=$(( 0 ))
+
+    # Programming-like usage, bracket matching - through distinct colors; note the backslash quoting
+    for (( ii = 1; ii <= size; ++ ii )); do
+      if [[ "${cmds[ii]} string" = "| string" ]]
+      then
+        sidx=${buffer[(in:ii:)\$\(?#[^\\\\]\)]} # find opening cmd-subst
+        (( sidx <= len + 100 )) && {
+          eidx=${buffer[(b:sidx:ii)[^\\\\]\)]} # find closing cmd-subst
+        }
+      fi
+    done
+
+    # Regular command-line usage
+    repeat 0 {
+      zsh -i -c "cat /etc/shells* | grep -x --line-buffered -i '"'/bin/zsh'"'"
+      builtin exit $return_value
+      fsh_theme -tq default
+      fsh_theme -tq default-X
+      command -v git | grep ".+git" && echo $'"'"'Git is installed'"'"'
+      git checkout -m --ours /etc/shells && git status-X
+      gem install asciidoctor
+      cat <<<$PATH | tr : \\n > /dev/null 2>/usr/local
+      man -a fopen fopen-X
+      CFLAGS="-g -Wall -O0" ./configure
+    }
+  '
+fi
+
+return 0
+} always {
+  if [[ -n ${temp_output_path-} && -e $temp_output_path ]]; then
+    command rm -f -- "$temp_output_path"
+  fi
+  local cleanup_color_name
+  for cleanup_color_name in color colour fg fg_bold fg_no_bold bg bg_bold bg_no_bold reset_color bold_color; do
+    builtin unset "$cleanup_color_name" 2>/dev/null || true
+    if (( ${+_fsh_theme_color_declarations[$cleanup_color_name]} )); then
+      builtin eval "${_fsh_theme_color_declarations[$cleanup_color_name]}"
+    fi
+  done
+  if (( colors_function_was_set )); then
+    functions[colors]=$colors_function_definition
+  else
+    builtin unfunction colors 2>/dev/null || true
+  fi
+  _fsh_lifecycle_refresh
+}

@@ -1,0 +1,459 @@
+# -*- mode: zsh; sh-indentation: 2; indent-tabs-mode: nil; sh-basic-offset: 2; -*-
+# vim: ft=zsh sw=2 ts=2 et
+#
+# Main chroma function. It allows to create the command-dedicated chromas
+# (like `_fsh_chroma_git`) through a definition provided by a chroma hash (read
+# from the upper scope).
+#
+# $1 - 0 or 1, denoting if it's first call to the chroma, or following one
+# $2 - the current token, also accessible by $__arg from the above scope -
+#      basically a private copy of $__arg
+# $3 - a private copy of $_start_pos, i.e. the position of the token in the
+#      command line buffer, used to add region_highlight entry (see man),
+#      because Zsh colorizes by *ranges* in command line buffer
+# $4 - a private copy of $_end_pos from the above scope
+#
+
+builtin emulate -L zsh
+builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc_quotes no_auto_pushd no_nomatch
+
+(( next_word = 2 | 8192 ))
+
+_fsh_chroma_debug() {
+  return 0
+}
+
+_fsh_chroma_apply_action() {
+  builtin emulate -L zsh
+  builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc_quotes no_auto_pushd
+
+  local action=$1 style
+  [[ -z $action || $action == NO-OP ]] && return 0
+  [[ $action == '__style='* ]] || return 1
+  style=${action#__style=}
+  if [[ $style == '${_fsh_theme_name}'* ]]; then
+    style=${_fsh_theme_name}${style#'${_fsh_theme_name}'}
+  fi
+  [[ $style == [-[:alnum:]_]## ]] || return 1
+  __style=$style
+}
+
+local __chroma_name="${1#\%}" __first_call="$2" __wrd="$3" __start_pos="$4" __end_pos="$5"
+
+# Not a well formed chroma name
+[[ -z "$__chroma_name" ]] && return 1
+
+# Load the fsh_{name-of-the-chroma}_chroma_def array
+(( !_fsh_state[chroma-${__chroma_name}-definition] )) &&
+  "_fsh_chroma_${__chroma_name}"
+
+_fsh_chroma_debug -r -- @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+_fsh_chroma_debug -r -- @@@@@@@  local __chroma_name="${1#\%}" __first_call="$2" __wrd="$3" __start_pos="$4" __end_pos="$5" @@@@@@@
+local __style __entry __value __action __handler __tmp __svalue __hspaces=$'\t ' __nl=$'\n' __ch_def_name
+integer __idx1 __idx2 __start __end __ivalue __have_value=0
+local -a _fsh_command_output __avalue
+local -A map
+map=( "#" "_H" "^" "_D" "*" "_S" )
+
+(( __start=_start_pos-__PBUFLEN, __end=_end_pos-__PBUFLEN ))
+
+# Handler that highlights the options
+_fsh_chroma_option_action() {
+  integer _start="$2" _end="$3"
+  local _scmd="$1" _wrd="$4"
+
+  [[ "$_wrd" = (#b)(--[a-zA-Z0-9_-]##)=(*) ]] && {
+      reply+=("$_start $(( _end - mend[2] + mbegin[2] - 1 )) ${_fsh_styles[${_fsh_theme_name}double-hyphen-option]}")
+  } || {
+[[ "$_wrd" = --* ]] && __style=${_fsh_theme_name}double-hyphen-option || \
+    __style=${_fsh_theme_name}single-hyphen-option
+  }
+}
+
+# Handler that highlights the options' arguments
+_fsh_chroma_option_argument_action() {
+  integer _start="$2" _end="$3"
+  local _scmd="$1" _wrd="$4"
+
+  [[ "$_wrd" = (#b)(--[a-zA-Z0-9_-]##)=(*) ]] && {
+    reply+=("$(( _start + 1 + mend[1] )) $_end ${_fsh_styles[${_fsh_theme_name}optarg-${${${(M)match[2]:#<->}:+number}:-string}]}")
+  } || __style=${_fsh_theme_name}optarg-${${${(M)_wrd:#(-|)<->}:+number}:-string}
+}
+
+# This handler also highlights explicit arguments, i.e. --opt=the-explicit-arg
+_fsh_chroma_option_separator_action() {
+  integer _start="$2" _end="$3"
+  local _scmd="$1" _wrd="$4"
+
+  [[ "$_wrd" = (#b)(--[a-zA-Z0-9_-]##)=(*) ]] && {
+    reply+=("$_start $(( _end - mend[2] + mbegin[2] - 1 )) ${_fsh_styles[${_fsh_theme_name}double-hyphen-option]}")
+    reply+=("$(( _start + 1 + mend[1] )) $_end ${_fsh_styles[${_fsh_theme_name}optarg-${${${(M)match[2]:#<->}:+number}:-string}]}")
+  } || {
+    [[ "$_wrd" = --* ]] && __style=${_fsh_theme_name}double-hyphen-option || \
+    __style=${_fsh_theme_name}single-hyphen-option
+  }
+}
+
+# A handler which verifies the token as an GIT url
+_fsh_chroma_verify_url() {
+  setopt localoptions extendedglob
+  local _wrd="$4"
+  integer url_correct=0
+  # Correct matches
+  # Correct matches
+  if [[ "$_wrd" = (#b)(git|http|https|ftp|ftps|file)://([a-zA-Z0-9._~-]##)(:[0-9]##)(#c0,1)(/([a-zA-Z0-9./_~:-]##))(#c0,1) ]]; then
+    url_correct=1
+  elif [[ "$_wrd" = (#b)rsync://([a-zA-Z0-9._~-]##)(/([a-zA-Z0-9./_~:-]##))(#c0,1) ]]; then
+    url_correct=1
+  elif [[ "$_wrd" = (#b)ssh://([a-zA-Z0-9._~-]##@)(#c0,1)([a-zA-Z0-9._~-]##)(:[0-9]##)(#c0,1)(/([a-zA-Z0-9./_~:-]##))(#c0,1) ]]; then
+    url_correct=1
+  elif [[ "$_wrd" = (#b)([a-zA-Z0-9._~-]##@)(#c0,1)([a-zA-Z0-9._~-]##):([a-zA-Z0-9./_~:-](#c0,1)[a-zA-Z0-9._~:-][a-zA-Z0-9./_~:-]#)(#c0,1) ]]; then
+    url_correct=1
+  elif [[ "$_wrd" = (#b)[[:alnum:]/_~:.-]## ]]; then
+    url_correct=1
+  fi
+
+  (( url_correct )) && \
+    { __style=${_fsh_theme_name}correct-subtle; return 0; } || \
+    { __style=${_fsh_theme_name}incorrect-subtle; return 1; }
+}
+
+# A handler which verifies the token as a shell wildcard
+_fsh_chroma_verify_pattern() {
+  setopt localoptions extendedglob
+  local _wrd="$4"
+  __style=${_fsh_theme_name}globbing-ext
+}
+
+# Creates a hash table for given option set (an *_opt field in the chroma def.)
+_fsh_chroma_create_option_hash() {
+  local __subcmd="$1" __option_set_id="$2" __the_hash_name="$3" __ __e __el __the_hash_name __var_name
+  local -a __split __sp __s
+
+  _fsh_chroma_debug -rl "======================" "  **## STARTING ##** CREATE option hash // subcmd:$__subcmd // option_set_id:$__option_set_id // hash:$__the_hash_name"
+  _fsh_chroma_debug "[D] Got option-set: ${(j:,:)__option_set_id}"
+  typeset -gA "$__the_hash_name"
+  _fsh_chroma_debug "[E] __the_hash_name ${__the_hash_name}:[$__option_set_id]"
+
+  # Split on ||
+  __ch_def_name="_fsh_chroma_${__chroma_name}_def[${__option_set_id}]"
+  __split=( "${(P@s:||:)__ch_def_name}" )
+  [[ ${#__split} -eq 1 && -z "${__split[1]}" ]] && __split=()
+  # Remove only leading and trailing whitespace
+  __split=( "${__split[@]//((#s)[[:space:]]##|[[:space:]]##(#e))/}" )
+
+  _fsh_chroma_debug -rl "[F] Got ||-__split: _________" ${${(@)${${__split[@]##[[:space:]]##}[@]//[${__hspaces}]##/ }[@]//[${__nl}]##/$__nl}[@]//(#s)/:::} "_________"
+  for __el in $__split; do
+    __sp=( "${(@s:<<>>:)__el}" )
+    [[ ${#__sp} -eq 1 && -z "${__sp[1]}" ]] && __sp=()
+    __sp=( "${__sp[@]//((#s)[[:space:]]##|[[:space:]]##(#e))/}" )
+    _fsh_chroma_debug -l -- "Processing an ||-part - got <<>>-split: _________" "${${__sp[@]}[@]/(#s)/-\\t}" "_________"
+    __e="${__sp[1]}"
+    local __e1=${${__e#\(}%\)(:add|:del|)}
+    local __e2=${(M)__e##\(*\)(:add|:del)}
+    # Split on | with the ( and ) and :add/:del stripped and then append
+    # the :add or :del depending on what's on the input line
+    __s=()
+    for __ in ${(@s:|:)__e1}; do
+      __s+=( $__${__e2:+${(M)__e%(:add|:del)}} )
+    done
+    [[ ${#__s} -eq 1 && -z "${__s[1]}" ]] && __s=()
+    __s=( "${__s[@]//((#s)[[:space:]]##|[[:space:]]##(#e))/}" )
+    shift __sp
+    for __ in $__s; do
+      __=${__%\^}
+      [[ "$__" = -*:(add|del) ]] && __var_name="${__the_hash_name}[${__}-directive]" || __var_name="${__the_hash_name}[${__}-opt-action]"
+      _fsh_chroma_debug "${(r:70:: :):-${__var_name}} := >>${__sp[1]}${${${#__sp}:#(0|1)}:+ +}<<"
+      : ${(P)__var_name::=${__sp[1]}${${${#__sp}:#(0|1)}:+ +}}
+      if (( ${#__sp} >= 2 )); then
+        __var_name="${__the_hash_name}[${__}-opt-arg-action]"
+        _fsh_chroma_debug "${(r:70:: :):-${__var_name}} := >>${__sp[2]}<<}"
+        : ${(P)__var_name::=$__sp[2]}
+      fi
+    done
+  done
+}
+
+# Processes given token
+_fsh_chroma_process_token() {
+  local __subcmd="$1" __wrd="$2" __val __var_name __main_hash_name __the_hash_name __i __size
+  local -a __splitted __split __added
+
+  _fsh_chroma_debug "\n******************* Starting _fsh_chroma_process_token <<$__wrd>>// subcmd:${(qq)__subcmd}"
+  __main_hash_name="_fsh_chroma_main_${${_fsh_state[chroma-current]//[^a-zA-Z0-9_]/_}//(#b)([\#\^\*])/${map[${match[1]}]}}"
+  __var_name="${__main_hash_name}[subcmd:$__subcmd]"
+  __splitted=( "${(@s://:P)__var_name}" )
+  [[ ${#__splitted} -eq 1 && -z "${__splitted[1]}" ]] && __splitted=()
+  __splitted=( "${__splitted[@]//((#s)[[:space:]]##|[[:space:]]##(#e))/}" )
+
+  _fsh_chroma_debug -rl -- "[B] MAIN-PROCESS-TOKEN: got [OPTION/ARG-**S-E-T-S**] //-splitted from subcmd:$__subcmd: ${${(j:, :)__splitted}:-EMPTY-SET!}" "----- __splitted\\Deleted: -----" ${${(j:, :)${__splitted[@]:#(${(~j:|:)${(@)=_fsh_state[chroma-${_fsh_state[chroma-current]}-deleted-nodes]}})}}:-EMPTY-SET (deleted)!} "----- Added\\Deleted: -----" ${${(j:, :)${${(@)=_fsh_state[chroma-${_fsh_state[chroma-current]}-added-nodes]}:#(${(~j:|:)${(@)=_fsh_state[chroma-${_fsh_state[chroma-current]}-deleted-nodes]}})}}:-EMPTY-SET (added)!} -----\ Deleted:\ ----- ${(j:, :)${(@)=_fsh_state[chroma-${_fsh_state[chroma-current]}-deleted-nodes]}}
+
+  (( ! ${#__splitted} )) && {
+    __var_name="${__main_hash_name}[subcmd:*]"
+    __splitted=( "${(@s://:P)__var_name}" )
+    [[ ${#__splitted} -eq 1 && -z "${__splitted[1]}" ]] && __splitted=()
+    __splitted=( "${__splitted[@]//((#s)[[:space:]]##|[[:space:]]##(#e))/}" )
+    (( ! ${#__splitted} )) && return 1
+  }
+
+  _fsh_chroma_debug -rl -- "---NO-HASH-CREATE-FROM-NOW-ON---"
+
+  if [[ -z "${_fsh_state[chroma-${_fsh_state[chroma-current]}-option-with-arg-active]}" ]]; then
+    _fsh_chroma_debug -rl -- "-z OPT-WITH-ARG-ACTIVE == true"
+    if [[ "$__wrd" = -* ]]; then
+      _fsh_chroma_debug "1st-PATH (-z opt-with-arg-active, non-opt-arg branch, i.e. OPTION BRANCH) [#${_fsh_state[chroma-${_fsh_state[chroma-current]}-counter-arg]}]"
+      for __val in ${__splitted[@]:#(${(~j:|:)${(@)=_fsh_state[chroma-${_fsh_state[chroma-current]}-deleted-nodes]}})} ${${(@)=_fsh_state[chroma-${_fsh_state[chroma-current]}-added-nodes]}:#(${(~j:|:)${(@)=_fsh_state[chroma-${_fsh_state[chroma-current]}-deleted-nodes]}})}; do
+        [[ "${__val}" != "${__val%%_([0-9]##|\#)##*}"_${_fsh_state[chroma-${_fsh_state[chroma-current]}-counter-arg]}_opt(\*|\^|) && "${__val}" != "${__val%%_([0-9]##|\#)*}"_"#"_opt(\*|\^|) ]] && { _fsh_chroma_debug "DIDN'T MATCH $__val / arg counter:${_fsh_state[chroma-${_fsh_state[chroma-current]}-counter-arg]}" ;  continue; } || _fsh_chroma_debug "Got candidate: $__val"
+        # Create the hash cache-parameter if needed
+        __the_hash_name="_fsh_chroma_${_fsh_state[chroma-current]//[^a-zA-Z0-9_]/_}__${__subcmd//[^a-zA-Z0-9_]/_}__${${__val//(#b)([\#\^\*])/${map[${match[1]}]}}//[^a-zA-Z0-9_]/_}"
+        [[ "$__val" = *_opt(\*|\^|) && "${(P)+__the_hash_name}" -eq 0 ]] && _fsh_chroma_create_option_hash "$__subcmd" "$__val" "$__the_hash_name" || _fsh_chroma_debug "Not creating, the hash already exists..."
+        # Try dedicated-entry for the option
+        __var_name="${__the_hash_name}[${${${${(M)__wrd#?*=}:+${__wrd%=*}=}:-$__wrd}}-opt-action]"
+        __split=( "${(@s://:P)__var_name}" )
+        [[ ${#__split} -eq 1 && -z "${__split[1]}" ]] && __split=()
+        # If no result, then try with catch-all entry
+        (( ! ${#__split} )) && {
+          _fsh_chroma_debug "% no ${(q-)${${${(M)__wrd#?*=}:+${__wrd%=*}=}:-$__wrd}}-opt-action, retrying with *-opt-action" "|__var_name|:$__var_name"
+          __var_name="${__the_hash_name}[*-opt-action]"
+          __split=( "${(@s://:P)__var_name}" )
+          [[ ${#__split} -eq 1 && -z "${__split[1]}" ]] && __split=()
+        }
+        __svalue="$__var_name"
+        # Remove whitespace
+        __split=( "${__split[@]//((#s)[[:space:]]##|[[:space:]]##(#e))/}" )
+        _fsh_chroma_debug -l -- "\`$__val' // ${#__split} // $__wrd: (ch.run #${_fsh_state[chroma-${_fsh_state[chroma-current]}-call-nr]}), deref. of \`$__var_name'"
+        if (( ${#__split} )); then
+          _fsh_chroma_debug -l -- "Got split of {\$#__split:$#__split} ${__wrd}-opt-action or *-opt-action" "${${(q-)__split[@]}[@]/(#s)/->\\t}"
+          if [[ "${__split[2]}" = *[[:blank:]]+ ]]; then
+            _fsh_chroma_debug "YES handling the value (the OPT.ARGUMENT)! [${__split[2]}]"
+            if [[ "$__wrd" = *=* ]]; then
+              _fsh_chroma_debug "The-immediate Arg-Acquiring, of option"
+              _fsh_state[chroma-${_fsh_state[chroma-current]}-option-with-arg-active]="${__svalue%-opt-action\]}-opt-arg-action]"
+              _fsh_state[chroma-${_fsh_state[chroma-current]}-option-arg]="${__wrd#*=}"
+              __have_value=2
+            else
+              _fsh_chroma_debug "Enable Arg-Awaiting, of option"
+              _fsh_chroma_debug "_fsh_state[chroma-${_fsh_state[chroma-current]}-option-with-arg-active]=\"${__svalue%-opt-action\]}-opt-arg-action]\""
+              __have_value=0
+              _fsh_state[chroma-${_fsh_state[chroma-current]}-option-with-arg-active]="${__svalue%-opt-action\]}-opt-arg-action]"
+            fi
+          fi
+          __action="${__split[1]}"
+          __handler="${__split[2]%[[:blank:]]+}"
+          # Check for directives (like :add)
+          if [[ "$__val" = *_opt\^ ]]; then
+            __var_name="${__the_hash_name}[${${${${(M)__wrd#?*=}:+${__wrd%=*}=}:-$__wrd}}:add-directive]"
+            (( ${(P)+__var_name} )) && __split=( "${(@s://:P)__var_name}" ) || __split=()
+            [[ ${#__split} -eq 1 && -z "${__split[1]}" ]] && __split[1]=()
+            __ivalue=${#__split}
+            __var_name="${__var_name%:add-*}:del-directive]"
+            (( ${(P)+__var_name} )) && __split+=( "${(@s://:P)__var_name}" )
+            [[ ${#__split} -eq $(( __ivalue + 1 )) && -z "${__split[__ivalue+1]}" ]] && __split[__ivalue+1]=()
+            __split=( "${__split[@]//((#s)[[:space:]]##|[[:space:]]##(#e))/}" )
+            __tmp=${#__split}
+            # First: del-directive
+            _fsh_state[chroma-${_fsh_state[chroma-current]}-deleted-nodes]+="${(j: :)__split[__ivalue+1,__tmp]} "
+            _fsh_chroma_debug -rl ":add / :del directives: __ivalue:$__ivalue, THE __SPLIT[#$__tmp]: " "${__split[@]}" "//" "The _fsh_state[chroma-*deleted-nodes]: " ${=_fsh_state[chroma-${_fsh_state[chroma-current]}-deleted-nodes]}
+            # Second: add-directive
+            _fsh_state[chroma-${_fsh_state[chroma-current]}-added-nodes]+="${(j: :)__split[1,__ivalue]} "
+          fi
+          [[ "$__handler" = ::[^[:space:]]* ]] && __handler="${__handler#::}" || __handler=""
+          [[ -n "$__handler" && "$__handler" != "NO-OP" ]] && { _fsh_chroma_debug -rl -- "Running handler(1): $__handler" ; "$__handler" "${_fsh_state[chroma-${_fsh_state[chroma-current]}-subcommand]:-NULL}" "$__start" "$__end" "$__wrd"; }
+          [[ "$__have_value" -ne 2 && -n "$__action" && "$__action" != "NO-OP" ]] && { _fsh_chroma_debug -rl "Running action (1): $__action"; _fsh_chroma_apply_action "$__action"; }
+          [[ "$__val" != *\* ]] && break
+        else
+          _fsh_chroma_debug -rl -- "NO-MATCH ROUTE TAKEN"
+        fi
+      done
+    else
+      _fsh_chroma_debug "1st-PATH-B (-z opt-with-arg-active, non-opt-arg branch, ARGUMENT BRANCH [#${_fsh_state[chroma-${_fsh_state[chroma-current]}-counter-arg]}]) //// added-nodes: ${=_fsh_state[chroma-${_fsh_state[chroma-current]}-added-nodes]}"
+      for __val in ${__splitted[@]:#(${(~j:|:)${(@)=_fsh_state[chroma-${_fsh_state[chroma-current]}-deleted-nodes]}})} ${${(@)=_fsh_state[chroma-${_fsh_state[chroma-current]}-added-nodes]}:#(${(~j:|:)${(@)=_fsh_state[chroma-${_fsh_state[chroma-current]}-deleted-nodes]}})}; do
+        [[ "${__val}" != "${__val%%_([0-9]##|\#)*}"_"${_fsh_state[chroma-${_fsh_state[chroma-current]}-counter-arg]}"_arg(\*|\^|) && "${__val}" != "${__val%%_([0-9]##|\#)*}"_"#"_arg(\*|\^|) ]] && { _fsh_chroma_debug "Continuing for $__val / arg counter ${_fsh_state[chroma-${_fsh_state[chroma-current]}-counter-arg]}" ; continue }
+        # Create the hash cache-parameter if needed
+        __the_hash_name="_fsh_chroma_${_fsh_state[chroma-current]//[^a-zA-Z0-9_]/_}__${__subcmd//[^a-zA-Z0-9_]/_}__${${__val//\#/H}//[^a-zA-Z0-9_]/_}"
+        __action="" __handler=""
+        _fsh_chroma_debug "A hit, chosen __val:$__val!"
+        __ch_def_name="_fsh_chroma_${__chroma_name}_def[$__val]"
+        __split=( "${(P@s:<<>>:)__ch_def_name}" )
+        __split=( "${__split[@]//((#s)[[:space:]]##|[[:space:]]##(#e))/}" )
+        __sp=( "${(@s://:)__split[1]}" )
+        __sp=( "${__sp[@]//((#s)[[:space:]]##|[[:space:]]##(#e))/}" )
+        __action="${__sp[1]#*::::: ##}"
+        # Verify if it's the expected argument
+        [[ "${__sp[1]}" = *:::::* && "$__wrd" != ${~${__sp[1]%% ##:::::*}} ]] && \
+          { _fsh_chroma_debug -r "mismatch ${__sp[1]%% ##:::::*} != $__wrd, continuing" ; continue; }
+        _fsh_chroma_debug -l -- "Got action record for $__val, i.e. the split:" "${__sp[@]//(#s)/-\t}" "_________"
+        [[ "${__sp[2]}" = ::[^[:space:]]* ]] && __handler="${__sp[2]#::}" || { [[ -n "$__handler" && "$__handler" != "NO-OP" ]] && _fsh_chroma_debug "=== Error === In chroma definition: a handler entry ${(q)__sp[2]} without leading \`::'" ; }
+        [[ -n "$__handler" && "$__handler" != "NO-OP" ]] && { _fsh_chroma_debug -rl -- "Running handler(3): $__handler" ; "$__handler" "${_fsh_state[chroma-${_fsh_state[chroma-current]}-subcommand]:-NULL}" "$__start" "$__end" "$__wrd"; }
+        [[ -n "$__action" && "$__action" != "NO-OP" ]] && { _fsh_chroma_debug -rl -- "Running action(3): $__action"; _fsh_chroma_apply_action "$__action"; }
+        # Check for argument directives (like :add)
+        if (( ${#__split} >= 2 )); then
+          for __ in "${(@)__split[2,-1]}"; do
+            __splitted=( "${(@s://:)__}" )
+            if [[ "${__splitted[1]}" = add:* ]]; then
+              _fsh_state[chroma-${_fsh_state[chroma-current]}-added-nodes]+="${__splitted[1]#add:} ${(j: :)__splitted[2,-1]} "
+            elif [[ "${__splitted[1]}" = del:* ]]; then
+              _fsh_state[chroma-${_fsh_state[chroma-current]}-deleted-nodes]+="${__splitted[1]#del:} ${(j: :)__splitted[2,-1]} "
+            fi
+          done
+          _fsh_chroma_debug -l "ARGUMENT :add / :del directives: THE __SPLIT[#${#__split}]: " "${__split[@]//(#s)/-\\t}" "//" "The _fsh_state[chroma-*deleted-nodes]: " ${(@)${=_fsh_state[chroma-${_fsh_state[chroma-current]}-deleted-nodes]}//(#s)/-\\t} "The _fsh_state[chroma-*added-nodes]: " ${(@)${=_fsh_state[chroma-${_fsh_state[chroma-current]}-added-nodes]}//(#s)/-\\t}
+        fi
+        [[ "$__val" != *\* ]] && break
+      done
+    fi
+  else
+    _fsh_chroma_debug -- "2nd-PATH (-n opt-with-arg-active) NON-EMPTY arg-active:\nThe actual opt-val <<< \$__wrd:$__wrd >>> store (after the \`Arg-Awaiting' in the chroma-run: #$(( _fsh_state[chroma-${_fsh_state[chroma-current]}-call-nr]-1 )) [current: #$(( _fsh_state[chroma-${_fsh_state[chroma-current]}-call-nr] ))])"
+    _fsh_state[chroma-${_fsh_state[chroma-current]}-option-arg]="$__wrd"
+    __have_value=1
+  fi
+  # Execute the action if not during simulated opt-argument (--opt=...)
+  _fsh_chroma_debug "** BEFORE: \`if (( __have_value ))'"
+  if (( __have_value )); then
+    _fsh_chroma_debug "In the \`if (( __have_value ))' [have_value: $__have_value]"
+    # Split
+    __var_name="${_fsh_state[chroma-${_fsh_state[chroma-current]}-option-with-arg-active]}"
+    _fsh_state[chroma-${_fsh_state[chroma-current]}-option-with-arg-active]=""
+    __split=( "${(@s://:P)__var_name}" )
+    [[ ${#__split} -eq 1 && -z "${__split[1]}" ]] && { _fsh_chroma_debug -rl "NULL at __var_name:$__var_name" ; __split=(); }
+    __split=( "${__split[@]//((#s)[[:space:]]##|[[:space:]]##(#e))/}" )
+    # Remember 1st level action
+    (( __have_value == 2 )) && __value="$__action" || __value=""
+    if (( ${#__split} )); then
+      _fsh_chroma_debug -l -- "Got //-split (3, for opt-ARG-action, from [$__var_name]):" "${${(q-)__split[@]}[@]/(#s)/+\\t}"
+      __action="${__split[1]}"
+      __handler="${__split[2]}"
+      [[ "$__handler" = ::[^[:space:]]* ]] && __handler="${__handler#::}"
+      [[ -n "$__handler" && "$__handler" != "NO-OP" ]] && \
+      {_fsh_chroma_debug -rl -- "Running handler(2): $__handler" ; "$__handler" "${_fsh_state[chroma-${_fsh_state[chroma-current]}-subcommand]:-NULL}" "$__start" "$__end" "$__wrd"; }
+      [[ -n "$__action" && "$__action" != "NO-OP" ]] && \
+      { _fsh_chroma_debug -rl -- "Running action(2): $__action"; _fsh_chroma_apply_action "$__action"; }
+      _fsh_chroma_debug -rl -- "The __action value: [$__value]"
+      [[ "$__have_value" -eq 2 && -n "$__value" && "$__value" != "NO-OP" ]] && \
+      { _fsh_chroma_debug -rl "Running action (of 1, at 2): $__value"; _fsh_chroma_apply_action "$__value"; }
+    fi
+  fi
+  _fsh_chroma_debug -- "_________ Exiting _fsh_chroma_process_token $__subcmd / $__wrd _________"
+}
+
+# Iterates over the chroma def. fields and creates initial
+# fields in the _fsh_chroma_${__chroma_name}_def hash
+_fsh_chroma_preprocess_definition() {
+  local __key __value __ke _val __the_hash_name="$1" __var_name
+  # Keep callback results separate from the caller's highlight accumulator.
+  local -a __split reply
+
+  _fsh_chroma_debug -rl -- "Starting PRE_PROCESS for __the_hash_name:$__the_hash_name"
+
+  __ch_def_name="_fsh_chroma_${__chroma_name}_def[subcommands]"
+  local __subcmds="${(P)__ch_def_name}"
+  if [[ "$__subcmds" = "::"* ]]; then
+    ${__subcmds#::}
+    __var_name="${__the_hash_name}[subcommands]"
+    : ${(P)__var_name::=(${(j:|:)reply})}
+  else
+    __var_name="${__the_hash_name}[subcommands]"
+    : ${(P)__var_name::=$__subcmds}
+  fi
+  _fsh_chroma_debug "Got SUBCOMMANDS: ${(P)__var_name}"
+
+  __ch_def_name="_fsh_chroma_${__chroma_name}_def[subcmd-hook]"
+  local __subcmd_hook="${(P)__ch_def_name}"
+  if [[ -n "$__subcmd_hook" ]]; then
+    __var_name="${__the_hash_name}[subcmd-hook]"
+    : ${(P)__var_name::=$__subcmd_hook}
+  fi
+
+  __ch_def_name="_fsh_chroma_${__chroma_name}_def[(I)subcmd:*]"
+  for __key in "${(P@)__ch_def_name}"; do
+    __split=( "${(@s:|:)${${__key##subcmd:\((#c0,1)}%\)}}" )
+    [[ ${#__split} -eq 1 && -z "${__split[1]}" ]] && __split=()
+    __split=( "${__split[@]//((#s)[[:space:]]##|[[:space:]]##(#e))/}" )
+    for __ke in "${__split[@]}"; do
+      __var_name="${__the_hash_name}[subcmd:$__ke]"
+      __ch_def_name="_fsh_chroma_${__chroma_name}_def[$__key]"
+      : ${(P)__var_name::=${(P)__ch_def_name}}
+      _fsh_chroma_debug -rl -- "Stored ${__var_name}=chroma_def[$__key], i.e. = ${(P)__ch_def_name}"
+    done
+  done
+}
+
+if (( __first_call )); then
+  "_fsh_chroma_${__chroma_name}_first_call"
+  _fsh_state[chroma-current]="$__wrd"
+  _fsh_state[chroma-${_fsh_state[chroma-current]}-counter-arg]=0
+  _fsh_state[chroma-${_fsh_state[chroma-current]}-got-subcommand]=0
+  _fsh_state[chroma-${_fsh_state[chroma-current]}-subcommand]=""
+  _fsh_state[chrome-${_fsh_state[chroma-current]}-occurred-double-hyphen]=0
+  _fsh_state[chroma-${_fsh_state[chroma-current]}-option-with-arg-active]=""
+  _fsh_state[chroma-${_fsh_state[chroma-current]}-option-arg]=""
+  _fsh_state[chroma-${_fsh_state[chroma-current]}-call-nr]=1
+  _fsh_state[chroma-${_fsh_state[chroma-current]}-added-nodes]=""
+  _fsh_state[chroma-${_fsh_state[chroma-current]}-deleted-nodes]=""
+  __the_hash_name="_fsh_chroma_main_${${_fsh_state[chroma-current]//[^a-zA-Z0-9_]/_}//(#b)([\#\^])/${map[${match[1]}]}}"
+  (( 0 == ${(P)+__the_hash_name} )) && {
+    typeset -gA "$__the_hash_name"
+    _fsh_chroma_preprocess_definition "$__the_hash_name"
+  } || _fsh_chroma_debug "...No... [\${+$__the_hash_name} ${(P)+__the_hash_name}]"
+  return 1
+else
+  (( ++ _fsh_state[chroma-${_fsh_state[chroma-current]}-call-nr] ))
+  # Following call, i.e. not the first one
+  # Check if chroma should end – test if token is of type
+  # "starts new command", if so pass-through – chroma ends
+  [[ "$__arg_type" = 3 ]] && return 2
+  _fsh_chroma_debug "== @@ Starting @@ #${_fsh_state[chroma-${_fsh_state[chroma-current]}-call-nr]} Main-Chroma-call == // << __WORD:$__wrd >> ## Subcommand: ${${_fsh_state[chroma-${_fsh_state[chroma-current]}-subcommand]}:-NULL} //@@// -n option-with-arg-active:${(q-)_fsh_state[chroma-${_fsh_state[chroma-current]}-option-with-arg-active]}"
+  if [[ "$__wrd" = -*  || -n "${_fsh_state[chroma-${_fsh_state[chroma-current]}-option-with-arg-active]}"
+  ]]; then
+    _fsh_chroma_debug "## The \`if -*' i.e. \`IF OPTION' MAIN branch"
+    _fsh_chroma_process_token "${${_fsh_state[chroma-${_fsh_state[chroma-current]}-subcommand]}:-NULL}" "$__wrd"
+  else
+    # If at e.g. '>' or destination/source spec (of the redirection)
+    if (( in_redirection > 0 || this_word & 128 )) || [[ $__wrd == "<<<" ]]; then
+      return 1
+    elif (( _fsh_state[chroma-${_fsh_state[chroma-current]}-got-subcommand] == 0 )) {
+      __the_hash_name="_fsh_chroma_main_${${_fsh_state[chroma-current]//[^a-zA-Z0-9_]/_}//(#b)([\#\^])/${map[${match[1]}]}}"
+      __var_name="${__the_hash_name}[subcommands]"
+      if [[ "$__wrd" = ${(P)~__var_name} ]]; then
+        _fsh_chroma_debug "GOT-SUBCOMMAND := $__wrd, subcmd verification / OK"
+        _fsh_state[chroma-${_fsh_state[chroma-current]}-got-subcommand]=1
+        _fsh_state[chroma-${_fsh_state[chroma-current]}-subcommand]="$__wrd"
+        __var_name="${__the_hash_name}[subcmd-hook]"
+        (( ${(P)+__var_name} )) && { _fsh_chroma_debug -r -- "Running subcmd-hook: ${(P)__var_name}" ; "${(P)__var_name}" "$__wrd"; }
+        __style="${_fsh_theme_name}subcommand"
+      else
+        _fsh_chroma_debug "subcmd verif / NOT OK; Incrementing the COUNTER-ARG ${_fsh_state[chroma-${_fsh_state[chroma-current]}-counter-arg]} -> $(( _fsh_state[chroma-${_fsh_state[chroma-current]}-counter-arg] + 1 ))"
+        (( _fsh_state[chroma-${_fsh_state[chroma-current]}-counter-arg] += 1 ))
+        _fsh_chroma_debug "UNRECOGNIZED ARGUMENT ${_fsh_state[chroma-${_fsh_state[chroma-current]}-counter-arg]}"
+        _fsh_chroma_process_token "${${_fsh_state[chroma-${_fsh_state[chroma-current]}-subcommand]}:-NULL}" "$__wrd"
+      fi
+    } else {
+      __wrd="${__wrd//\`/x}"
+      __arg="${__arg//\`/x}"
+      __wrd="${(Q)__wrd}"
+      local __tmp_def_name="_fsh_chroma_${__chroma_name}_def[subcommands-blacklist]"
+      if [[ ${_fsh_state[chroma-${_fsh_state[chroma-current]}-subcommand]} = \
+        (${(~j:|:)${(@s:,:)${(PA)__tmp_def_name}}})
+      ]] {
+        return 1
+      }
+      _fsh_chroma_debug "Incrementing the COUNTER-ARG ${_fsh_state[chroma-${_fsh_state[chroma-current]}-counter-arg]} -> $(( _fsh_state[chroma-${_fsh_state[chroma-current]}-counter-arg] + 1 ))"
+      (( _fsh_state[chroma-${_fsh_state[chroma-current]}-counter-arg] += 1 ))
+      _fsh_chroma_debug "ARGUMENT ${_fsh_state[chroma-${_fsh_state[chroma-current]}-counter-arg]}"
+      _fsh_chroma_debug "ELSE *-got-subcommand == 1 is TRUE"
+      _fsh_chroma_process_token "${_fsh_state[chroma-${_fsh_state[chroma-current]}-subcommand]}" "$__wrd"
+    }
+  fi
+fi
+
+
+# Add region_highlight entry (via `reply' array)
+if [[ -n "$__style" ]]; then
+  (( __start=__start_pos-${#PREBUFFER}, __end=__end_pos-${#PREBUFFER}, __start >= 0 )) \
+    && reply+=("$__start $__end ${_fsh_styles[$__style]}")
+fi
+
+# We aren't passing-through, do obligatory things ourselves
+(( this_word = next_word ))
+_start_pos=$_end_pos
+
+return 0
