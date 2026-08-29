@@ -91,7 +91,7 @@ integer deadline
 zpty -b "$pty_name" \
   "ZDOTDIR=${(q)fixture_root}/interactive-zdotdir FSH_DOCKER_MARKER=${(q)FSH_DOCKER_MARKER} PATH=${(q)fixture_root}/bin:\$PATH zsh -f -i"
 {
-  zpty -w "$pty_name" "PS1='FSH_ASYNC> '; unsetopt prompt_cr prompt_sp; zstyle ':fsh:config' work-dir ${(q)fixture_root}/interactive-work; source ${(q)plugin_root}/F-Sy-H.plugin.zsh; _fsh_test_prepare_git_options() { _fsh_state[chroma-git-runtime-safe-subcommands]=commit; _fsh_chroma_git_prepare_runtime_options commit; }; zle -N _fsh_test_prepare_git_options; bindkey '^X^G' _fsh_test_prepare_git_options; print -r -- FSH_ASYNC_LOADED"
+  zpty -w "$pty_name" "PS1='FSH_ASYNC> '; unsetopt prompt_cr prompt_sp; zstyle ':fsh:config' work-dir ${(q)fixture_root}/interactive-work; source ${(q)plugin_root}/F-Sy-H.plugin.zsh; _fsh_chroma_git; _fsh_test_prepare_git_options() { _fsh_state[chroma-git-runtime-safe-subcommands]=commit; _fsh_chroma_git_prepare_runtime_options commit; }; autoload -Uz add-zle-hook-widget; add-zle-hook-widget line-init _fsh_test_prepare_git_options; print -r -- FSH_ASYNC_LOADED"
 
   deadline=$(( SECONDS + 10 ))
   while (( SECONDS < deadline )); do
@@ -136,10 +136,9 @@ zpty -b "$pty_name" \
   [[ -e $FSH_GIT_COMMAND_MARKER ]]
   command sleep 0.3
 
-  # Drive the dependent option provider through a test-only ZLE widget. Parser
-  # integration is covered separately; this profile owns the asynchronous
-  # worker and callback boundary and must not depend on repaint scheduling.
-  zpty -w -n "$pty_name" $'\C-X\C-G'
+  # A test-only line-init hook drives the dependent option provider while ZLE
+  # is active. Parser integration is covered separately; this profile owns the
+  # asynchronous worker and callback boundary, not repaint scheduling.
   deadline=$(( SECONDS + 10 ))
   while [[ ! -e $FSH_GIT_OPTION_MARKER ]] && (( SECONDS < deadline )); do
     command sleep 0.02
