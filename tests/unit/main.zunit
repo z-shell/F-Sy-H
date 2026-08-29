@@ -169,3 +169,45 @@ reply=()
     assert "$output" is_empty
     assert "$state" same_as "0"
 }
+
+@test 'default highlighting stays within the performance budget' {
+    run zsh -f ./tests/integration/test-highlight-budget.zsh
+
+    assert "$output" is_empty
+    assert "$state" same_as "0"
+}
+
+@test 'shipped themes persist and reject invalid secondary themes' {
+    run zsh -f ./tests/integration/test-theme-persistence.zsh
+
+    assert "$output" is_empty
+    assert "$state" same_as "0"
+}
+
+@test 'chroma registry is unique, reachable, and explicitly extensible' {
+    run zsh -f ./tests/integration/test-chroma-registry.zsh
+
+    assert "$output" is_empty
+    assert "$state" same_as "0"
+}
+
+@test 'git, zi, docker, and generic chromas emit exact regions' {
+    run zsh -f ./tests/integration/test-chroma-regions.zsh
+
+    assert "$output" is_empty
+    assert "$state" same_as "0"
+}
+
+@test 'docker chroma never forks synchronously' {
+    run zsh -f ./tests/integration/test-async-chroma.zsh
+
+    assert "$output" is_empty
+    assert "$state" same_as "0"
+}
+
+@test 'theme schema rejects malformed and out-of-range declarations' {
+    run zsh -f ./tests/integration/test-theme-validator.zsh
+
+    assert "$output" is_empty
+    assert "$state" same_as "0"
+}

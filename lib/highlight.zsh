@@ -190,13 +190,13 @@ typeset -gA _fsh_state
 
 # Brackets highlighter active by default
 : ${_fsh_state[use_brackets]:=1}
-_fsh_state+=(
+() {
+local -a registry=(
   chroma-fsh_theme    _fsh_chroma_theme
   chroma-alias         _fsh_chroma_alias
   chroma-autoload      _fsh_chroma_autoload
   chroma-autorandr     _fsh_chroma_autorandr
   chroma-docker        _fsh_chroma_docker
-  chroma-example       _fsh_chroma_example
   chroma-ionice        _fsh_chroma_ionice
   chroma-make          _fsh_chroma_make
   chroma-nice          _fsh_chroma_nice
@@ -230,9 +230,6 @@ _fsh_state+=(
   chroma-fish          _fsh_chroma_shell
   chroma-sh            _fsh_chroma_shell
   chroma-zsh           _fsh_chroma_shell
-
-  chroma-whatis        _fsh_chroma_whatis
-  chroma-man           _fsh_chroma_whatis
 
   chroma--             _fsh_chroma_precommand
   chroma-xargs         _fsh_chroma_precommand
@@ -278,7 +275,6 @@ _fsh_state+=(
   chroma-openssl       _fsh_chroma_subcommand
   chroma-solargraph    _fsh_chroma_subcommand
   chroma-subliminal    _fsh_chroma_subcommand
-  chroma-svnadmin      _fsh_chroma_subcommand
   chroma-travis        _fsh_chroma_subcommand
   chroma-udisksctl     _fsh_chroma_subcommand
   chroma-xdotool       _fsh_chroma_subcommand
@@ -292,13 +288,32 @@ _fsh_state+=(
   chroma-fpath=\(      _fsh_chroma_fpath_assignment
   chroma-FPATH+=       _fsh_chroma_fpath_assignment
   chroma-FPATH=        _fsh_chroma_fpath_assignment
-  #chroma-which        _fsh_chroma_which
-  #chroma-vim          _fsh_chroma_vim
 )
 
-if [[ $OSTYPE == darwin* ]] {
-  noglob unset _fsh_state[chroma-man] _fsh_state[chroma-whatis]
-}
+# The whatis chroma probes `whatis`, whose macOS implementation reports
+# "nothing appropriate" for every query and cannot drive the highlighter.
+# Skip registration there so the registry never advertises an entry the
+# platform cannot serve.
+if [[ $OSTYPE != darwin* ]]; then
+  registry+=(
+    chroma-whatis        _fsh_chroma_whatis
+    chroma-man           _fsh_chroma_whatis
+  )
+fi
+
+local -A seen
+local key
+integer index
+for (( index = 1; index <= $#registry; index += 2 )); do
+  key=$registry[index]
+  if (( ${+seen[$key]} )); then
+    builtin print -u2 -r -- "f-sy-h: duplicate chroma registry key: $key"
+    return 1
+  fi
+  seen[$key]=1
+done
+_fsh_state+=( "${registry[@]}" )
+} || return
 
 # Assignments seen, to know if math parameter exists
 typeset -gA _fsh_assigns_seen

@@ -1,0 +1,36 @@
+# -*- mode: zsh; sh-indentation: 2; indent-tabs-mode: nil; sh-basic-offset: 2; -*-
+# vim: ft=zsh sw=2 ts=2 et
+#
+# zle -F widget for workers started by _fsh_async_command.
+
+builtin emulate -L zsh
+builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc_quotes no_auto_pushd
+
+local fd=$1 key input= pid
+integer owned_fd=$fd
+
+key=${_fsh_state[_fsh-async-fd-$fd-key]-}
+[[ -n $key ]] || return 1
+
+_fsh_read_all "$fd" input || true
+zle -F -w "$fd" 2>/dev/null || zle -F "$fd" 2>/dev/null || true
+pid=${_fsh_lifecycle_owned_fd_pids[$fd]-}
+{ exec {owned_fd}<&- } 2>/dev/null || true
+[[ $pid == <-> ]] && builtin wait "$pid" 2>/dev/null || true
+_fsh_lifecycle_release_fd "$fd"
+
+_fsh_state[$key-cache]=${input%$'\n'}
+_fsh_state[$key-cache-ready]=1
+_fsh_state[$key-cache-born-at]=$SECONDS
+_fsh_state[$key-pending]=0
+builtin unset \
+  "_fsh_state[$key-started-at]" \
+  "_fsh_state[$key-fd]" \
+  "_fsh_state[_fsh-async-fd-$fd-key]"
+
+typeset -g _fsh_prior_buffer=
+builtin true
+_fsh_zle_highlight
+zle -R
+
+return 0

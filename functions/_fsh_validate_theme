@@ -1,0 +1,126 @@
+# -*- mode: zsh; sh-indentation: 2; indent-tabs-mode: nil; sh-basic-offset: 2; -*-
+# vim: ft=zsh sw=2 ts=2 et
+#
+# Validate one source theme against the canonical schema.
+#
+# $1 - theme INI path
+# $2 - shipped theme directory, used to resolve secondary theme names
+#
+# Results:
+# - _fsh_validated_theme_data: parsed INI records
+# - _fsh_theme_validation_errors: code|message diagnostics
+# - _fsh_theme_declared_count and _fsh_theme_resolved_count
+
+builtin emulate -L zsh
+builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc_quotes no_auto_pushd
+
+local theme_path=$1 theme_dir=$2 validation_mode=${3:-} full_key declared_key style candidate inikey value token
+local secondary_key secondary_name secondary_path required_key error
+local -A known declared_seen
+local -a candidates style_colors
+
+typeset -gA _fsh_validated_theme_data=()
+typeset -ga _fsh_theme_validation_errors=()
+typeset -gi _fsh_theme_declared_count=0 _fsh_theme_resolved_count=0
+
+if [[ -z $validation_mode ]]; then
+  [[ ${theme_path:t:r} == *overlay* ]] && validation_mode=overlay || validation_mode=full
+fi
+[[ $validation_mode == (full|overlay) ]] || {
+  _fsh_theme_validation_errors+=( "invalid-mode|unknown theme validation mode: $validation_mode" )
+  return 1
+}
+
+_fsh_read_ini "$theme_path" _fsh_validated_theme_data '' || {
+  for error in "${_fsh_ini_errors[@]}"; do
+    _fsh_theme_validation_errors+=( "$error" )
+  done
+  return 1
+}
+
+style_colors=( red green blue yellow cyan magenta black white default )
+for style in "${_fsh_theme_style_order[@]}"; do
+  known[$style]=1
+  for candidate in ${(s. .)_fsh_theme_style_fallbacks[$style]}; do
+    [[ $candidate == - ]] && candidate=$style
+    known[$candidate]=1
+  done
+done
+known[secondary]=1
+
+for full_key in ${(k)_fsh_validated_theme_data}; do
+  declared_key=${full_key#*>_}
+  if (( ! ${+known[$declared_key]} )); then
+    _fsh_theme_validation_errors+=( "unknown-style|unknown style declaration: $declared_key" )
+    continue
+  fi
+  if (( ${+declared_seen[$declared_key]} )); then
+    _fsh_theme_validation_errors+=( "duplicate-style|style declared in multiple sections: $declared_key" )
+    continue
+  fi
+  declared_seen[$declared_key]=1
+  (( ++_fsh_theme_declared_count ))
+
+  [[ $declared_key == secondary ]] && continue
+  value=${_fsh_validated_theme_data[$full_key]}
+  [[ -z $value ]] && continue
+  for token in ${(s:,:)value}; do
+    [[ $token == bg:* ]] && token=${token#bg:}
+    if [[ $token == (none|(no-|)(bold|blink|conceal|reverse|standout|underline)) ||
+      $token == (${(~j:|:)style_colors}) || $token == \#[0-9a-fA-F](#c6,6) ]]; then
+      continue
+    fi
+    if [[ $token == (0|[1-9][0-9]#) ]] && (( token <= 255 )); then
+      continue
+    fi
+    _fsh_theme_validation_errors+=( \
+      "invalid-style-value|$declared_key has invalid color or style element: $token" )
+  done
+done
+
+if [[ $validation_mode == full ]]; then
+  for style in "${_fsh_theme_style_order[@]}"; do
+    [[ $style == secondary ]] && continue
+    candidates=( ${(s. .)_fsh_theme_style_fallbacks[$style]} default )
+    required_key=$candidates[1]
+    [[ $required_key == - ]] && required_key=$style
+    (( ${+declared_seen[$required_key]} )) ||
+      _fsh_theme_validation_errors+=( "missing-style|missing required style declaration: $required_key" )
+
+    inikey=
+    for candidate in "${candidates[@]}"; do
+      [[ $candidate == - ]] && candidate=$style
+      inikey=${_fsh_validated_theme_data[(i)<*>_${candidate}]}
+      [[ -n $inikey ]] && break
+    done
+    if [[ -n $inikey ]]; then
+      (( ++_fsh_theme_resolved_count ))
+    else
+      _fsh_theme_validation_errors+=( "unresolved-style|cannot resolve style: $style" )
+    fi
+  done
+fi
+
+secondary_key=${_fsh_validated_theme_data[(i)<*>_secondary]}
+if [[ -n $secondary_key ]]; then
+  secondary_name=${_fsh_validated_theme_data[$secondary_key]}
+  if [[ -n $secondary_name ]]; then
+    secondary_path=$secondary_name
+    if [[ $secondary_path = */* || $secondary_path = (CONFIG|CACHE|LOCAL|HOME|OPT):* ]]; then
+      secondary_path="${${secondary_path/(#s)CONFIG:/${${XDG_CONFIG_HOME:-$HOME/.config}%/}/f-sy-h/}%.ini}.ini"
+      secondary_path="${${secondary_path/(#s)CACHE:/${${XDG_CACHE_HOME:-$HOME/.cache}%/}/f-sy-h/}%.ini}.ini"
+      secondary_path="${${secondary_path/(#s)LOCAL://usr/local/share/f-sy-h/}%.ini}.ini"
+      secondary_path="${${secondary_path/(#s)HOME:/$HOME/.f-sy-h/}%.ini}.ini"
+      secondary_path="${${secondary_path/(#s)OPT://opt/local/share/f-sy-h/}%.ini}.ini"
+      secondary_path=${~secondary_path}
+    else
+      secondary_path="$theme_dir/${secondary_name}.ini"
+    fi
+    [[ -f $secondary_path ]] ||
+      _fsh_theme_validation_errors+=( "missing-secondary|secondary theme does not exist: $secondary_name" )
+    [[ ! -e $secondary_path || -r $secondary_path ]] ||
+      _fsh_theme_validation_errors+=( "unreadable-secondary|secondary theme is unreadable: $secondary_name" )
+  fi
+fi
+
+(( $#_fsh_theme_validation_errors == 0 ))

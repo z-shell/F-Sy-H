@@ -53,6 +53,11 @@ fi
 
 builtin source -- "$plugin_dir/lib/lifecycle.zsh" || return
 _fsh_lifecycle_begin "${lifecycle_modules[@]}" || return
+builtin source -- "$plugin_dir/lib/theme-schema.zsh" || {
+  load_status=$?
+  _fsh_lifecycle_abort "$load_status"
+  return $?
+}
 
 #
 # Resolve the entrypoint without assigning to special parameter 0. Plugin
@@ -80,14 +85,32 @@ else
 fi
 _fsh_work_dir=${~_fsh_work_dir}
 
-configured_value=10000
-zstyle -s ':fsh:config' max-length configured_value || configured_value=10000
+configured_value=1000
+zstyle -s ':fsh:config' max-length configured_value || configured_value=1000
 [[ $configured_value == <-> ]] || {
   builtin print -u2 -r -- 'f-sy-h: :fsh:config max-length must be a non-negative integer'
   _fsh_lifecycle_abort 2
   return $?
 }
 typeset -gi _fsh_max_length=$configured_value
+
+configured_value=5
+zstyle -s ':fsh:config' chroma-cache-seconds configured_value || configured_value=5
+[[ $configured_value == <-> ]] || {
+  builtin print -u2 -r -- 'f-sy-h: :fsh:config chroma-cache-seconds must be a non-negative integer'
+  _fsh_lifecycle_abort 2
+  return $?
+}
+typeset -gi _fsh_chroma_cache_seconds=$configured_value
+
+configured_value=2
+zstyle -s ':fsh:config' chroma-timeout-seconds configured_value || configured_value=2
+[[ $configured_value == <-> && $configured_value -gt 0 ]] || {
+  builtin print -u2 -r -- 'f-sy-h: :fsh:config chroma-timeout-seconds must be a positive integer'
+  _fsh_lifecycle_abort 2
+  return $?
+}
+typeset -gi _fsh_chroma_timeout_seconds=$configured_value
 
 # Invokes each highlighter that needs updating.
 # This function is supposed to be called whenever the ZLE state changes.
@@ -107,8 +130,8 @@ _fsh_zle_highlight() {
   local REPLY # don't leak $REPLY into global scope
   local -a reply
 
-  # Do not highlight if there are more than 300 chars in the buffer. It's most
-  # likely a pasted command or a huge list of files in that case..
+  # Skip highlighting above the configured buffer-length limit. Long buffers
+  # are commonly pasted commands or generated lists.
   [[ -n ${_fsh_max_length:-} ]] && [[ $#BUFFER -gt $_fsh_max_length ]] && return $ret
 
   # Do not highlight if there are pending inputs (copy/paste).
@@ -351,6 +374,7 @@ if [[ -o interactive ]]; then
     _fsh_lifecycle_abort 1
     return $?
   }
+  zle -N _fsh_async_command_callback
   _fsh_bind_widgets || {
     builtin print -u2 -r -- 'f-sy-h: failed binding ZLE widgets'
     _fsh_lifecycle_abort 1
@@ -370,10 +394,10 @@ zmodload zsh/parameter 2>/dev/null
 zmodload zsh/system 2>/dev/null
 
 builtin autoload -Uz -- is-at-least \
-  _fsh_read_ini _fsh_run_git_command \
-  _fsh_make_targets _fsh_run_command _fsh_read_all
+  _fsh_read_ini _fsh_validate_theme _fsh_run_git_command \
+  _fsh_make_targets _fsh_run_command _fsh_read_all \
+  _fsh_async_command _fsh_async_command_callback
 
-# Disabled: _fsh_chroma_vim _fsh_chroma_which
 builtin autoload -Uz -- \
   _fsh_chroma_alias \
   _fsh_chroma_autoload \
@@ -390,7 +414,6 @@ builtin autoload -Uz -- \
   _fsh_chroma_nice \
   _fsh_chroma_nmcli \
   _fsh_chroma_node \
-  _fsh_chroma_ogit \
   _fsh_chroma_perl \
   _fsh_chroma_precommand \
   _fsh_chroma_printf \
@@ -401,9 +424,29 @@ builtin autoload -Uz -- \
   _fsh_chroma_ssh \
   _fsh_chroma_subcommand \
   _fsh_chroma_subversion \
-  _fsh_chroma_whatis \
   _fsh_chroma_zi \
   _fsh_chroma_main
+
+# Kept in sync with the platform guard in lib/highlight.zsh: macOS `whatis`
+# cannot serve this chroma, so it is neither autoloaded nor registered there.
+[[ $OSTYPE == darwin* ]] || builtin autoload -Uz -- _fsh_chroma_whatis
+
+configured_patterns=()
+if zstyle -a ':fsh:config' chroma-opt-in configured_patterns; then
+  for configured_pattern in "${configured_patterns[@]}"; do
+    case $configured_pattern in
+      vim|which)
+        builtin autoload -Uz -- "_fsh_chroma_$configured_pattern"
+        ;;
+      *)
+        builtin print -u2 -r -- \
+          "f-sy-h: unsupported :fsh:config chroma-opt-in value: $configured_pattern"
+        _fsh_lifecycle_abort 2
+        return $?
+        ;;
+    esac
+  done
+fi
 
 configured_value=enabled
 zstyle -s ':fsh:config' theme-manager configured_value || configured_value=enabled
@@ -424,6 +467,10 @@ builtin source -- "$_fsh_base_dir/lib/string-highlight.zsh" || {
   _fsh_lifecycle_abort "$load_status"
   return $?
 }
+
+for configured_pattern in "${configured_patterns[@]}"; do
+  _fsh_state[chroma-$configured_pattern]="_fsh_chroma_$configured_pattern"
+done
 
 configured_value=enabled
 zstyle -s ':fsh:config' bracket-highlighting configured_value || configured_value=enabled

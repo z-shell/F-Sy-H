@@ -23,7 +23,7 @@ local -a _fsh_command_output
 
 (( __first_call )) && {
     # Called for the first time - new command
-    _fsh_state[chrome-git-got-c]=0
+    _fsh_state[chroma-shell-got-c]=0
     return 1
 } || {
     # Following call, i.e. not the first one
@@ -40,7 +40,7 @@ local -a _fsh_command_output
     if [[ $__wrd = -* && $__wrd != -*c* ]]; then
         __style=${_fsh_theme_name}${${${__wrd:#--*}:+single-hyphen-option}:-double-hyphen-option}
     else
-        if (( _fsh_state[chrome-git-got-c] == 1 )); then
+        if (( _fsh_state[chroma-shell-got-c] == 1 )); then
             for (( __idx1 = 1, __idx2 = 1; __idx2 <= __asize; ++ __idx1 )); do
                 [[ ${__arg[__idx2]} = ${__wrd[__idx1]} ]] && break
                 while [[ ${__arg[__idx2]} != ${__wrd[__idx1]} ]]; do
@@ -51,11 +51,11 @@ local -a _fsh_command_output
                 [[ ${__arg[__idx2]} = ${__wrd[__idx1]} ]] && break
             done
 
-            _fsh_state[chrome-git-got-c]=0
+            _fsh_state[chroma-shell-got-c]=0
             (( _start_pos-__PBUFLEN >= 0 )) && \
                 _fsh_highlight_process "$PREBUFFER" "${__wrd}" "$(( __start_pos + __idx2 - 1 ))"
         elif [[ $__wrd = -*c* ]]; then
-            _fsh_state[chrome-git-got-c]=1
+            _fsh_state[chroma-shell-got-c]=1
         else
             return 1
         fi
