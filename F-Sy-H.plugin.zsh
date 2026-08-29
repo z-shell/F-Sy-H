@@ -424,9 +424,12 @@ builtin autoload -Uz -- \
   _fsh_chroma_ssh \
   _fsh_chroma_subcommand \
   _fsh_chroma_subversion \
-  _fsh_chroma_whatis \
   _fsh_chroma_zi \
   _fsh_chroma_main
+
+# Kept in sync with the platform guard in lib/highlight.zsh: macOS `whatis`
+# cannot serve this chroma, so it is neither autoloaded nor registered there.
+[[ $OSTYPE == darwin* ]] || builtin autoload -Uz -- _fsh_chroma_whatis
 
 configured_patterns=()
 if zstyle -a ':fsh:config' chroma-opt-in configured_patterns; then

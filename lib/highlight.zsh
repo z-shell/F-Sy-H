@@ -231,9 +231,6 @@ local -a registry=(
   chroma-sh            _fsh_chroma_shell
   chroma-zsh           _fsh_chroma_shell
 
-  chroma-whatis        _fsh_chroma_whatis
-  chroma-man           _fsh_chroma_whatis
-
   chroma--             _fsh_chroma_precommand
   chroma-xargs         _fsh_chroma_precommand
   chroma-nohup         _fsh_chroma_precommand
@@ -293,6 +290,17 @@ local -a registry=(
   chroma-FPATH=        _fsh_chroma_fpath_assignment
 )
 
+# The whatis chroma probes `whatis`, whose macOS implementation reports
+# "nothing appropriate" for every query and cannot drive the highlighter.
+# Skip registration there so the registry never advertises an entry the
+# platform cannot serve.
+if [[ $OSTYPE != darwin* ]]; then
+  registry+=(
+    chroma-whatis        _fsh_chroma_whatis
+    chroma-man           _fsh_chroma_whatis
+  )
+fi
+
 local -A seen
 local key
 integer index
@@ -306,10 +314,6 @@ for (( index = 1; index <= $#registry; index += 2 )); do
 done
 _fsh_state+=( "${registry[@]}" )
 } || return
-
-if [[ $OSTYPE == darwin* ]] {
-  noglob unset _fsh_state[chroma-man] _fsh_state[chroma-whatis]
-}
 
 # Assignments seen, to know if math parameter exists
 typeset -gA _fsh_assigns_seen

@@ -20,6 +20,18 @@ source "$plugin_root/F-Sy-H.plugin.zsh"
 (( ! ${+functions[_fsh_chroma_ogit]} ))
 [[ ${_fsh_state[chroma-svnadmin]} == _fsh_chroma_subversion ]]
 
+# The whatis chroma is platform-gated. Autoload state and registry state must
+# agree on every platform, otherwise the reachability sweep below is a lie.
+if [[ $OSTYPE == darwin* ]]; then
+  (( ! ${+_fsh_state[chroma-whatis]} ))
+  (( ! ${+_fsh_state[chroma-man]} ))
+  (( ! ${+functions[_fsh_chroma_whatis]} ))
+else
+  [[ ${_fsh_state[chroma-whatis]} == _fsh_chroma_whatis ]]
+  [[ ${_fsh_state[chroma-man]} == _fsh_chroma_whatis ]]
+  (( ${+functions[_fsh_chroma_whatis]} ))
+fi
+
 typeset key target function_name
 typeset -A registry_targets
 for key in ${(k)_fsh_state}; do
