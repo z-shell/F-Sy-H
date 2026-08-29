@@ -38,6 +38,7 @@ jobs:
           persist-credentials: false
 
       - name: Check native Zsh source
+        shell: bash
         run: |
           set -euo pipefail
           index=0
