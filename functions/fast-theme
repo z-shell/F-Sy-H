@@ -31,6 +31,11 @@ map=( "CONFIG:" "${XDG_CONFIG_HOME:-$HOME/.config}/f-sy-h/"
 
 FAST_WORK_DIR=${${FAST_WORK_DIR/(#m)(#s)(CONFIG|CACHE|LOCAL|HOME|OPT):(#c0,1)/${map[${MATCH%:}:]}}%/}
 
+[[ -d $FAST_WORK_DIR ]] || command mkdir -p -- "$FAST_WORK_DIR" || {
+  print -u2 "f-sy-h: cannot create working directory $FAST_WORK_DIR"
+  return 1
+}
+
 local OPT_HELP OPT_INFO OPT_VERBOSE OPT_QUIET OPT_RESET OPT_LIST OPT_TEST OPT_SECONDARY OPT_SHOW OPT_COPY OPT_OV_RESET
 local OPT_PALETTE OPT_CDWD OPT_XCHG OPT_OV_XCHG
 local -A opthash
@@ -113,7 +118,7 @@ if [[ -n "$OPT_COPY" ]]; then
   return 0
 fi
 
-[[ -n "$OPT_RESET" ]] && { command rm -f "$FAST_WORK_DIR"/{current_theme.zsh,secondary_theme.zsh}; [[ -z "$OPT_QUIET" ]] && print -r -- "${fg[yellow]}Reset done$reset_color (${fg[red]}restart is required$reset_color)"; return 0; }
+[[ -n "$OPT_RESET" ]] && { command rm -f "$FAST_WORK_DIR"/{current_theme.zsh,secondary_theme.zsh,secondary_theme.local.zsh}{,.zwc}; [[ -z "$OPT_QUIET" ]] && print -r -- "${fg[yellow]}Reset done$reset_color (${fg[red]}restart is required$reset_color)"; return 0; }
 [[ -n "$OPT_OV_RESET" ]] && { command rm -f "$FAST_WORK_DIR"/theme_overlay.zsh; [[ -z "$OPT_QUIET" ]] && print -r -- "${fg[yellow]}Overlay-reset done$reset_color (${fg[red]}restart is required$reset_color)"; return 0; }
 
 if [[ -n "$OPT_LIST" ]]; then
@@ -264,7 +269,7 @@ else
   .fast-read-ini-file "$FAST_BASE_DIR/themes/$1.ini" out ""
 fi
 
-[[ -z "$OPT_SECONDARY" ]] && { [[ "$THEME_NAME" = *"overlay"* ]] && local outfile="theme_overlay.zsh" || local outfile="current_theme.zsh"; } || local outfile="secondary_theme.zsh"
+[[ -z "$OPT_SECONDARY" ]] && { [[ "$THEME_NAME" = *"overlay"* ]] && local outfile="theme_overlay.zsh" || local outfile="current_theme.zsh"; } || local outfile="secondary_theme.local.zsh"
 [[ -z "$OPT_XCHG" && -z "$OPT_OV_XCHG" ]] && command rm -f "$FAST_WORK_DIR"/"$outfile"
 
 # Set a zstyle and a parameter to carry theme name
@@ -282,7 +287,7 @@ fi
 # Store from which file the theme or overlay is being loaded
 [[ "$THEME_NAME" != *"overlay" && -z "$OPT_OV_XCHG" ]] && FAST_HIGHLIGHT_STYLES[${FAST_THEME_NAME}-path]="$THEME_PATH" || FAST_HIGHLIGHT_STYLES[${FAST_THEME_NAME}-ov-path]="$THEME_PATH"
 
-# Generate current_theme.zsh or secondary_theme.zsh, traversing ini-file associative array
+# Generate the selected main, overlay, or local secondary theme.
 local k kk
 local inikey inival result result2 first_val isbg
 integer ov_counter=0 first

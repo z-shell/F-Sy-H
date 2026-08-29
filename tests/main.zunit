@@ -127,3 +127,10 @@ reply=()
     assert "$output" is_empty
     assert "$state" same_as "0"
 }
+
+@test 'entrypoint is passive, option-safe, and repeatable' {
+    run zsh -f ./scripts/test-plugin-entrypoint.zsh
+
+    assert "$output" is_empty
+    assert "$state" same_as "0"
+}

@@ -26,26 +26,22 @@
 # -*- mode: zsh; sh-indentation: 2; indent-tabs-mode: nil; sh-basic-offset: 2; -*-
 # vim: ft=zsh sw=2 ts=2 et
 # -------------------------------------------------------------------------------------------------
-#
-# Standardized way of handling finding plugin dir,
-# regardless of functionargzero and posixargzero,
-# and with an option for a plugin manager to alter
-# the plugin directory (i.e. set ZERO parameter)
-#
-# Standardized $0 Handling
-# https://wiki.zshell.dev/community/zsh_plugin_standard#zero-handling
-0="${ZERO:-${${0:#$ZSH_ARGZERO}:-${(%):-%N}}}"
-0="${${(M)0:#/*}:-$PWD/$0}"
 
-# Functions Directory
-# https://wiki.zshell.dev/community/zsh_plugin_standard#funtions-directory
-if [[ $PMSPEC != *f* ]]; then
-  fpath+=( "${0:h}/functions" )
-fi
+builtin emulate -L zsh
+builtin setopt extended_glob typeset_silent no_short_loops rc_quotes no_auto_pushd
+
+#
+# Resolve the entrypoint without assigning to special parameter 0. Plugin
+# managers may provide ZERO as the entrypoint path.
+typeset -g FAST_BASE_DIR=${${ZERO:-${(%):-%x}}:A:h}
+
+# Portable autoload paths. Managers may add the same paths first; exact checks
+# keep direct and managed loading idempotent.
+(( ${fpath[(Ie)$FAST_BASE_DIR]} )) || fpath+=( "$FAST_BASE_DIR" )
+(( ${fpath[(Ie)$FAST_BASE_DIR/functions]} )) || fpath+=( "$FAST_BASE_DIR/functions" )
 
 # Default global variables
-typeset -g FAST_HIGHLIGHT_VERSION=1.67
-typeset -g FAST_BASE_DIR="${0:h}"
+typeset -g FAST_HIGHLIGHT_VERSION=1.67.1
 typeset -ga _FAST_MAIN_CACHE
 
 # Holds list of indices pointing at brackets that are complex, i.e. e.g. part of "[[" in [[ ... ]]
@@ -56,12 +52,6 @@ typeset -ga _FAST_COMPLEX_BRACKETS
 typeset -g FAST_WORK_DIR=${FAST_WORK_DIR:-${XDG_CACHE_HOME:-~/.cache}/f-sy-h}
 : ${FAST_WORK_DIR:=$FAST_BASE_DIR}
 FAST_WORK_DIR=${~FAST_WORK_DIR}
-
-# Create working directory if it doesn't exist.
-[[ -w $FAST_WORK_DIR ]] || command mkdir -p "$FAST_WORK_DIR" || {
-  print -u2 "f-sy-h: cannot create working directory $FAST_WORK_DIR"
-  return 1
-}
 
 # Invokes each highlighter that needs updating.
 # This function is supposed to be called whenever the ZLE state changes.
@@ -369,8 +359,8 @@ if (( FAST_THEME_MANAGER_DISABLED )) {
   alias f-sy-h=fast-theme
 }
 
-source "${0:h}/functions/fast-highlight"
-source "${0:h}/functions/fast-string-highlight"
+source "$FAST_BASE_DIR/functions/fast-highlight"
+source "$FAST_BASE_DIR/functions/fast-string-highlight"
 
 local __fsyh_theme
 zstyle -s :plugin:fast-syntax-highlighting theme __fsyh_theme
@@ -393,16 +383,5 @@ zstyle -s :plugin:fast-syntax-highlighting theme __fsyh_theme
 unset __fsyh_theme
 
 _fsh_highlight_fill_option_variables
-
-if [[ ! -e $FAST_WORK_DIR/secondary_theme.zsh ]] {
-  local theme_link=https://raw.githubusercontent.com/z-shell/F-Sy-H/main/share/free_theme.zsh
-  if { type curl &>/dev/null } {
-  command curl -fsSL -o "$FAST_WORK_DIR/secondary_theme.zsh" $theme_link &>/dev/null
-  } elif { type wget &>/dev/null } {
-    command wget -O "$FAST_WORK_DIR/secondary_theme.zsh" $theme_link &>/dev/null
-  }
-  touch "$FAST_WORK_DIR/secondary_theme.zsh"
-  unset theme_link
-}
 
 [[ $COLORTERM == (24bit|truecolor) || ${terminfo[colors]} -eq 16777216 ]] || zmodload zsh/nearcolor &>/dev/null || true

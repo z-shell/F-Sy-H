@@ -1,8 +1,8 @@
 ---
-name: 🛡️ ZUnit
+name: ZUnit
 
 on:
-  workflow_dispatch:
+  workflow_dispatch: {}
   push:
     paths:
       - "**/*.ch"
@@ -11,60 +11,50 @@ on:
       - "share/*"
       - "themes/*"
       - "functions/*"
-  pull_request_target:
-    paths:
-      - "**/*.ch"
-      - "**/*.zsh"
-      - "tests/*"
-      - "share/*"
-      - "themes/*"
-      - "functions/*"
+  pull_request: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  build-macos:
-    name: 🧪 ZUnit Mac
-    runs-on: macos-latest
+  test:
+    name: ZUnit (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
-      - name: 📚 Get ZUnit
+      - name: Check out code
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - name: Install Zsh on Linux
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -yq zsh
+      - name: Build ZUnit 0.8.2
         run: |
+          git init zunit.git
+          git -C zunit.git remote add origin https://github.com/z-shell/zunit.git
+          git -C zunit.git fetch --depth 1 origin 15061c83373be80b523988121b7ba12c6b2d82dc
+          git -C zunit.git checkout --detach FETCH_HEAD
+          zsh -f -c 'cd zunit.git && ./build.zsh'
           mkdir bin
-          curl -fsSL https://raw.githubusercontent.com/zdharma/revolver/13e7af7ee037b6db0a598a4e54242dd9c63a4c45/revolver > bin/revolver
-          curl -fsSL https://raw.githubusercontent.com/zdharma/color/d8f91ab5fcfceb623ae45d3333ad0e543775549c/color.zsh > bin/color
-          git clone https://github.com/zdharma/zunit.git zunit.git
-          cd zunit.git
-          ./build.zsh
-          cd ..
-          mv ./zunit.git/zunit bin
-          chmod u+x bin/{color,revolver,zunit}
-      - name: ✏️ Run
-        run: |
-          export TERM="xterm-256color"
-          export PATH="$PWD/bin:$PATH"
-          zunit
+          mv zunit.git/zunit bin/zunit
+      - name: Run ZUnit
+        env:
+          TERM: xterm-256color
+        run: PATH="$PWD/bin:$PATH" zunit
 
-  build-linux:
-    name: 🧪 ZUnit Linux
+  required:
+    name: ZUnit
+    if: ${{ always() }}
+    needs: test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: ℹ️ Setup linux dependencies
-        run: |
-          sudo apt update
-          sudo apt-get install zsh -yq
-      - name: 📚 Get ZUnit
-        run: |
-          mkdir bin
-          curl -fsSL https://raw.githubusercontent.com/zdharma/revolver/13e7af7ee037b6db0a598a4e54242dd9c63a4c45/revolver > bin/revolver
-          curl -fsSL https://raw.githubusercontent.com/zdharma/color/d8f91ab5fcfceb623ae45d3333ad0e543775549c/color.zsh > bin/color
-          git clone https://github.com/zdharma/zunit.git zunit.git
-          cd zunit.git
-          ./build.zsh
-          cd ..
-          mv ./zunit.git/zunit bin
-          chmod u+x bin/{color,revolver,zunit}
-      - name: ✏️ Run
-        run: |
-          export TERM="xterm-256color"
-          export PATH="$PWD/bin:$PATH"
-          zunit
+      - name: Verify matrix result
+        env:
+          TEST_RESULT: ${{ needs.test.result }}
+        run: test "$TEST_RESULT" = success

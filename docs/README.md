@@ -5,8 +5,8 @@
 <h2 align="center">Feature-rich Syntax Highlighting for Zsh</h2>
 <p align="center">
   <a href="https://github.com/orgs/z-shell/discussions/">《❔ Ask a Question 》</a>
-  <a href="https://wiki.zshell.dev.dev/search">《💡 Search Wiki 》</a>
-  <a href="https://github.com/z-shell/community/issues/new?assignees=&labels=%F0%9F%91%A5+member&template=membership.yml&title=team%3A+">《💜 Join 》</a>
+  <a href="https://wiki.zshell.dev/search">《💡 Search Wiki 》</a>
+  <a href="https://github.com/z-shell/.github/blob/main/.github/CONTRIBUTING.md">《💜 Contribute 》</a>
   <a href="https://translate.zshell.dev">《🌐 Localize 》</a>
 </p>
 <p align="center">
@@ -38,6 +38,33 @@
   <li><a href="CHROMA_GUIDE.adoc">Chroma Guide</a></li>
 </ul>
 <hr /> <h2 align="left">Installation</h2>
+
+<h3 align="left">Compatibility and loading contract</h3>
+
+<p>
+F-Sy-H uses the portable project identifier <code>f-sy-h</code> and supports
+Zsh 5.8 or newer. The authoritative entrypoint is
+<code>F-Sy-H.plugin.zsh</code>.
+</p>
+
+<p>
+Loading adds the repository root and <code>functions</code> directory to
+<code>fpath</code>, installs ZLE widget wrappers and a <code>preexec</code>
+hook, loads required Zsh modules, and defines the <code>f-sy-h</code> alias when
+the theme manager is enabled. Loading performs no network request and does not
+create the cache directory. The explicit <code>fast-theme</code> command creates
+the cache directory when it needs to write theme state. Existing
+<code>current_theme.zsh</code>, <code>theme_overlay.zsh</code>, and explicitly
+generated <code>secondary_theme.local.zsh</code> files in that directory are
+sourced as user-managed configuration when their matching feature is used.
+</p>
+
+<p>
+An exact unload operation is not yet available. Lifecycle restoration is
+tracked in <a href="https://github.com/z-shell/F-Sy-H/issues/54">issue #54</a>.
+Detailed usage belongs in the
+<a href="https://wiki.zshell.dev/ecosystem/plugins/f-sy-h">Z-Shell Wiki</a>.
+</p>
 
   <hr /><h3 align="left">Manual</h3>
 

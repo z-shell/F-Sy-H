@@ -43,7 +43,7 @@ FAST_WORK_DIR=${~FAST_WORK_DIR}
   builtin setopt extended_glob no_short_loops rc_quotes no_auto_pushd
   local -A map
   map=( "CONFIG:" "${XDG_CONFIG_HOME:-$HOME/.config}/f-sy-h/"
-        "CACHE:"  "${XDG_CACHE_HOME:-$HOME/.cache}/zi/f-sy-h/"
+        "CACHE:"  "${XDG_CACHE_HOME:-$HOME/.cache}/f-sy-h/"
         "LOCAL:"  "/usr/local/share/f-sy-h/"
         "HOME:" "$HOME/.f-sy-h/"
         "OPT:"  "/opt/local/share/f-sy-h/"
@@ -878,7 +878,11 @@ _fsh_highlight_process() {
                      __idx=1
                      _mybuf=$FAST_THEME_NAME
                      FAST_THEME_NAME=${${${FAST_HIGHLIGHT_STYLES[${FAST_THEME_NAME}secondary]}:t:r}#(CONFIG|CACHE|LOCAL|HOME|OPT):}
-                     (( ${+FAST_HIGHLIGHT_STYLES[${FAST_THEME_NAME}default]} )) || source $FAST_WORK_DIR/secondary_theme.zsh
+                     (( ${+FAST_HIGHLIGHT_STYLES[${FAST_THEME_NAME}default]} )) || {
+                       [[ -r $FAST_WORK_DIR/secondary_theme.local.zsh ]] && \
+                         source "$FAST_WORK_DIR/secondary_theme.local.zsh" || \
+                         source "$FAST_BASE_DIR/share/free_theme.zsh"
+                     }
                    else
                      __idx=0
                    fi
@@ -957,7 +961,11 @@ _fsh_highlight_process() {
                    __idx=1
                    _mybuf=$FAST_THEME_NAME
                    FAST_THEME_NAME=${${${FAST_HIGHLIGHT_STYLES[${FAST_THEME_NAME}secondary]}:t:r}#(CONFIG|CACHE|LOCAL|HOME|OPT):}
-                   (( ${+FAST_HIGHLIGHT_STYLES[${FAST_THEME_NAME}default]} )) || source $FAST_WORK_DIR/secondary_theme.zsh
+                   (( ${+FAST_HIGHLIGHT_STYLES[${FAST_THEME_NAME}default]} )) || {
+                     [[ -r $FAST_WORK_DIR/secondary_theme.local.zsh ]] && \
+                       source "$FAST_WORK_DIR/secondary_theme.local.zsh" || \
+                       source "$FAST_BASE_DIR/share/free_theme.zsh"
+                   }
                  else
                    __idx=0
                  fi
@@ -1230,7 +1238,11 @@ _fsh_highlight_process() {
       __idx=1
       __tmp=$FAST_THEME_NAME
       FAST_THEME_NAME=${${${FAST_HIGHLIGHT_STYLES[${FAST_THEME_NAME}secondary]}:t:r}#(CONFIG|CACHE|LOCAL|HOME|OPT):}
-      (( ${+FAST_HIGHLIGHT_STYLES[${FAST_THEME_NAME}default]} )) || source $FAST_WORK_DIR/secondary_theme.zsh
+      (( ${+FAST_HIGHLIGHT_STYLES[${FAST_THEME_NAME}default]} )) || {
+        [[ -r $FAST_WORK_DIR/secondary_theme.local.zsh ]] && \
+          source "$FAST_WORK_DIR/secondary_theme.local.zsh" || \
+          source "$FAST_BASE_DIR/share/free_theme.zsh"
+      }
     else
       __idx=0
     fi

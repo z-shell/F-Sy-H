@@ -1,5 +1,5 @@
 ---
-name: "✅ Zsh"
+name: Zsh
 on:
   push:
     paths:
@@ -9,15 +9,15 @@ on:
       - "share/*"
       - "themes/*"
       - "functions/*"
-  pull_request:
-    paths:
-      - "**/*.ch"
-      - "**/*.zsh"
-      - "tests/*"
-      - "share/*"
-      - "themes/*"
-      - "functions/*"
+  pull_request: {}
   workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   zsh-matrix:
@@ -25,9 +25,9 @@ jobs:
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
-      - name: ⤵️ Check out code from GitHub
-        uses: actions/checkout@v4
-      - name: "⚡ Set matrix output"
+      - name: Check out code
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - name: Set matrix output
         id: set-matrix
         run: |
           MATRIX="$(find . -type d -name 'doc' -prune -o -type f \( -iname '*.zsh' -o -iname '*.ch' -o -iname 'fast-*' \) -print | jq -ncR '{"include": [{"file": inputs}]}')"
@@ -40,18 +40,30 @@ jobs:
       fail-fast: false
       matrix: ${{ fromJSON(needs.zsh-matrix.outputs.matrix) }}
     steps:
-      - name: ⤵️ Check out code from GitHub
-        uses: actions/checkout@v4
-      - name: "⚡ Install dependencies"
+      - name: Check out code
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - name: Install dependencies
         run: sudo apt update && sudo apt-get install -yq zsh
-      - name: "⚡ zsh -n: ${{ matrix.file }}"
+      - name: "zsh -n: ${{ matrix.file }}"
         env:
           ZSH_FILE: ${{ matrix.file }}
         run: |
           zsh -n "${ZSH_FILE}"
-      - name: "⚡ zcompile ${{ matrix.file }}"
+      - name: "zcompile: ${{ matrix.file }}"
         env:
           ZSH_FILE: ${{ matrix.file }}
         run: |
-          zsh -fc "zcompile ${ZSH_FILE}"; rc=$?
-          ls -al "${ZSH_FILE}.zwc"; exit "$rc"
+          compiled="${RUNNER_TEMP}/$(basename "${ZSH_FILE}").zwc"
+          zsh -fc 'zcompile -U "$1" "$2"' zsh "$compiled" "$ZSH_FILE"
+          test -f "$compiled"
+
+  required:
+    name: Zsh
+    if: ${{ always() }}
+    needs: zsh-n
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify matrix result
+        env:
+          TEST_RESULT: ${{ needs.zsh-n.result }}
+        run: test "$TEST_RESULT" = success

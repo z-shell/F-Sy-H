@@ -18,10 +18,6 @@ SET_FPATH="${0:h}/../../functions"
 [[ -z "$FAST_WORK_DIR" ]] && FAST_WORK_DIR="${0:h}"
 [[ -z "$ZSH_VERSION" ]] && exec $ZSH_BIN zsh -f -c "source \"$0\" \"$1\" \"$2\" \"$3\""
 
-if [[ ! -e "$FAST_WORK_DIR/secondary_theme.zsh" ]]; then
-  cp -f "${0:A:h}/../free_theme.zsh" "$FAST_WORK_DIR/secondary_theme.zsh"
-fi
-
 if [[ -e "$SET_FPATH/fast-highlight" ]]; then
   source "$SET_FPATH/fast-highlight"
   source "$SET_FPATH/fast-string-highlight"

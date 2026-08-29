@@ -19,7 +19,7 @@
 (( next_word = 2 | 8192 ))
 
 local __first_call="$1" __wrd="$2" __start_pos="$3" __end_pos="$4"
-local __style __chars __home=$FAST_WORK_DIR
+local __style __chars
 integer __idx1 __idx2
 
 # First call, i.e. command starts, i.e. "grep" token etc.
@@ -46,11 +46,8 @@ integer __idx1 __idx2
     # Count non-option tokens.
     (( FAST_HIGHLIGHT[chroma-src-counter] += 1, __idx1 = FAST_HIGHLIGHT[chroma-src-counter] ))
     if (( FAST_HIGHLIGHT[chroma-src-counter] == 1 )); then
-      command mkdir -p "$__home"
-      command cp -f "${__wrd}" "$__home" 2>/dev/null && {
-        zcompile "$__home"/"${__wrd:t}" 2>/dev/null 1>&2 && \
+      [[ -f $__wrd && -r $__wrd ]] && \
         __style=${FAST_THEME_NAME}correct-subtle || __style=${FAST_THEME_NAME}incorrect-subtle
-      }
     elif (( FAST_HIGHLIGHT[chroma-src-counter] == 2 )); then
       # Handle paths, etc. normally - just pass-through to the big highlighter (the main f-sy-h highlighter, used before chromas).
       return 1
