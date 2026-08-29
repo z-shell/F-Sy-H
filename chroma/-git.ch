@@ -145,7 +145,7 @@ fsh__git__chroma__def=(
     ##
     ## {{{
 
-    subcmd:commit "COMMIT_#_opt // FILE_#_arg // NO_MATCH_#_opt"
+    subcmd:commit "COMMIT_#_opt // COMMIT_FILE_OR_DIR_#_arg // NO_MATCH_#_opt"
 
     "COMMIT_#_opt" "
               (-m|--message=|-am)
@@ -163,7 +163,9 @@ fsh__git__chroma__def=(
                        <<>> NO-OP // ::chroma/main-chroma-std-aopt-action
                        <<>> NO-OP // ::chroma/main-chroma-std-aopt-ARG-action"
 
-    # A generic action
+    "COMMIT_FILE_OR_DIR_#_arg" "NO-OP // ::chroma/-git-verify-file-or-dir"
+
+    # A generic action shared by other subcommands
     "FILE_#_arg" "NO-OP // ::chroma/-git-verify-file"
 
     ## }}}

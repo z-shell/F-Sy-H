@@ -4,15 +4,25 @@ emulate -R zsh
 
 typeset -r plugin_root=${0:A:h:h}
 typeset -r fixture_root=$(command mktemp -d "${TMPDIR:-/tmp}/fsyh-git-chroma.XXXXXXXX")
+typeset -r fixture_repo=$fixture_root/repo
 typeset -r reported_buffer='(cd ../dir; git diff)|patch -p1'
 trap 'command rm -rf -- "$fixture_root"' EXIT HUP INT TERM
 
 typeset -gx ZDOTDIR=$fixture_root/zdotdir
 typeset -gx XDG_CACHE_HOME=$fixture_root/cache-home
 typeset -gx FAST_WORK_DIR=$fixture_root/work
-command mkdir -p -- "$ZDOTDIR"
+command mkdir -p -- \
+  "$ZDOTDIR" \
+  "$fixture_repo/some/folder/with/changes"
+command touch -- \
+  "$fixture_repo/some/file.lua" \
+  "$fixture_repo/some/folder/with/changes/changed.lua"
 
 source "$plugin_root/F-Sy-H.plugin.zsh"
+builtin cd -- "$fixture_repo"
+
+FAST_HIGHLIGHT_STYLES[correct-subtle]=fg=green
+FAST_HIGHLIGHT_STYLES[incorrect-subtle]=fg=red
 
 assert_region_contract() {
   emulate -L zsh
@@ -69,4 +79,31 @@ highlight_and_assert() {
   assert_region_contract
 }
 
+assert_trailing_token_style() {
+  emulate -L zsh
+
+  local expected_buffer=$1 expected_style=$2
+  local token=${expected_buffer##* }
+  local entry
+  local -a fields
+  integer token_start=$(( ${#expected_buffer} - ${#token} ))
+
+  highlight_and_assert "$expected_buffer" || return
+
+  for entry in "${region_highlight[@]}"; do
+    fields=( ${(z)entry} )
+    if (( fields[1] == token_start && fields[2] == ${#expected_buffer} )) &&
+      [[ ${fields[3]} == "$expected_style" ]]; then
+      return 0
+    fi
+  done
+
+  builtin print -u2 -r -- \
+    "missing $expected_style region for trailing token in: $expected_buffer"
+  return 1
+}
+
 highlight_and_assert "$reported_buffer" || exit $?
+assert_trailing_token_style 'git commit some/file.lua' fg=green || exit $?
+assert_trailing_token_style 'git commit some/folder/with/changes/' fg=green || exit $?
+assert_trailing_token_style 'git commit missing/path/' fg=red || exit $?
