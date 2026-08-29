@@ -13,19 +13,34 @@ typeset -gx FAST_WORK_DIR=$fixture_root/work
 typeset -gx PMSPEC=0fuUpiPs
 command mkdir -p -- "$ZDOTDIR"
 
+count_fpath_entry() {
+  emulate -L zsh
+
+  local entry
+  integer count=0
+  for entry in "${fpath[@]}"; do
+    [[ $entry == "$1" ]] && (( ++count ))
+  done
+  REPLY=$count
+}
+
 source "$plugin_root/F-Sy-H.plugin.zsh"
 
 [[ $FAST_BASE_DIR == $plugin_root ]]
-(( ${#${(M)fpath:#$plugin_root}} == 1 ))
-(( ${#${(M)fpath:#$plugin_root/functions}} == 1 ))
+count_fpath_entry "$plugin_root"
+(( REPLY == 1 ))
+count_fpath_entry "$plugin_root/functions"
+(( REPLY == 1 ))
 [[ ! -e $FAST_WORK_DIR ]]
 
 autoload -Uz chroma/-source.ch
 [[ ${functions[chroma/-source.ch]} == *builtin*autoload* ]]
 
 source "$plugin_root/F-Sy-H.plugin.zsh"
-(( ${#${(M)fpath:#$plugin_root}} == 1 ))
-(( ${#${(M)fpath:#$plugin_root/functions}} == 1 ))
+count_fpath_entry "$plugin_root"
+(( REPLY == 1 ))
+count_fpath_entry "$plugin_root/functions"
+(( REPLY == 1 ))
 
 command mkdir -p -- "$FAST_WORK_DIR"
 fast-theme --secondary --quiet default

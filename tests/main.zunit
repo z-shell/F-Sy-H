@@ -134,3 +134,17 @@ reply=()
     assert "$output" is_empty
     assert "$state" same_as "0"
 }
+
+@test 'entrypoint unload restores non-interactive and partial-load state' {
+    run zsh -f ./scripts/test-plugin-lifecycle.zsh noninteractive
+
+    assert "$output" is_empty
+    assert "$state" same_as "0"
+}
+
+@test 'entrypoint unload restores interactive ZLE state' {
+    run zsh -f -i ./scripts/test-plugin-lifecycle.zsh interactive
+
+    assert "$output" is_empty
+    assert "$state" same_as "0"
+}

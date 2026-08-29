@@ -27,13 +27,37 @@
 # vim: ft=zsh sw=2 ts=2 et
 # -------------------------------------------------------------------------------------------------
 
+() {
 builtin emulate -L zsh
 builtin setopt extended_glob typeset_silent no_short_loops rc_quotes no_auto_pushd
+
+local source_path plugin_dir load_status
+local -a lifecycle_collisions lifecycle_modules
+
+lifecycle_modules=( ${(f)"$(zmodload)"} )
+source_path="${${(M)1:#/*}:-$PWD/$1}"
+plugin_dir=${source_path:a:h}
+
+(( ${+_fsh_lifecycle_loaded} && _fsh_lifecycle_loaded )) && return 0
+
+lifecycle_collisions=(
+  ${(M)${(k)functions}:#(_fsh_lifecycle_*|f-sy-h_plugin_unload)}
+)
+(( ${+_fsh_lifecycle_started} )) && lifecycle_collisions+=( _fsh_lifecycle_started )
+(( ${+_fsh_lifecycle_loaded} )) && lifecycle_collisions+=( _fsh_lifecycle_loaded )
+if (( $#lifecycle_collisions )); then
+  builtin print -u2 -r -- \
+    "f-sy-h: lifecycle state already exists: ${(j:, :)lifecycle_collisions}"
+  return 2
+fi
+
+builtin source "$plugin_dir/lib/lifecycle.zsh" || return
+_fsh_lifecycle_begin "${lifecycle_modules[@]}" || return
 
 #
 # Resolve the entrypoint without assigning to special parameter 0. Plugin
 # managers may provide ZERO as the entrypoint path.
-typeset -g FAST_BASE_DIR=${${ZERO:-${(%):-%x}}:A:h}
+typeset -g FAST_BASE_DIR=$plugin_dir
 
 # Portable autoload paths. Managers may add the same paths first; exact checks
 # keep direct and managed loading idempotent.
@@ -223,12 +247,6 @@ _zsh_highlight_bind_widgets() {
   local -F2 SECONDS
   local prefix=orig-s${SECONDS/./}-r$(( RANDOM % 1000 )) # unique each time, in case we're sourced more than once
 
-  # Load ZSH module zsh/zleparameter, needed to override user defined widgets.
-  zmodload zsh/zleparameter 2>/dev/null || {
-    builtin print -r -- >&2 'zsh-syntax-highlighting: failed loading zsh/zleparameter.'
-    return 1
-  }
-
   # Override ZLE widgets to make them invoke _zsh_highlight.
   local -U widgets_to_bind
   widgets_to_bind=(${${(k)widgets}:#(.*|run-help|which-command|beep|set-local-history|yank|zle-line-pre-redraw|zle-keymap-select)})
@@ -286,12 +304,6 @@ _zsh_highlight_bind_widgets() {
 # Setup
 # -------------------------------------------------------------------------------------------------
 
-# Try binding widgets.
-_zsh_highlight_bind_widgets || {
-  builtin print -r -- >&2 'zsh-syntax-highlighting: failed binding ZLE widgets, exiting.'
-  return 1
-}
-
 # Reset scratch variables when command line is done.
 _zsh_highlight_preexec_hook() {
   typeset -g _ZSH_HIGHLIGHT_PRIOR_BUFFER=
@@ -300,10 +312,30 @@ _zsh_highlight_preexec_hook() {
   _FAST_MAIN_CACHE=()
 }
 
-autoload -Uz add-zsh-hook
-add-zsh-hook preexec _zsh_highlight_preexec_hook 2>/dev/null || {
-  builtin print -r -- >&2 'zsh-syntax-highlighting: failed loading add-zsh-hook.'
-}
+if [[ -o interactive ]]; then
+  zmodload zsh/zleparameter 2>/dev/null || {
+    builtin print -u2 -r -- 'f-sy-h: failed loading zsh/zleparameter'
+    _fsh_lifecycle_abort 1
+    return $?
+  }
+  _fsh_lifecycle_capture_widgets || {
+    builtin print -u2 -r -- 'f-sy-h: failed capturing ZLE widget state'
+    _fsh_lifecycle_abort 1
+    return $?
+  }
+  _zsh_highlight_bind_widgets || {
+    builtin print -u2 -r -- 'f-sy-h: failed binding ZLE widgets'
+    _fsh_lifecycle_abort 1
+    return $?
+  }
+
+  autoload -Uz add-zsh-hook
+  add-zsh-hook preexec _zsh_highlight_preexec_hook 2>/dev/null || {
+    builtin print -u2 -r -- 'f-sy-h: failed registering the preexec hook'
+    _fsh_lifecycle_abort 1
+    return $?
+  }
+fi
 
 /f-sy-h-debug() {
   builtin print -r -- "$@" >>! /tmp/reply
@@ -359,8 +391,16 @@ if (( FAST_THEME_MANAGER_DISABLED )) {
   alias f-sy-h=fast-theme
 }
 
-source "$FAST_BASE_DIR/functions/fast-highlight"
-source "$FAST_BASE_DIR/functions/fast-string-highlight"
+builtin source "$FAST_BASE_DIR/functions/fast-highlight" || {
+  load_status=$?
+  _fsh_lifecycle_abort "$load_status"
+  return $?
+}
+builtin source "$FAST_BASE_DIR/functions/fast-string-highlight" || {
+  load_status=$?
+  _fsh_lifecycle_abort "$load_status"
+  return $?
+}
 
 local __fsyh_theme
 zstyle -s :plugin:fast-syntax-highlighting theme __fsyh_theme
@@ -385,3 +425,10 @@ unset __fsyh_theme
 _fsh_highlight_fill_option_variables
 
 [[ $COLORTERM == (24bit|truecolor) || ${terminfo[colors]} -eq 16777216 ]] || zmodload zsh/nearcolor &>/dev/null || true
+
+_fsh_lifecycle_finalize || {
+  load_status=$?
+  _fsh_lifecycle_abort "$load_status"
+  return $?
+}
+} "${ZERO:-${${0:#$ZSH_ARGZERO}:-${(%):-%N}}}"
