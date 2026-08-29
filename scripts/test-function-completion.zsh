@@ -25,15 +25,15 @@ function _fsh_test_read_until() {
   builtin emulate -L zsh
 
   local pattern=$1 chunk
-  integer attempt=0
+  integer read_deadline=$(( SECONDS + 30 ))
   REPLY=
 
-  while (( ++attempt <= 500 )); do
+  while (( SECONDS < read_deadline )); do
     if zpty -r -t "$pty_name" chunk; then
       REPLY+=$chunk
       [[ $REPLY == ${~pattern} ]] && return 0
     else
-      command sleep 0.01
+      command sleep 0.02
     fi
   done
 
@@ -42,10 +42,14 @@ function _fsh_test_read_until() {
 
 {
   : >| "$test_dir/secondary_theme.zsh" || _fsh_test_fail 'cannot prepare isolated theme cache'
+  command mkdir -p -- "$test_dir/home" "$test_dir/zdotdir" || \
+    _fsh_test_fail 'cannot prepare isolated shell directories'
   zmodload zsh/zpty || _fsh_test_fail 'zsh/zpty is unavailable'
 
   if (( test_status == 0 )); then
-    zpty -b "$pty_name" zsh -f || _fsh_test_fail 'cannot start isolated interactive Zsh'
+    zpty -b "$pty_name" \
+      "HOME=${(q)test_dir}/home ZDOTDIR=${(q)test_dir}/zdotdir zsh -f" || \
+      _fsh_test_fail 'cannot start isolated interactive Zsh'
   fi
 
   if (( test_status == 0 )); then
@@ -54,8 +58,9 @@ function _fsh_test_read_until() {
   fi
 
   if (( test_status == 0 )); then
-    zpty -w "$pty_name" "FAST_WORK_DIR=${(q)test_dir}; source ${(q)plugin_path}; autoload -Uz compinit; compinit -D; print -r -- FSH_\${:-LOAD}_NEW:\${+functions[_fsh_highlight_process]}:OLD:\${+functions[-fast-highlight-process]}"
-    _fsh_test_read_until '*FSH_LOAD_NEW:[01]:OLD:[01]*' || _fsh_test_fail 'F-Sy-H did not load in the interactive Zsh'
+    zpty -w "$pty_name" "FAST_WORK_DIR=${(q)test_dir}; source ${(q)plugin_path}; autoload -Uz compinit; compinit -D; PS1='FSH_INTERRUPT_READY> '; print -r -- FSH_\${:-LOAD}_NEW:\${+functions[_fsh_highlight_process]}:OLD:\${+functions[-fast-highlight-process]}"
+    _fsh_test_read_until '*FSH_LOAD_NEW:[01]:OLD:[01]*FSH_INTERRUPT_READY*' || \
+      _fsh_test_fail "F-Sy-H did not load in the interactive Zsh: ${(V)REPLY[1,1000]}"
     load_output=$REPLY
   fi
 
@@ -63,9 +68,8 @@ function _fsh_test_read_until() {
     zpty -w -n "$pty_name" $'time -\t'
     command sleep 0.1
     zpty -w -n "$pty_name" $'\C-C'
-    command sleep 0.1
-    zpty -w "$pty_name" 'print -r -- FSH_${:-COMPLETION}_DONE'
-    _fsh_test_read_until '*FSH_COMPLETION_DONE*' || _fsh_test_fail 'completion probe did not finish'
+    _fsh_test_read_until '*FSH_INTERRUPT_READY*' || \
+      _fsh_test_fail "completion probe did not return to the prompt: ${(V)REPLY[1,1000]}"
     completion_output=$REPLY
   fi
 
