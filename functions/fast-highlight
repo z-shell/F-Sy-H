@@ -296,7 +296,7 @@ typeset -ga ZLAST_COMMANDS
 # Takes a single argument.
 #
 # The result will be stored in REPLY.
--fast-highlight-main-type() {
+_fsh_highlight_main_type() {
   REPLY=$__fast_highlight_main__command_type_cache[(e)$1]
   [[ -z $REPLY ]] && {
     if zmodload -e zsh/parameter; then
@@ -340,7 +340,7 @@ typeset -ga ZLAST_COMMANDS
 
 # Below are variables that must be defined in outer
 # scope so that they are reachable in *-process()
--fast-highlight-fill-option-variables() {
+_fsh_highlight_fill_option_variables() {
   if [[ -o ignore_braces ]] || eval '[[ -o ignore_close_braces ]] 2>/dev/null'; then
     FAST_HIGHLIGHT[right_brace_is_recognised_everywhere]=0
   else
@@ -369,7 +369,7 @@ typeset -ga ZLAST_COMMANDS
 
 
 # Main syntax highlighting function.
--fast-highlight-process() {
+_fsh_highlight_process() {
   builtin emulate -L zsh ${=${options[xtrace]:#off}:+-o xtrace}
   builtin setopt extended_glob bare_glob_qual no_nomatch typeset_silent
 
@@ -451,7 +451,7 @@ typeset -ga ZLAST_COMMANDS
 
   [[ -n $ZCALC_ACTIVE ]] && {
     _start_pos=0; _end_pos=__len; __arg=$__buf
-    -fast-highlight-math-string
+    _fsh_highlight_math_string
     return 0
   }
 
@@ -626,12 +626,12 @@ typeset -ga ZLAST_COMMANDS
             $_mybuf = (#b)(*)(*)\$\{([a-zA-Z_][a-zA-Z0-9_:-]#|[0-9]##)(*) ]] && \
               (( ${+parameters[${match[3]%%:-*}]} ))
       then
-        -fast-highlight-main-type ${match[1]}${match[2]}${(P)match[3]%%:-*}${match[4]#\}}
+        _fsh_highlight_main_type ${match[1]}${match[2]}${(P)match[3]%%:-*}${match[4]#\}}
       elif [[ $braces_stack = T* ]]; then # T - typedef, etc.
         REPLY=none
       else
         : ${expanded_path::=${~_mybuf}}
-        -fast-highlight-main-type $expanded_path
+        _fsh_highlight_main_type $expanded_path
       fi
 
       case $REPLY in
@@ -710,7 +710,7 @@ typeset -ga ZLAST_COMMANDS
             (( itmp < iitmp && itmp <= __asize - 1 )) && (( jtmp > __asize && (jtmp = __asize), 1 > 0 )) && \
             (( __start=_start_pos-__PBUFLEN+itmp, __end=_start_pos-__PBUFLEN+jtmp, __start >= 0 )) && \
             reply+=("$__start $__end ${FAST_HIGHLIGHT_STYLES[${FAST_THEME_NAME}double-quoted-argument]}") && \
-            { itmp=${__arg[(i)=]}; __arg=${__arg[itmp,__asize]}; (( _start_pos += itmp - 1 )); -fast-highlight-string; \
+            { itmp=${__arg[(i)=]}; __arg=${__arg[itmp,__asize]}; (( _start_pos += itmp - 1 )); _fsh_highlight_string; \
             (( _start_pos = _start_pos - itmp + 1, 1 > 0 )); } || \
             { (( iitmp <= __asize - 1 )) && (( jjtmp > __asize && (jjtmp = __asize), 1 > 0 )) && \
             (( __start=_start_pos-__PBUFLEN+iitmp, __end=_start_pos-__PBUFLEN+jjtmp, __start >= 0 )) && \
@@ -718,7 +718,7 @@ typeset -ga ZLAST_COMMANDS
             } || {
               itmp=${__arg[(i)=]}; __arg=${__arg[itmp,__asize]}; (( _start_pos += itmp - 1 ));
               [[ ${__arg[2,4]} = '$((' ]] && {
-                -fast-highlight-math-string; (( __start=_start_pos-__PBUFLEN+2, __end=__start+2, __start >= 0 )) && \
+                _fsh_highlight_math_string; (( __start=_start_pos-__PBUFLEN+2, __end=__start+2, __start >= 0 )) && \
                 reply+=("$__start $__end ${FAST_HIGHLIGHT_STYLES[${FAST_THEME_NAME}double-paren]}")
                 # Counting complex brackets (for brackets-highlighter): 4. $(( in assign argument
                 _FAST_COMPLEX_BRACKETS+=( $__start $(( __start + 1 )) )
@@ -727,7 +727,7 @@ typeset -ga ZLAST_COMMANDS
                   # Counting complex brackets (for brackets-highlighter): 5. )) in assign argument
                   _FAST_COMPLEX_BRACKETS+=( $__start $(( __start + 1 )) )
                 }
-              } || -fast-highlight-string; (( _start_pos = _start_pos - itmp + 1, 1 > 0 ))
+              } || _fsh_highlight_string; (( _start_pos = _start_pos - itmp + 1, 1 > 0 ))
             }
           } elif [[ $__arg = ${histchars[1]}* && -n ${__arg[2]} ]] {
             __style=${FAST_THEME_NAME}history-expansion
@@ -758,7 +758,7 @@ typeset -ga ZLAST_COMMANDS
 
             # Counting complex brackets (for brackets-highlighter): 6. (( as command
             _FAST_COMPLEX_BRACKETS+=( $__start $(( __start + 1 )) )
-            -fast-highlight-math-string
+            _fsh_highlight_math_string
 
             # ADD
             [[ $__arg[-2,-1] == '))' ]] && {
@@ -866,7 +866,7 @@ typeset -ga ZLAST_COMMANDS
         '-'*)    (( !_was_double_hyphen )) && __style=${FAST_THEME_NAME}single-hyphen-option || __style=${FAST_THEME_NAME}default;;
         \$\'*)
                  (( __start=_start_pos-__PBUFLEN, __end=_end_pos-__PBUFLEN, __start >= 0 )) && reply+=("$__start $__end ${FAST_HIGHLIGHT_STYLES[${FAST_THEME_NAME}dollar-quoted-argument]}")
-                 -fast-highlight-dollar-string
+                 _fsh_highlight_dollar_string
                  already_added=1
                  ;;
         [\"\']*|[^\"\\]##([\\][\\])#\"*|[^\'\\]##([\\][\\])#\'*)
@@ -883,7 +883,7 @@ typeset -ga ZLAST_COMMANDS
                      __idx=0
                    fi
                    (( _start_pos-__PBUFLEN >= 0 )) && \
-                     -fast-highlight-process "$PREBUFFER" "${${__arg%[\'\"]}#[\'\"]}" $(( _start_pos + 1 ))
+                     _fsh_highlight_process "$PREBUFFER" "${${__arg%[\'\"]}#[\'\"]}" $(( _start_pos + 1 ))
                    (( __idx )) && FAST_THEME_NAME=$_mybuf
                    already_added=1
                  else
@@ -911,7 +911,7 @@ typeset -ga ZLAST_COMMANDS
                            [[ $__tmp = \" ]] && {
                              __arg=${cdpath_dir[iitmp+1,itmp-1]}
                              (( _start_pos += iitmp - 1 + 1 ))
-                             -fast-highlight-string
+                             _fsh_highlight_string
                              (( _start_pos = _start_pos - iitmp + 1 - 1 ))
                            }
                            # The end-of-quoting proper algorithm action
@@ -932,7 +932,7 @@ typeset -ga ZLAST_COMMANDS
                      [[ $__tmp = \" ]] && {
                        __arg=${cdpath_dir[iitmp+1,__asize]}
                        (( _start_pos += iitmp - 1 + 1 ))
-                       -fast-highlight-string
+                       _fsh_highlight_string
                        (( _start_pos = _start_pos - iitmp + 1 - 1 ))
                      }
                    }
@@ -940,7 +940,7 @@ typeset -ga ZLAST_COMMANDS
                  ;;
         \$\(\(*)
                  already_added=1
-                 -fast-highlight-math-string
+                 _fsh_highlight_math_string
                  # ADD
                  (( __start=_start_pos-__PBUFLEN+1, __end=__start+2, __start >= 0 )) && reply+=("$__start $__end ${FAST_HIGHLIGHT_STYLES[${FAST_THEME_NAME}double-paren]}")
                  # Counting complex brackets (for brackets-highlighter): 9. $(( as argument
@@ -962,7 +962,7 @@ typeset -ga ZLAST_COMMANDS
                    __idx=0
                  fi
                  (( _start_pos-__PBUFLEN >= 0 )) && \
-                   -fast-highlight-process "$PREBUFFER" "${${__arg%[\`]}#[\`]}" $(( _start_pos + 1 ))
+                   _fsh_highlight_process "$PREBUFFER" "${${__arg%[\`]}#[\`]}" $(( _start_pos + 1 ))
                  (( __idx )) && FAST_THEME_NAME=$_mybuf
                  already_added=1
           ;;
@@ -993,7 +993,7 @@ typeset -ga ZLAST_COMMANDS
                  ;;
         *)       # F - (( after for
                  if [[ $braces_stack = F* ]]; then
-                   -fast-highlight-string
+                   _fsh_highlight_string
                    _mybuf=$__arg
                    __idx=_start_pos
                    while [[ $_mybuf = (#b)[^a-zA-Z\{\$]#([a-zA-Z][a-zA-Z0-9]#)(*) ]]; do
@@ -1056,7 +1056,7 @@ typeset -ga ZLAST_COMMANDS
                  else
                    if [[ ${FAST_HIGHLIGHT[no_check_paths]} != 1 ]]; then
                      if [[ ${FAST_HIGHLIGHT[use_async]} != 1 ]]; then
-		       if -fast-highlight-check-path noasync; then
+                       if _fsh_highlight_check_path noasync; then
 			 # ADD
 			 (( __start=_start_pos-__PBUFLEN, __end=_end_pos-__PBUFLEN, __start >= 0 )) && reply+=("$__start $__end ${FAST_HIGHLIGHT_STYLES[$__style]}")
                          already_added=1
@@ -1074,7 +1074,7 @@ typeset -ga ZLAST_COMMANDS
 		     else
 		       if [[ -z ${FAST_HIGHLIGHT[cache-path-${(q)__arg}-${_start_pos}]} || $(( EPOCHSECONDS - FAST_HIGHLIGHT[cache-path-${(q)__arg}-${_start_pos}-born-at] )) -gt 8 ]]; then
 			 if [[ $LASTWIDGET != *-or-beginning-search ]]; then
-			   exec {PCFD}< <(-fast-highlight-check-path; sleep 5)
+                           exec {PCFD}< <(_fsh_highlight_check_path; sleep 5)
 			   command sleep 0
 			   FAST_HIGHLIGHT[path-queue]+=";$_start_pos $_end_pos;"
 			   is-at-least 5.0.6 && __pos=1 || __pos=0
@@ -1100,7 +1100,7 @@ typeset -ga ZLAST_COMMANDS
     then
       (( next_word = (next_word | 2) & ~129 ))
       [[ ${FAST_HIGHLIGHT_STYLES[${FAST_THEME_NAME}here-string-text]} != "none" ]] && (( __start=_start_pos-__PBUFLEN, __end=_end_pos-__PBUFLEN, __start >= 0 )) && reply+=("$__start $__end ${FAST_HIGHLIGHT_STYLES[${FAST_THEME_NAME}here-string-text]}")
-      -fast-highlight-string ${FAST_HIGHLIGHT_STYLES[${FAST_THEME_NAME}here-string-var]:#none}
+      _fsh_highlight_string ${FAST_HIGHLIGHT_STYLES[${FAST_THEME_NAME}here-string-var]:#none}
       already_added=1
     elif (( this_word & (BIT_case_preamble + BIT_case_item) ))
     then
@@ -1238,7 +1238,7 @@ typeset -ga ZLAST_COMMANDS
       (( __start=${_mybuf%%;*}-__PBUFLEN-1, __end=${_mybuf##*;}-__PBUFLEN, __start >= 0 )) && \
         reply+=("$__start $__end ${FAST_HIGHLIGHT_STYLES[${__tmp}recursive-base]}")
       # Pass authentic buffer for recursive analysis
-      -fast-highlight-process "$PREBUFFER" "${__buf[${_mybuf%%;*},${_mybuf##*;}]}" $(( ${_mybuf%%;*} - 1 ))
+      _fsh_highlight_process "$PREBUFFER" "${__buf[${_mybuf%%;*},${_mybuf##*;}]}" $(( ${_mybuf%%;*} - 1 ))
     done
     # Restore theme
     (( __idx )) && FAST_THEME_NAME=$__tmp
@@ -1247,7 +1247,7 @@ typeset -ga ZLAST_COMMANDS
   return 0
 }
 
--fast-highlight-check-path() {
+_fsh_highlight_check_path() {
   (( _start_pos-__PBUFLEN >= 0 )) || \
     { [[ $1 != "noasync" ]] && print -r -- "- $_start_pos $_end_pos"; return 1; }
   [[ $1 != "noasync" ]] && {
@@ -1274,7 +1274,7 @@ typeset -ga ZLAST_COMMANDS
   return 1
 }
 
--fast-highlight-check-path-handler() {
+_fsh_highlight_check_path_handler() {
   local IFS=$'\n' pid PCFD=$1 line stripped val
   integer idx
 
@@ -1305,7 +1305,7 @@ typeset -ga ZLAST_COMMANDS
   exec {PCFD}<&-
 }
 
-zle -N -- fast-highlight-check-path-handler -fast-highlight-check-path-handler
+zle -N -- fast-highlight-check-path-handler _fsh_highlight_check_path_handler
 
 # Highlight special blocks inside double-quoted strings
 #
@@ -1320,7 +1320,7 @@ zle -N -- fast-highlight-check-path-handler -fast-highlight-check-path-handler
 # backslash-something (not ['"$]) is occurred.
 #
 # $1 - additional style to glue-in to added style
--fast-highlight-string() {
+_fsh_highlight_string() {
   (( _start_pos-__PBUFLEN >= 0 )) || return 0
   _mybuf=$__arg
   __idx=_start_pos
@@ -1355,7 +1355,7 @@ zle -N -- fast-highlight-check-path-handler -fast-highlight-check-path-handler
 # - D matches words [a-zA-Z]## (variables)
 #
 # Parameters used: _mybuf, __idx, _end_idx, __style
--fast-highlight-math-string() {
+_fsh_highlight_math_string() {
   (( _start_pos-__PBUFLEN >= 0 )) || return 0
   _mybuf=$__arg
   __idx=_start_pos
@@ -1391,7 +1391,7 @@ zle -N -- fast-highlight-check-path-handler -fast-highlight-check-path-handler
 }
 
 # Highlight special chars inside dollar-quoted strings
--fast-highlight-dollar-string() {
+_fsh_highlight_dollar_string() {
   (( _start_pos-__PBUFLEN >= 0 )) || return 0
   local i j k __style
   local AA
@@ -1433,14 +1433,14 @@ zle -N -- fast-highlight-check-path-handler -fast-highlight-check-path-handler
   done
 }
 
--fast-highlight-init() {
+_fsh_highlight_init() {
   _FAST_COMPLEX_BRACKETS=()
   __fast_highlight_main__command_type_cache=()
 }
 
 typeset -ga FSH_LIST
--fsh_sy_h_shappend() {
+_fsh_shappend() {
   FSH_LIST+=( "$(( $1 - 1 ));;$(( $2 ))" )
 }
 
-functions -M fsh_sy_h_append 2 2 -fsh_sy_h_shappend 2>/dev/null
+functions -M fsh_sy_h_append 2 2 _fsh_shappend 2>/dev/null

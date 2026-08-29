@@ -157,15 +157,15 @@ for (( i = 0; i <= 2; ++ i )) { print \$i; }
 
   local right_brace_is_recognised_everywhere
   integer path_dirs_was_set multi_func_def ointeractive_comments
-  -fast-highlight-fill-option-variables
+  _fsh_highlight_fill_option_variables
 
   local BUFFER
   for BUFFER in "${long_input[@]}"; do
     reply=( )
     () {
-      -fast-highlight-init
-      -fast-highlight-process "" "$BUFFER" "0"
-      -fast-highlight-string-process "" "$BUFFER"
+      _fsh_highlight_init
+      _fsh_highlight_process "" "$BUFFER" "0"
+      _fsh_highlight_string_process "" "$BUFFER"
     }
   done
 
@@ -180,15 +180,15 @@ elif [[ -r "$1" ]]; then
   SECONDS=0
 
   reply=( )
-  -fast-highlight-init
+  _fsh_highlight_init
 
   local right_brace_is_recognised_everywhere
   integer path_dirs_was_set multi_func_def ointeractive_comments
-  -fast-highlight-fill-option-variables
+  _fsh_highlight_fill_option_variables
 
   () {
-    -fast-highlight-process "" "$BUFFER" "0"
-    -fast-highlight-string-process "" "$BUFFER"
+    _fsh_highlight_process "" "$BUFFER" "0"
+    _fsh_highlight_string_process "" "$BUFFER"
   }
 
   print "Running time: $SECONDS"
