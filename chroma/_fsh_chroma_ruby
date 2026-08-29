@@ -26,7 +26,7 @@ integer __idx1 __idx2
     # _fsh_state is used because it survives between calls, and
     # allows to use a single global hash only, instead of multiple
     # global variables.
-    _fsh_state[chrome-ruby-got-eswitch]=0
+    _fsh_state[chroma-ruby-got-eswitch]=0
     return 1
 } || {
     # Following call, i.e. not the first one.
@@ -43,19 +43,19 @@ integer __idx1 __idx2
         __style=${_fsh_theme_name}${${${__wrd:#--*}:+single-hyphen-option}:-double-hyphen-option}
 
         if [[ "$__wrd" = "-e" || ("$__wrd" = -*e* && "$__wrd" != --*) ]]; then
-            _fsh_state[chrome-ruby-got-eswitch]=1
+            _fsh_state[chroma-ruby-got-eswitch]=1
         fi
     else
         __wrd="${(Q)__wrd}"
-        if (( _fsh_state[chrome-ruby-got-eswitch] == 1 )); then
-            _fsh_state[chrome-ruby-got-eswitch]=0
+        if (( _fsh_state[chroma-ruby-got-eswitch] == 1 )); then
+            _fsh_state[chroma-ruby-got-eswitch]=0
             (( __start=__start_pos-${#PREBUFFER}, __end=__end_pos-${#PREBUFFER}, __start >= 0 )) &&
                 reply+=("$__start $__end ${_fsh_styles[${_fsh_theme_name}single-quoted-argument]}")
         else
             # Pass-through to the big-loop outside
             return 1
         fi
-        _fsh_state[chrome-ruby-got-eswitch]=0
+        _fsh_state[chroma-ruby-got-eswitch]=0
     fi
 }
 

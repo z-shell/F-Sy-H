@@ -32,7 +32,6 @@ local -a _fsh_command_output
     _fsh_state[chroma-docker-counter]=0
     _fsh_state[chroma-docker-got-subcommand]=0
     _fsh_state[chroma-docker-subcommand]=""
-    _fsh_state[chrome-docker-got-msg1]=0
     return 1
 } || {
     # Following call, i.e. not the first one
@@ -63,7 +62,7 @@ local -a _fsh_command_output
                     if (( __idx1 == 2 )); then
                         __style=${_fsh_theme_name}subcommand
                     elif (( __idx1 == 3 )); then
-                        _fsh_run_command "docker images -q" chroma-docker-list ""
+                        _fsh_async_command chroma-docker-list docker images -q
                         [[ -n "${_fsh_command_output[(r)$__wrd]}" ]] && {
                             (( __start=__start_pos-${#PREBUFFER}, __end=__end_pos-${#PREBUFFER}, __start >= 0 )) && \
                                 reply+=("$__start $__end ${_fsh_styles[${_fsh_theme_name}correct-subtle]}")

@@ -600,9 +600,6 @@ _fsh_chroma_git_first_call() {
   _fsh_state[chroma-git-counter]=0
   _fsh_state[chroma-git-got-subcommand]=0
   _fsh_state[chroma-git-subcommand]=""
-  _fsh_state[chrome-git-got-msg1]=0
-  _fsh_state[chrome-git-got-anymsg]=0
-  _fsh_state[chrome-git-occurred-double-hyphen]=0
   _fsh_state[chroma-git-checkout-new]=0
   _fsh_state[chroma-git-fetch-multiple]=0
   _fsh_state[chroma-git-branch-change]=0
@@ -613,45 +610,222 @@ _fsh_chroma_git_first_call() {
 }
 
 _fsh_chroma_git_check_alias() {
-  local _wrd="$1"
+  builtin emulate -L zsh
+  builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc_quotes no_auto_pushd
+
+  local _wrd=$1 resolved
   local -a _result
+
+  resolved=$_wrd
 
   typeset -ga _fsh_chroma_git_aliases
   _result=( ${(M)_fsh_chroma_git_aliases[@]:#${_wrd}[[:space:]]##*} )
   _fsh_chroma_debug "Got is-alias-_result: $_result"
-  [[ -n "$_result" ]] && \
-  _fsh_state[chroma-${_fsh_state[chroma-current]}-subcommand]="${${${_result#* }## ##}%% *}"
+  if [[ -n "$_result" ]]; then
+    resolved="${${${_result[1]#* }## ##}%% *}"
+    _fsh_state[chroma-${_fsh_state[chroma-current]}-subcommand]=$resolved
+  fi
+  _fsh_chroma_git_prepare_runtime_options "$resolved"
 }
 
-# A hook that returns the list of git's
-# available subcommands in $reply
-_fsh_chroma_git_get_subcommands() {
-  local __svalue
-  integer __ivalue
-  LANG=C _fsh_run_command "git help -a" chroma-${_fsh_state[chroma-current]}-subcmd-list "" $(( 15 * 60 ))
+# Parse the indented command rows emitted by `git help -a'. Headings and prose
+# are deliberately ignored so an unexpected help layout falls back safely.
+_fsh_chroma_git_parse_subcommands() {
+  builtin emulate -L zsh
+  builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc_quotes no_auto_pushd
 
-  if [[ "${_fsh_command_output[1]}" = See* ]]; then
-    # (**)
-    # git >= v2.20, the aliases in the `git help -a' command
-    _fsh_command_output=( ${${${${(M)_fsh_command_output[@]:#([[:space:]](#c3,3)[a-zA-Z0-9_]*|Command aliases)}##[[:space:]]##}//(#s)Command\ aliases(#e)/Command_aliases}} )
-    __svalue="+${_fsh_command_output[(I)Command_aliases]}"
-    _fsh_command_output[1,__svalue-1]=( ${(@)_fsh_command_output[1,__svalue-1]%%[[:space:]]##*} )
+  local line trimmed command_name
+  local -A seen=()
+  _fsh_git_parse_reply=()
+
+  for line in "$@"; do
+    trimmed=${line##[[:space:]]##}
+    [[ $trimmed == 'External commands'* ||
+       $trimmed == 'Command aliases'* ]] && break
+    [[ $line == [[:space:]]##* ]] || continue
+    [[ $trimmed == [a-zA-Z0-9][a-zA-Z0-9._-]#[[:space:]]##* ]] || continue
+    command_name=${trimmed%%[[:space:]]*}
+    [[ $command_name == [a-zA-Z0-9][a-zA-Z0-9._-]# ]] || continue
+    (( ${+seen[$command_name]} )) || _fsh_git_parse_reply+=( "$command_name" )
+    seen[$command_name]=1
+  done
+}
+
+_fsh_chroma_git_canonical_option() {
+  builtin emulate -L zsh
+  builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc_quotes no_auto_pushd
+
+  local option=${1%,}
+  integer has_equals=0
+
+  [[ $option == *\=* ]] && has_equals=1
+  option=${option%%\[*}
+  option=${option%%\<*}
+  (( has_equals )) && option=${option%%=*}=
+  [[ $option == --[a-zA-Z0-9][a-zA-Z0-9_-]#(|=) ||
+     $option == -[a-zA-Z0-9](|=) ]] || return 1
+  canonical_option=$option
+}
+
+# Parse option spellings from the synopsis column emitted by `git <cmd> -h'.
+# Optional --[no-] forms are expanded because both spellings are accepted.
+_fsh_chroma_git_parse_options() {
+  builtin emulate -L zsh
+  builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc_quotes no_auto_pushd
+
+  local line trimmed synopsis token canonical_option
+  local -A seen=()
+  local -a tokens candidates
+  _fsh_git_parse_reply=()
+
+  for line in "$@"; do
+    trimmed=${line##[[:space:]]##}
+    [[ $trimmed == -* ]] || continue
+    synopsis=${trimmed%%[[:space:]][[:space:]]*}
+    tokens=( ${=synopsis} )
+    for token in "${tokens[@]}"; do
+      token=${token%,}
+      [[ $token == -* ]] || continue
+      if [[ $token == *'[no-]'* ]]; then
+        candidates=( "${token/'[no-]'/}" "${token/'[no-]'/no-}" )
+      else
+        candidates=( "$token" )
+      fi
+      for token in "${candidates[@]}"; do
+        _fsh_chroma_git_canonical_option "$token" || continue
+        (( ${+seen[$canonical_option]} )) || _fsh_git_parse_reply+=( "$canonical_option" )
+        seen[$canonical_option]=1
+      done
+    done
+  done
+}
+
+_fsh_chroma_git_prepare_runtime_options() {
+  builtin emulate -L zsh
+  builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc_quotes no_auto_pushd
+
+  local subcommand=$1 safe_subcommand key definition_id previous_id current_entry node generation_marker
+  integer inserted=0
+  local -a runtime_output runtime_options _fsh_git_parse_reply nodes updated_nodes
+  local -a safe_subcommands
+
+  [[ $subcommand == [a-zA-Z0-9][a-zA-Z0-9._-]# ]] || return 0
+  safe_subcommands=( "${(@f)_fsh_state[chroma-git-runtime-safe-subcommands]-}" )
+  (( safe_subcommands[(Ie)$subcommand] )) || return 0
+  safe_subcommand=${subcommand//[^a-zA-Z0-9_]/_}
+  key=chroma-git-options-$safe_subcommand
+  _fsh_state[$key-cache-seconds]=$(( 15 * 60 ))
+  _fsh_async_command --capture-stderr "$key" env LC_ALL=C git "$subcommand" -h
+  runtime_output=( "${_fsh_command_output[@]}" )
+  (( ${_fsh_state[$key-cache-ready]:-0} )) || return 0
+
+  _fsh_chroma_git_parse_options "${runtime_output[@]}"
+  runtime_options=( "${_fsh_git_parse_reply[@]}" )
+  (( $#runtime_options )) || return 0
+
+  previous_id=${_fsh_state[$key-definition-id]-}
+  if [[ -n $previous_id &&
+        ${_fsh_state[$key-definition-born-at]-} == ${_fsh_state[$key-cache-born-at]} ]]; then
+    definition_id=$previous_id
   else
-    # (**)
-    # git < v2.20, add aliases through extra code
-    _fsh_command_output=( ${(s: :)${(M)_fsh_command_output[@]:#  [a-z]*}} )
-    __svalue=${#_fsh_command_output}
-    # This allows to check if the command is an alias - we want to
-    # highlight the aliased command just like the target command of the alias
-    _fsh_run_command "+git config --get-regexp 'alias.*'" chroma-${_fsh_state[chroma-current]}-alias-list "[[:space:]]#alias." $(( 15 * 60 ))
+    (( ++ _fsh_state[$key-definition-generation] ))
+    generation_marker=${(l:${_fsh_state[$key-definition-generation]}::R:)}
+    definition_id="GIT_RUNTIME_${safe_subcommand}_${generation_marker}_#_opt"
+    _fsh_state[$key-definition-born-at]=${_fsh_state[$key-cache-born-at]}
+  fi
+  if [[ -n $previous_id && $previous_id != $definition_id ]]; then
+    builtin unset "_fsh_chroma_git_def[$previous_id]"
+  fi
+  _fsh_state[$key-definition-id]=$definition_id
+  _fsh_chroma_git_def[$definition_id]="
+    (${(j:|:)runtime_options})
+      <<>> NO-OP // ::_fsh_chroma_option_separator_action"
+
+  current_entry=${_fsh_chroma_main_git[subcmd:$subcommand]-}
+  if [[ -z $current_entry ]]; then
+    current_entry=$definition_id' // CATCH_ALL_#_opt'
+  else
+    nodes=( "${(@s://:)current_entry}" )
+    updated_nodes=()
+    for node in "${nodes[@]}"; do
+      node=${node//((#s)[[:space:]]##|[[:space:]]##(#e))/}
+      [[ -n $previous_id && $node == $previous_id ]] && continue
+      if (( ! inserted )) && [[ $node == NO_MATCH_*_opt ]]; then
+        updated_nodes+=( "$definition_id" )
+        inserted=1
+      fi
+      updated_nodes+=( "$node" )
+    done
+    if (( ! inserted )); then
+      updated_nodes+=( "$definition_id" )
+    fi
+    current_entry=${(j: // :)updated_nodes}
+  fi
+  _fsh_chroma_main_git[subcmd:$subcommand]=$current_entry
+}
+
+# Return Git subcommands in $reply. Runtime output is authoritative when it is
+# available; the frozen list keeps first paint and unavailable Git installs
+# deterministic.
+_fsh_chroma_git_get_subcommands() {
+  builtin emulate -L zsh
+  builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc_quotes no_auto_pushd
+
+  local line alias_name alias_value alias_target
+  local -a fallback runtime_output runtime_subcommands alias_output alias_names _fsh_git_parse_reply
+  local -A seen=()
+
+  fallback=(
+    add am archive bisect branch bundle checkout cherry-pick clean clone commit
+    describe diff fetch format-patch gc grep init log maintenance merge mv notes
+    pull push range-diff rebase reset restore revert rm shortlog show
+    sparse-checkout stash status submodule switch tag worktree config reflog
+    remote replace blame bugreport count-objects diagnose difftool fsck help
+    merge-tree rerere show-branch verify-commit verify-tag version
+  )
+
+  _fsh_state[chroma-git-subcommands-cache-seconds]=$(( 15 * 60 ))
+  _fsh_async_command chroma-git-subcommands env LC_ALL=C git help -a
+  runtime_output=( "${_fsh_command_output[@]}" )
+  if (( ${_fsh_state[chroma-git-subcommands-cache-ready]:-0} )); then
+    _fsh_chroma_git_parse_subcommands "${runtime_output[@]}"
+    runtime_subcommands=( "${_fsh_git_parse_reply[@]}" )
+    if (( $#runtime_subcommands )); then
+      _fsh_state[chroma-git-subcommands-last-valid]=${(F)runtime_subcommands}
+    fi
+  fi
+  if (( ! $#runtime_subcommands )) &&
+      (( ${+_fsh_state[chroma-git-subcommands-last-valid]} )); then
+    runtime_subcommands=( "${(@f)_fsh_state[chroma-git-subcommands-last-valid]}" )
+  fi
+  (( $#runtime_subcommands )) || runtime_subcommands=( "${fallback[@]}" )
+  _fsh_state[chroma-git-runtime-safe-subcommands]=${(F)runtime_subcommands}
+
+  _fsh_state[chroma-git-aliases-cache-seconds]=$(( 15 * 60 ))
+  _fsh_async_command chroma-git-aliases env LC_ALL=C git config --get-regexp '^alias\.'
+  alias_output=( "${_fsh_command_output[@]}" )
+  typeset -ga _fsh_chroma_git_aliases
+  _fsh_chroma_git_aliases=()
+  if (( ${_fsh_state[chroma-git-aliases-cache-ready]:-0} )); then
+    for line in "${alias_output[@]}"; do
+      alias_name=${line%%[[:space:]]*}
+      alias_value=${line#${alias_name}}
+      alias_value=${alias_value##[[:space:]]##}
+      alias_name=${alias_name#alias.}
+      [[ $alias_name == [a-zA-Z0-9][a-zA-Z0-9._-]# && $alias_value != '!'* ]] || continue
+      alias_target=${alias_value%%[[:space:]]*}
+      [[ $alias_target == [a-zA-Z0-9][a-zA-Z0-9._-]# ]] || continue
+      (( runtime_subcommands[(Ie)$alias_target] )) || continue
+      alias_names+=( "$alias_name" )
+      _fsh_chroma_git_aliases+=( "$alias_name $alias_target" )
+    done
   fi
 
-  __tmp=${#_fsh_command_output}
-  typeset -ga _fsh_chroma_git_aliases
-  _fsh_chroma_git_aliases=( ${_fsh_command_output[__svalue+1,__tmp]} )
-  [[ ${_fsh_command_output[__svalue]} != "Command_aliases" ]] && (( ++ __svalue, __ivalue=0, 1 )) || (( __ivalue=1 ))
-  _fsh_command_output[__svalue,__tmp]=( ${(@)_fsh_command_output[__svalue+__ivalue,__tmp]%%[[:space:]]##*} )
-  reply=( "${_fsh_command_output[@]}" )
+  reply=()
+  for line in "${runtime_subcommands[@]}" "${alias_names[@]}"; do
+    (( ${+seen[$line]} )) || reply+=( "$line" )
+    seen[$line]=1
+  done
 }
 
 # A generic handler

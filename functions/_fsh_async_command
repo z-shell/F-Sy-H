@@ -1,0 +1,97 @@
+# -*- mode: zsh; sh-indentation: 2; indent-tabs-mode: nil; sh-basic-offset: 2; -*-
+# vim: ft=zsh sw=2 ts=2 et
+#
+# Run a chroma lookup outside the ZLE hot path.
+#
+# Optional $1 - --capture-stderr, merge standard error into the cached output
+# $1 - unique _fsh_state cache key after optional flags
+# $2... - command and arguments, passed without string evaluation
+#
+# Output is returned in _fsh_command_output. A fresh or stale cache is returned
+# immediately. When the cache is stale, one background worker refreshes it.
+
+builtin emulate -L zsh
+builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc_quotes no_auto_pushd
+
+integer capture_stderr=0
+if [[ $1 == --capture-stderr ]]; then
+  capture_stderr=1
+  shift
+fi
+
+local key=$1 fd pid
+local -a command_args=( "${@:2}" )
+integer age cache_seconds owned_fd
+typeset -ga _fsh_command_output
+
+[[ -n $key && $#command_args -gt 0 ]] || return 2
+cache_seconds=${_fsh_state[$key-cache-seconds]:-$_fsh_chroma_cache_seconds}
+
+if (( ${+_fsh_state[$key-cache-ready]} )); then
+  _fsh_command_output=( "${(@f)_fsh_state[$key-cache]}" )
+else
+  _fsh_command_output=()
+fi
+
+if (( ${_fsh_state[$key-pending]:-0} )); then
+  age=$(( SECONDS - _fsh_state[$key-started-at] ))
+  if (( age >= _fsh_chroma_timeout_seconds )); then
+    fd=${_fsh_state[$key-fd]-}
+    if [[ $fd == <-> ]]; then
+      pid=${_fsh_lifecycle_owned_fd_pids[$fd]-}
+      zle -F -w "$fd" 2>/dev/null || zle -F "$fd" 2>/dev/null || true
+      [[ $pid == <-> ]] && builtin kill -TERM "$pid" 2>/dev/null || true
+      [[ $pid == <-> ]] && builtin wait "$pid" 2>/dev/null || true
+      owned_fd=$fd
+      { exec {owned_fd}<&- } 2>/dev/null || true
+      _fsh_lifecycle_release_fd "$fd"
+      builtin unset "_fsh_state[_fsh-async-fd-$fd-key]"
+    fi
+    _fsh_state[$key-pending]=0
+    _fsh_state[$key-disabled]=1
+    if (( ! ${_fsh_state[$key-warned]:-0} )); then
+      zle -M "f-sy-h: disabled slow chroma lookup: $key"
+      _fsh_state[$key-warned]=1
+    fi
+  fi
+  return 0
+fi
+
+(( ${_fsh_state[$key-disabled]:-0} )) && return 0
+if (( ${+_fsh_state[$key-cache-ready]} )); then
+  age=$(( SECONDS - _fsh_state[$key-cache-born-at] ))
+  (( age <= cache_seconds )) && return 0
+fi
+
+# zle with no arguments succeeds only while the line editor is active. Never
+# start a worker from non-interactive parsing or test-only direct calls.
+zle >/dev/null 2>&1 || return 0
+
+if (( capture_stderr )); then
+  exec {fd}< <(command "${command_args[@]}" 2>&1)
+else
+  exec {fd}< <(command "${command_args[@]}" 2>/dev/null)
+fi
+pid=${sysparams[procsubstpid]-}
+command true
+
+_fsh_state[$key-pending]=1
+_fsh_state[$key-started-at]=$SECONDS
+_fsh_state[$key-fd]=$fd
+_fsh_state[_fsh-async-fd-$fd-key]=$key
+_fsh_lifecycle_register_fd "$fd" _fsh_async_command_callback "$pid" || return 1
+zle -F -w "$fd" _fsh_async_command_callback || {
+  owned_fd=$fd
+  { exec {owned_fd}<&- } 2>/dev/null || true
+  [[ $pid == <-> ]] && builtin kill -TERM "$pid" 2>/dev/null || true
+  [[ $pid == <-> ]] && builtin wait "$pid" 2>/dev/null || true
+  _fsh_lifecycle_release_fd "$fd"
+  builtin unset \
+    "_fsh_state[$key-pending]" \
+    "_fsh_state[$key-started-at]" \
+    "_fsh_state[$key-fd]" \
+    "_fsh_state[_fsh-async-fd-$fd-key]"
+  return 1
+}
+
+return 0

@@ -28,7 +28,7 @@ integer __idx1 __idx2
   # _fsh_state is used because it survives between calls, and
   # allows to use a single global hash only, instead of multiple
   # global variables.
-  _fsh_state[chrome-perl-got-eswitch]=0
+  _fsh_state[chroma-perl-got-eswitch]=0
   return 1
 } || {
   # Following call, i.e. not the first one.
@@ -45,14 +45,14 @@ integer __idx1 __idx2
     __style=${_fsh_theme_name}${${${__wrd:#--*}:+single-hyphen-option}:-double-hyphen-option}
 
     if [[ "$__wrd" = "-e" || ("$__wrd" = -*e* && "$__wrd" != --*) ]]; then
-      _fsh_state[chrome-perl-got-eswitch]=1
+      _fsh_state[chroma-perl-got-eswitch]=1
     fi
   else
     __wrd="${__wrd//\`/x}"
     __arg="${__arg//\`/x}"
     __wrd="${(Q)__wrd}"
-    if (( _fsh_state[chrome-perl-got-eswitch] == 1 )); then
-      _fsh_state[chrome-perl-got-eswitch]=0
+    if (( _fsh_state[chroma-perl-got-eswitch] == 1 )); then
+      _fsh_state[chroma-perl-got-eswitch]=0
       __style=${_fsh_theme_name}single-quoted-argument
     else
       # Pass-through to the big-loop outside

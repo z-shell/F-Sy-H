@@ -35,6 +35,7 @@ colors || return 1
 # exact prior declarations for every return path.
 {
 
+local temp_output_path=
 typeset -g _fsh_work_dir
 : ${_fsh_work_dir:=$_fsh_base_dir}
 _fsh_work_dir=${~_fsh_work_dir}
@@ -179,86 +180,7 @@ fi
 
 [[ -z "$1" ]] && { print -u2 "${fg[yellow]}Show help$reset_color: ${fg[cyan]}-h, --help$reset_color"; return 1; }
 
-# _fsh_styles key onto ini-file key
-map=(
-    default                     "-"
-    unknown-token               "-"
-    reserved-word               "-"
-    subcommand                  "- reserved-word"
-    alias                       "- command builtin"
-    suffix-alias                "- alias command builtin"
-    builtin                     "-"
-    function                    "- builtin command"
-    command                     "-"
-    precommand                  "- command"
-    commandseparator            "-"
-    hashed-command              "- command"
-    path                        "-"
-    path_pathseparator          "pathseparator"
-    globbing                    "- back-or-dollar-double-quoted-argument" # fallback: variable in string "text $var text"
-    globbing-ext                "- double-quoted-argument" # fallback: the string "abc..."
-    history-expansion           "-"
-    single-hyphen-option        "- single-quoted-argument"
-    double-hyphen-option        "- double-quoted-argument"
-    back-quoted-argument        "-"
-    single-quoted-argument      "-"
-    double-quoted-argument      "-"
-    dollar-quoted-argument      "-"
-    back-or-dollar-double-quoted-argument   "- back-dollar-quoted-argument"
-    back-dollar-quoted-argument             "- back-or-dollar-double-quoted-argument"
-    assign                      "- reserved-word"
-    redirection                 "- reserved-word"
-    comment                     "-"
-    variable                    "-"
-    mathvar                     "- forvar variable"
-    mathnum                     "- fornum"
-    matherr                     "- incorrect-subtle"
-    assign-array-bracket        "-"
-    for-loop-variable           "forvar mathvar variable"
-    for-loop-number             "fornum mathnum"
-    for-loop-operator           "foroper reserved-word"
-    for-loop-separator          "forsep commandseparator"
-    exec-descriptor             "- reserved-word"
-    here-string-tri             "-"
-    here-string-text            "- subtle-bg"
-    here-string-var             "- back-or-dollar-double-quoted-argument"
-    secondary                   "-"
-    recursive-base              "- default"
-    case-input                  "- variable"
-    case-parentheses            "- reserved-word"
-    case-condition              "- correct-subtle"
-    correct-subtle              "-"
-    incorrect-subtle            "-"
-    subtle-separator            "- commandseparator"
-    subtle-bg                   "- correct-subtle"
-    path-to-dir                 "- path"
-    paired-bracket              "- subtle-bg correct-subtle"
-    bracket-level-1             "-"
-    bracket-level-2             "-"
-    bracket-level-3             "-"
-    global-alias                "- alias suffix-alias"
-    single-sq-bracket           "-"
-    double-sq-bracket           "-"
-    double-paren                "-"
-    optarg-string               "- double-quoted-argument"
-    optarg-number               "- mathnum"
-)
-
-# In which order to generate entries
-local -a order
-order=(
-  default unknown-token reserved-word alias suffix-alias builtin function command precommand
-  commandseparator hashed-command path path_pathseparator globbing globbing-ext history-expansion
-  single-hyphen-option double-hyphen-option back-quoted-argument single-quoted-argument
-  double-quoted-argument dollar-quoted-argument back-or-dollar-double-quoted-argument
-  back-dollar-quoted-argument assign redirection comment variable mathvar
-  mathnum matherr assign-array-bracket for-loop-variable for-loop-number for-loop-operator
-  for-loop-separator exec-descriptor here-string-tri here-string-text here-string-var secondary
-  case-input case-parentheses case-condition correct-subtle incorrect-subtle subtle-separator subtle-bg
-  path-to-dir paired-bracket bracket-level-1 bracket-level-2 bracket-level-3
-  global-alias subcommand single-sq-bracket double-sq-bracket double-paren
-  optarg-string optarg-number recursive-base
-)
+local -a order=( "${_fsh_theme_style_order[@]}" )
 
 [[ -n "$OPT_VERBOSE" ]] && print "Number of styles available for customization: ${#order}"
 
@@ -271,7 +193,7 @@ style_colors=( red green blue yellow cyan magenta black white default )
 #
 
 local -A out
-local THEME_NAME THEME_PATH="$1"
+local THEME_NAME THEME_PATH="$1" theme_source
 if [[ "$1" = */* || "$1" = (CONFIG|CACHE|LOCAL|HOME|OPT):* ]]; then
   1="${${1/(#s)CONFIG:/${${XDG_CONFIG_HOME:-$HOME/.config}%/}/f-sy-h/}%.ini}.ini"
   1="${${1/(#s)CACHE:/${${XDG_CACHE_HOME:-$HOME/.cache}%/}/f-sy-h/}%.ini}.ini"
@@ -284,16 +206,34 @@ if [[ "$1" = */* || "$1" = (CONFIG|CACHE|LOCAL|HOME|OPT):* ]]; then
   [[ ! -r "$1" ]] && { print -u2 "${fg[yellow]}Theme$reset_color \`$1' ${fg[yellow]}unreadable, aborting$reset_color"; return 1; }
 
   THEME_NAME="${1:t:r}"
-  _fsh_read_ini "$1" out ""
+  theme_source=$1
 else
   [[ ! -f "$_fsh_base_dir/themes/$1.ini" ]] && { print -u2 "${fg[yellow]}No such theme$reset_color \`$1'${fg[yellow]}, aborting$reset_color"; return 1; }
   [[ ! -r "$_fsh_base_dir/themes/$1.ini" ]] && { print -u2 "${fg[yellow]}Theme$reset_color \`$1' ${fg[yellow]}unreadable, aborting$reset_color"; return 1; }
 
   THEME_NAME="$1"
-  _fsh_read_ini "$_fsh_base_dir/themes/$1.ini" out ""
+  theme_source="$_fsh_base_dir/themes/$1.ini"
 fi
 
-local outfile output_path temp_output_path=
+_fsh_validate_theme "$theme_source" "$_fsh_base_dir/themes" || {
+  local validation_error
+  for validation_error in "${_fsh_theme_validation_errors[@]}"; do
+    builtin print -u2 -r -- \
+      "f-sy-h: ${validation_error%%|*}: ${validation_error#*|}"
+  done
+  return 1
+}
+out=( "${(@kv)_fsh_validated_theme_data}" )
+
+local secondary_key secondary_name
+if [[ -z "$OPT_SECONDARY" ]]; then
+  secondary_key=${out[(i)<*>_secondary]}
+  if [[ -n $secondary_key ]]; then
+    secondary_name=${out[$secondary_key]}
+  fi
+fi
+
+local outfile output_path
 [[ -z "$OPT_SECONDARY" ]] && { [[ "$THEME_NAME" = *"overlay"* ]] && outfile="theme_overlay.ini" || outfile="current_theme.ini"; } || outfile="secondary_theme.local.ini"
 
 # Set the runtime theme name. Persisted theme state is written as INI data.
@@ -303,6 +243,10 @@ if [[ -z "$OPT_SECONDARY" && -z "$OPT_XCHG" && -z "$OPT_OV_XCHG" ]]; then
   }
 elif [[ -z "$OPT_XCHG" && -z "$OPT_OV_XCHG" ]]; then
   local _fsh_theme_name="$THEME_NAME"
+fi
+
+if [[ -n $secondary_name ]]; then
+  fsh_theme -q --secondary "$secondary_name" || return 1
 fi
 
 # Store from which file the theme or overlay is being loaded
@@ -325,35 +269,44 @@ local inikey inival result result2 first_val isbg
 integer ov_counter=0 first
 
 for k in "${order[@]}"; do
-  first=1
-  for kk in ${(s. .)map[$k]} default; do
-    [[ "$kk" = "-" ]] && kk="$k"
-    (( first )) && first_val="$kk"
-    inikey="${out[(i)<*>_${kk}]}"
-    [[ -n "$inikey" ]] && {
-      (( !first )) && [[ -z "$OPT_QUIET" ]] && {
-        [[ $kk = default ]] && {
-          [[ "$THEME_NAME" != *"overlay"* ]] && print "Missing style: $first_val"
-        } || print "For style $first_val, went for fallback style $kk"
+  if [[ $k == secondary ]]; then
+    first_val=$k
+    inikey=${out[(i)<*>_secondary]}
+  else
+    first=1
+    for kk in ${(s. .)_fsh_theme_style_fallbacks[$k]} default; do
+      [[ "$kk" = "-" ]] && kk="$k"
+      (( first )) && first_val="$kk"
+      inikey="${out[(i)<*>_${kk}]}"
+      [[ -n "$inikey" ]] && {
+        (( !first )) && [[ -z "$OPT_QUIET" ]] && {
+          [[ $kk = default ]] && {
+            [[ "$THEME_NAME" != *"overlay"* ]] && print "Missing style: $first_val"
+          } || print "For style $first_val, went for fallback style $kk"
+        }
+        break
       }
-      break
-    }
-    first=0
-    [[ "$THEME_NAME" = *"overlay"* ]] && break
-  done
+      first=0
+      [[ "$THEME_NAME" = *"overlay"* ]] && break
+    done
+  fi
 
   # ORIG: Clear orig-style when loading a new theme, not overlay
   [[ -z "$OPT_OV_XCHG" ]] && unset "_fsh_styles[orig-style-$k]"
   # ORIG: Restore orig-style when loading a new overlay
   [[ -n "$OPT_OV_XCHG" && -n "${_fsh_styles[orig-style-$k]}" ]] && { _fsh_styles[${_fsh_theme_name}$k]="${_fsh_styles[orig-style-$k]}"; unset "_fsh_styles[orig-style-$k]"; }
   # Set only the keys provided in theme
-  [[ -z "$inikey" ]] && { [[ -z "$OPT_QUIET" && "$THEME_NAME" != *"overlay"* ]] && print "Missing style $first_val"; continue; }
-
-  inival="${out[$inikey]}"
-  if [[ "$k" = "secondary" && -z "$OPT_SECONDARY" && -n "$inival" ]]; then
-    fsh_theme -q --secondary "$inival"
+  if [[ -z $inikey ]]; then
+    if [[ $k == secondary ]]; then
+      [[ "$THEME_NAME" != *"overlay"* && -z "$OPT_OV_XCHG" ]] &&
+        unset "_fsh_styles[${_fsh_theme_name}secondary]"
+      continue
+    fi
+    [[ -z "$OPT_QUIET" && "$THEME_NAME" != *"overlay"* ]] && print "Missing style $first_val"
+    continue
   fi
 
+  inival="${out[$inikey]}"
   result=""
   if [[ $k = secondary ]]; then
     result="$inival"
@@ -368,12 +321,16 @@ for k in "${order[@]}"; do
           isbg=1
           kk=${kk#bg:}
         fi
-        if [[ $kk = (${(~j:|:)style_colors}) || $kk = [0-9]## || $kk = \#[0-9a-fA-F](#c6,6) ]]; then
+        if [[ $kk = (${(~j:|:)style_colors}) ||
+          ( $kk = (0|[1-9][0-9]#) && $kk -le 255 ) ||
+          $kk = \#[0-9a-fA-F](#c6,6) ]]; then
           result+="${result:+,}"
           (( isbg )) && result+="bg=" || result+="fg="
           result+="$kk"
         else
-          print "cannot parse style $k: unknown color or style element $kk"
+          builtin print -u2 -r -- \
+            "f-sy-h: cannot parse style $k: unknown color or style element $kk"
+          return 1
         fi
     fi
     done

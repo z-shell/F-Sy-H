@@ -61,8 +61,15 @@ jobs:
           zsh -f -i tests/integration/test-plugin-lifecycle.zsh interactive
           zsh -f tests/integration/test-function-completion.zsh
           zsh -f tests/integration/test-git-chroma-regions.zsh
+          zsh -f tests/integration/test-git-runtime-knowledge.zsh
           zsh -f tests/integration/test-passive-safety.zsh
           zsh -f tests/integration/test-hostile-autoloads.zsh
+          zsh -f tests/integration/test-highlight-budget.zsh
+          zsh -f tests/integration/test-theme-persistence.zsh
+          zsh -f tests/integration/test-chroma-registry.zsh
+          zsh -f tests/integration/test-chroma-regions.zsh
+          zsh -f tests/integration/test-async-chroma.zsh
+          zsh -f tests/integration/test-theme-validator.zsh
 
   current:
     name: Zsh 5.9.2
@@ -119,8 +126,15 @@ jobs:
           zsh -f -i tests/integration/test-plugin-lifecycle.zsh interactive
           zsh -f tests/integration/test-function-completion.zsh
           zsh -f tests/integration/test-git-chroma-regions.zsh
+          zsh -f tests/integration/test-git-runtime-knowledge.zsh
           zsh -f tests/integration/test-passive-safety.zsh
           zsh -f tests/integration/test-hostile-autoloads.zsh
+          zsh -f tests/integration/test-highlight-budget.zsh
+          zsh -f tests/integration/test-theme-persistence.zsh
+          zsh -f tests/integration/test-chroma-registry.zsh
+          zsh -f tests/integration/test-chroma-regions.zsh
+          zsh -f tests/integration/test-async-chroma.zsh
+          zsh -f tests/integration/test-theme-validator.zsh
 
   required:
     name: Zsh

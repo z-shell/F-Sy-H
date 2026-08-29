@@ -129,10 +129,13 @@ All ordinary settings use `:fsh:config`. Set them before loading the plugin:
 
 ```zsh
 zstyle ':fsh:config' work-dir "${XDG_CACHE_HOME:-$HOME/.cache}/f-sy-h"
-zstyle ':fsh:config' max-length 10000
+zstyle ':fsh:config' max-length 1000
 zstyle ':fsh:config' theme-manager enabled
 zstyle ':fsh:config' bracket-highlighting enabled
 zstyle ':fsh:config' path-blocklist '/private/*' '/mnt/slow/**'
+zstyle ':fsh:config' chroma-opt-in vim
+zstyle ':fsh:config' chroma-cache-seconds 5
+zstyle ':fsh:config' chroma-timeout-seconds 2
 zi light z-shell/F-Sy-H
 ```
 
@@ -140,11 +143,19 @@ The settings are:
 
 - `work-dir`: scalar path, default
   `${XDG_CACHE_HOME:-$HOME/.cache}/f-sy-h`.
-- `max-length`: non-negative integer, default `10000`.
+- `max-length`: non-negative integer, default `1000`.
 - `theme-manager`: boolean-like scalar, default `enabled`.
 - `bracket-highlighting`: boolean-like scalar, default `enabled`.
 - `path-blocklist`: array of Zsh patterns excluded from path probing, empty by
   default.
+- `chroma-opt-in`: array containing `vim`, `which`, or both, empty by default.
+  The `vim` chroma reads `.viminfo` and displays recent files. The `which`
+  chroma runs multiple command-discovery tools while highlighting.
+- `chroma-cache-seconds`: non-negative lifetime for asynchronous chroma lookup
+  results, default `5`.
+- `chroma-timeout-seconds`: positive time budget for an asynchronous chroma
+  worker, default `2`. A worker that exceeds it is disabled for the session
+  and reports one ZLE warning.
 
 For boolean-like settings, `disabled`, `false`, `no`, `off`, and `0` disable
 the feature; any other value enables it.
@@ -210,8 +221,24 @@ zsh -f tests/integration/test-function-completion.zsh
 zsh -f tests/integration/test-git-chroma-regions.zsh
 zsh -f tests/integration/test-passive-safety.zsh
 zsh -f tests/integration/test-hostile-autoloads.zsh
+zsh -f tests/integration/test-highlight-budget.zsh
+zsh -f tests/integration/test-theme-persistence.zsh
+zsh -f tests/integration/test-chroma-registry.zsh
+zsh -f tests/integration/test-chroma-regions.zsh
+zsh -f tests/integration/test-async-chroma.zsh
+zsh -f tests/integration/test-theme-validator.zsh
+zsh -f tools/validate-themes.zsh
 zunit
 ```
+
+The highlight-budget profile measures five parses of a fixed 1,000-character
+buffer after one warm-up run. Its median must remain at or below 250 ms, and a
+buffer above the default limit must take the skip path.
+
+`tools/validate-themes.zsh` validates all shipped themes by default and accepts
+explicit INI paths as arguments. It emits one JSON Lines record per result or
+diagnostic using schema `fsh-theme-validation/v1`, and exits non-zero if any
+record has `status` set to `error`.
 
 The ZUnit command requires the repository's pinned ZUnit toolchain.
 
