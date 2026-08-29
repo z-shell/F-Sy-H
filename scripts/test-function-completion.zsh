@@ -58,7 +58,7 @@ function _fsh_test_read_until() {
   fi
 
   if (( test_status == 0 )); then
-    zpty -w "$pty_name" "FAST_WORK_DIR=${(q)test_dir}; source ${(q)plugin_path}; autoload -Uz compinit; compinit -D; PS1='FSH_INTERRUPT_READY> '; print -r -- FSH_\${:-LOAD}_NEW:\${+functions[_fsh_highlight_process]}:OLD:\${+functions[-fast-highlight-process]}"
+    zpty -w "$pty_name" "FAST_WORK_DIR=${(q)test_dir}; source ${(q)plugin_path}; autoload -Uz compinit; compinit -D -i; PS1='FSH_INTERRUPT_READY> '; print -r -- FSH_\${:-LOAD}_NEW:\${+functions[_fsh_highlight_process]}:OLD:\${+functions[-fast-highlight-process]}"
     _fsh_test_read_until '*FSH_LOAD_NEW:[01]:OLD:[01]*FSH_INTERRUPT_READY*' || \
       _fsh_test_fail "F-Sy-H did not load in the interactive Zsh: ${(V)REPLY[1,1000]}"
     load_output=$REPLY
