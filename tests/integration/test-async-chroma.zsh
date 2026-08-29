@@ -10,7 +10,7 @@ setopt err_exit no_unset no_function_argzero posix_argzero
 # test failures and must not reach standard error.
 typeset -g _fsh_test_file=${${(%):-%N}:A}
 TRAPZERR() {
-  [[ ${funcfiletrace[1]%:*} == $_fsh_test_file ]] || return 0
+  [[ ${${funcfiletrace[1]%:*}:A} == $_fsh_test_file ]] || return 0
   builtin print -u2 -r -- \
     "f-sy-h: async chroma check failed at line ${funcfiletrace[1]##*:}"
 }
