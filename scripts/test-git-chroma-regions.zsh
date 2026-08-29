@@ -23,6 +23,9 @@ builtin cd -- "$fixture_repo"
 
 FAST_HIGHLIGHT_STYLES[correct-subtle]=fg=green
 FAST_HIGHLIGHT_STYLES[incorrect-subtle]=fg=red
+FAST_HIGHLIGHT_STYLES[global-alias]=fg=cyan
+alias -g NOOUT='>/dev/null'
+alias -g MESSAGE=subject
 
 assert_region_contract() {
   emulate -L zsh
@@ -86,24 +89,33 @@ assert_trailing_token_style() {
   local token=${expected_buffer##* }
   local entry
   local -a fields
+  integer matching_regions=0
   integer token_start=$(( ${#expected_buffer} - ${#token} ))
 
   highlight_and_assert "$expected_buffer" || return
 
   for entry in "${region_highlight[@]}"; do
     fields=( ${(z)entry} )
-    if (( fields[1] == token_start && fields[2] == ${#expected_buffer} )) &&
-      [[ ${fields[3]} == "$expected_style" ]]; then
-      return 0
-    fi
+    (( fields[1] == token_start && fields[2] == ${#expected_buffer} )) || continue
+    (( ++matching_regions ))
+    [[ ${fields[3]} == "$expected_style" ]] || {
+      builtin print -u2 -r -- \
+        "unexpected ${fields[3]} region for trailing token in: $expected_buffer"
+      return 1
+    }
   done
 
-  builtin print -u2 -r -- \
-    "missing $expected_style region for trailing token in: $expected_buffer"
-  return 1
+  (( matching_regions == 1 )) || {
+    builtin print -u2 -r -- \
+      "expected one $expected_style region for trailing token in: $expected_buffer"
+    return 1
+  }
 }
 
 highlight_and_assert "$reported_buffer" || exit $?
 assert_trailing_token_style 'git commit some/file.lua' fg=green || exit $?
 assert_trailing_token_style 'git commit some/folder/with/changes/' fg=green || exit $?
 assert_trailing_token_style 'git commit missing/path/' fg=red || exit $?
+assert_trailing_token_style 'git commit --dry-run NOOUT' fg=cyan || exit $?
+assert_trailing_token_style 'git commit --dry-run NOOUT missing/path/' fg=red || exit $?
+assert_trailing_token_style 'git commit -m MESSAGE missing/path/' fg=red || exit $?
