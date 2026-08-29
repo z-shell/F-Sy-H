@@ -148,3 +148,10 @@ reply=()
     assert "$output" is_empty
     assert "$state" same_as "0"
 }
+
+@test 'git chroma preserves region_highlight contract on first use' {
+    run zsh -f ./scripts/test-git-chroma-regions.zsh
+
+    assert "$output" is_empty
+    assert "$state" same_as "0"
+}

@@ -320,7 +320,8 @@ chroma/main-process-token.ch() {
 # fields in the fsh__${__chroma_name}__chroma__def hash
 chroma/-pre_process_chroma_def.ch() {
   local __key __value __ke _val __the_hash_name="$1" __var_name
-  local -a __split
+  # Keep callback results separate from the caller's highlight accumulator.
+  local -a __split reply
 
   chroma/main-chroma-print -rl -- "Starting PRE_PROCESS for __the_hash_name:$__the_hash_name"
 
