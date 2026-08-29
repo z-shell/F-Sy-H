@@ -1,8 +1,0 @@
-{
-  "files.associations": {
-    "*za-*": "shellscript",
-    ".ch": "shellscript",
-    "fast-*": "shellscript",
-    ".fast-*": "shellscript"
-  }
-}
