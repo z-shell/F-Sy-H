@@ -6,7 +6,7 @@
 # $1 - PREBUFFER
 # $2 - BUFFER
 #
--fast-highlight-string-process() {
+_fsh_highlight_string_process() {
   builtin emulate -L zsh ${=${options[xtrace]:#off}:+-o xtrace}
   builtin setopt extended_glob typeset_silent no_short_loops rc_quotes no_auto_pushd
 

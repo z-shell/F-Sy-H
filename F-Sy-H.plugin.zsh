@@ -92,11 +92,11 @@ _zsh_highlight() {
   # Reset region highlight to build it from scratch
   # may need to remove path_prefix highlighting when the line ends
   if [[ $WIDGET == zle-line-finish ]] || _zsh_highlight_buffer_modified; then
-    -fast-highlight-init
-    -fast-highlight-process "$PREBUFFER" "$BUFFER" 0
+    _fsh_highlight_init
+    _fsh_highlight_process "$PREBUFFER" "$BUFFER" 0
     (( FAST_HIGHLIGHT[use_brackets] )) && {
       _FAST_MAIN_CACHE=( $reply )
-      -fast-highlight-string-process "$PREBUFFER" "$BUFFER"
+      _fsh_highlight_string_process "$PREBUFFER" "$BUFFER"
     }
     region_highlight=( $reply )
   else
@@ -105,7 +105,7 @@ _zsh_highlight() {
       FAST_HIGHLIGHT[prev_char]="$char"
       (( FAST_HIGHLIGHT[use_brackets] )) && {
         reply=( $_FAST_MAIN_CACHE )
-        -fast-highlight-string-process "$PREBUFFER" "$BUFFER"
+        _fsh_highlight_string_process "$PREBUFFER" "$BUFFER"
         region_highlight=( $reply )
       }
     fi
@@ -392,7 +392,7 @@ zstyle -s :plugin:fast-syntax-highlighting theme __fsyh_theme
 
 unset __fsyh_theme
 
--fast-highlight-fill-option-variables
+_fsh_highlight_fill_option_variables
 
 if [[ ! -e $FAST_WORK_DIR/secondary_theme.zsh ]] {
   local theme_link=https://raw.githubusercontent.com/z-shell/F-Sy-H/main/share/free_theme.zsh
