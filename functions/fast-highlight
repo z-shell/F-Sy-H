@@ -1317,7 +1317,9 @@ _fsh_highlight_check_path_handler() {
   exec {PCFD}<&-
 }
 
-zle -N -- fast-highlight-check-path-handler _fsh_highlight_check_path_handler
+if [[ -o interactive ]] && (( ${+builtins[zle]} )); then
+  zle -N -- fast-highlight-check-path-handler _fsh_highlight_check_path_handler
+fi
 
 # Highlight special blocks inside double-quoted strings
 #
