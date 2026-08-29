@@ -128,7 +128,10 @@ zpty -b "$pty_name" \
   done
   [[ $output == *FSH_ASYNC_READY:1:0:deadbeef* ]]
 
-  zpty -w -n "$pty_name" 'git commit --future-mode'
+  # Parser and buffer integration have their own profile. Start the Git command
+  # provider from a serialized ZLE lifecycle hook so this test measures only
+  # the worker and callback boundary.
+  zpty -w "$pty_name" "_fsh_chroma_git; _fsh_test_prepare_git_commands() { add-zle-hook-widget -d line-init _fsh_test_prepare_git_commands; local -a reply=(); _fsh_chroma_git_get_subcommands; }; autoload -Uz add-zle-hook-widget; add-zle-hook-widget line-init _fsh_test_prepare_git_commands"
   deadline=$(( SECONDS + 10 ))
   while [[ ! -e $FSH_GIT_COMMAND_MARKER ]] && (( SECONDS < deadline )); do
     command sleep 0.02
@@ -136,11 +139,9 @@ zpty -b "$pty_name" \
   [[ -e $FSH_GIT_COMMAND_MARKER ]]
   command sleep 0.3
 
-  # Install the dependent provider only after the Docker and Git-command stages
-  # finish. The next line-init drives it while ZLE is active without overlapping
-  # workers or relying on repaint scheduling.
-  zpty -w -n "$pty_name" $'\C-U'
-  zpty -w "$pty_name" "_fsh_test_prepare_git_options() { _fsh_state[chroma-git-runtime-safe-subcommands]=commit; _fsh_chroma_git_prepare_runtime_options commit; }; autoload -Uz add-zle-hook-widget; add-zle-hook-widget line-init _fsh_test_prepare_git_options"
+  # Install the dependent provider only after command discovery finishes. The
+  # next line-init drives it while ZLE is active without overlapping workers.
+  zpty -w "$pty_name" "_fsh_test_prepare_git_options() { add-zle-hook-widget -d line-init _fsh_test_prepare_git_options; _fsh_state[chroma-git-runtime-safe-subcommands]=commit; _fsh_chroma_git_prepare_runtime_options commit; }; autoload -Uz add-zle-hook-widget; add-zle-hook-widget line-init _fsh_test_prepare_git_options"
   deadline=$(( SECONDS + 10 ))
   while [[ ! -e $FSH_GIT_OPTION_MARKER ]] && (( SECONDS < deadline )); do
     command sleep 0.02
@@ -150,19 +151,19 @@ zpty -b "$pty_name" \
 
   zpty -w -n "$pty_name" $'\C-U'
   zpty -w "$pty_name" \
-    'print -r -- "FSH_GIT_READY:${_fsh_state[chroma-git-subcommands-cache-ready]}:${_fsh_state[chroma-git-options-commit-cache-ready]}:${_fsh_chroma_main_git[subcmd:commit]}"'
+    'print -r -- "FSH_GIT_READY:${_fsh_state[chroma-git-subcommands-cache-ready]}:${_fsh_state[chroma-git-options-commit-cache-ready]}"'
 
   output=
   deadline=$(( SECONDS + 10 ))
   while (( SECONDS < deadline )); do
     if zpty -r -t "$pty_name" chunk; then
       output+=$chunk
-      [[ $output == *FSH_GIT_READY:1:1:*GIT_RUNTIME_commit_R_\#_opt* ]] && break
+      [[ $output == *FSH_GIT_READY:1:1* ]] && break
     else
       command sleep 0.02
     fi
   done
-  [[ $output == *FSH_GIT_READY:1:1:*GIT_RUNTIME_commit_R_\#_opt* ]]
+  [[ $output == *FSH_GIT_READY:1:1* ]]
 } always {
   zpty -d "$pty_name" 2>/dev/null || true
 }
