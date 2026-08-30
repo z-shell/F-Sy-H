@@ -64,7 +64,7 @@ jobs:
           zsh -f tests/integration/test-git-runtime-knowledge.zsh
           zsh -f tests/integration/test-passive-safety.zsh
           zsh -f tests/integration/test-hostile-autoloads.zsh
-          zsh -f tests/integration/test-highlight-budget.zsh
+          zsh -f tests/integration/test-highlight-performance.zsh
           zsh -f tests/integration/test-theme-persistence.zsh
           zsh -f tests/integration/test-chroma-registry.zsh
           zsh -f tests/integration/test-chroma-regions.zsh
@@ -75,6 +75,13 @@ jobs:
     name: Zsh 5.9.2
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    outputs:
+      base_173_ms: ${{ steps.performance.outputs.base_173_ms }}
+      base_1000_ms: ${{ steps.performance.outputs.base_1000_ms }}
+      pr_173_ms: ${{ steps.performance.outputs.pr_173_ms }}
+      pr_1000_ms: ${{ steps.performance.outputs.pr_1000_ms }}
+      delta_173: ${{ steps.performance.outputs.delta_173 }}
+      delta_1000: ${{ steps.performance.outputs.delta_1000 }}
     steps:
       - name: Check out code
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
@@ -129,12 +136,127 @@ jobs:
           zsh -f tests/integration/test-git-runtime-knowledge.zsh
           zsh -f tests/integration/test-passive-safety.zsh
           zsh -f tests/integration/test-hostile-autoloads.zsh
-          zsh -f tests/integration/test-highlight-budget.zsh
+          zsh -f tests/integration/test-highlight-performance.zsh
           zsh -f tests/integration/test-theme-persistence.zsh
           zsh -f tests/integration/test-chroma-registry.zsh
           zsh -f tests/integration/test-chroma-regions.zsh
           zsh -f tests/integration/test-async-chroma.zsh
           zsh -f tests/integration/test-theme-validator.zsh
+
+      - name: Compare highlighting performance
+        if: github.event_name == 'pull_request'
+        id: performance
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          base_dir="$RUNNER_TEMP/base"
+          git fetch --no-tags --depth=1 origin "$BASE_SHA"
+          git worktree add --detach "$base_dir" "$BASE_SHA"
+
+          base_output=$(FSH_BENCHMARK_REPORT=1 \
+            zsh -f "$base_dir/tests/integration/test-highlight-budget.zsh") || true
+          pr_output=$(FSH_BENCHMARK_REPORT=1 \
+            zsh -f tests/integration/test-highlight-performance.zsh)
+
+          metric() {
+            awk -v target="$1" \
+              '$1 == "f-sy-h:" && $2 == target && $3 == "chars" {
+                sub(/^median=/, "", $4)
+                sub(/s$/, "", $4)
+                printf "%.3f", $4 * 1000
+              }'
+          }
+          difference() {
+            awk -v base="$1" -v pr="$2" \
+              'BEGIN { printf "%+.1f%%", ((pr - base) / base) * 100 }'
+          }
+
+          base_173=$(metric 173 <<<"$base_output")
+          base_1000=$(metric 1000 <<<"$base_output")
+          pr_173=$(metric 173 <<<"$pr_output")
+          pr_1000=$(metric 1000 <<<"$pr_output")
+          test -n "$base_173" && test -n "$base_1000"
+          test -n "$pr_173" && test -n "$pr_1000"
+
+          delta_173=$(difference "$base_173" "$pr_173")
+          delta_1000=$(difference "$base_1000" "$pr_1000")
+          {
+            echo "base_173_ms=$base_173"
+            echo "base_1000_ms=$base_1000"
+            echo "pr_173_ms=$pr_173"
+            echo "pr_1000_ms=$pr_1000"
+            echo "delta_173=$delta_173"
+            echo "delta_1000=$delta_1000"
+          } >> "$GITHUB_OUTPUT"
+
+          {
+            echo '### PR highlighting performance'
+            echo
+            echo '| Buffer | Base | PR | Difference |'
+            echo '| ---: | ---: | ---: | ---: |'
+            echo "| 173 chars | ${base_173} ms | ${pr_173} ms | ${delta_173} |"
+            echo "| 1000 chars | ${base_1000} ms | ${pr_1000} ms | ${delta_1000} |"
+            echo
+            echo 'Negative differences are faster. Medians use nine parses after one warm-up.'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  performance-comment:
+    name: PR Performance Comment
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    needs: current
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Update PR performance comment
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          BASE_173_MS: ${{ needs.current.outputs.base_173_ms }}
+          BASE_1000_MS: ${{ needs.current.outputs.base_1000_ms }}
+          PR_173_MS: ${{ needs.current.outputs.pr_173_ms }}
+          PR_1000_MS: ${{ needs.current.outputs.pr_1000_ms }}
+          DELTA_173: ${{ needs.current.outputs.delta_173 }}
+          DELTA_1000: ${{ needs.current.outputs.delta_1000 }}
+        run: |
+          set -euo pipefail
+          comment_file="$RUNNER_TEMP/pr-performance.md"
+          {
+            echo '<!-- f-sy-h-pr-performance -->'
+            echo '## PR highlighting performance'
+            echo
+            echo '| Buffer | Base | PR | Difference |'
+            echo '| ---: | ---: | ---: | ---: |'
+            echo "| 173 chars | ${BASE_173_MS} ms | ${PR_173_MS} ms | ${DELTA_173} |"
+            echo "| 1000 chars | ${BASE_1000_MS} ms | ${PR_1000_MS} ms | ${DELTA_1000} |"
+            echo
+            echo 'Negative differences are faster. Medians use nine parses after one warm-up on the same runner.'
+            echo
+            echo '### Behavioral assertions'
+            echo
+            echo '- Pass: representative buffers produce highlighting'
+            echo '- Pass: steady-state highlighting performs no full lifecycle refresh'
+            echo '- Pass: buffers above the configured limit take the skip path'
+            echo '- Pass: lazy and steady-state plugin resources unload cleanly'
+          } > "$comment_file"
+          ! rg -n -F '\n' "$comment_file"
+
+          comment_id=$(gh api \
+            "repos/$GITHUB_REPOSITORY/issues/$PR_NUMBER/comments" \
+            --jq 'first(.[] | select(.user.login == "github-actions[bot]" and (.body | contains("<!-- f-sy-h-pr-performance -->")))) | .id // empty')
+          if [[ -n $comment_id ]]; then
+            gh api --method PATCH \
+              "repos/$GITHUB_REPOSITORY/issues/comments/$comment_id" \
+              -F "body=@$comment_file" >/dev/null
+          else
+            gh api --method POST \
+              "repos/$GITHUB_REPOSITORY/issues/$PR_NUMBER/comments" \
+              -F "body=@$comment_file" >/dev/null
+          fi
 
   required:
     name: Zsh

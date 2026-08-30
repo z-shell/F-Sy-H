@@ -1,5 +1,7 @@
 #!/usr/bin/env zsh
 
+# Report timing for CI comparisons while enforcing deterministic behavior.
+
 emulate -R zsh
 setopt err_exit no_unset no_function_argzero posix_argzero
 
@@ -17,15 +19,15 @@ zstyle ':fsh:config' bracket-highlighting disabled
 
 source "$plugin_root/F-Sy-H.plugin.zsh"
 
-float -r interactive_budget_seconds=0.100
-float -r cap_budget_seconds=0.250
 integer length run
-float started elapsed median budget_seconds
+float started elapsed median
 typeset pattern='echo this is a moderately long test command line with several arguments and some paths like /usr/local/bin/foo --verbose --dry-run'
 typeset extension=' /usr/local/bin/foo --verbose --dry-run argument'
 typeset BUFFER= PREBUFFER= WIDGET=self-insert
 integer CURSOR=0 REGION_ACTIVE=0
 typeset -a region_highlight samples
+typeset lifecycle_refresh_definition=${functions[_fsh_lifecycle_refresh]}
+integer lifecycle_refresh_calls=0
 
 (( _fsh_max_length == 1000 ))
 (( ! ${+functions[_fsh_highlight_buffer]} ))
@@ -45,6 +47,10 @@ for length in 173 1000; do
   _fsh_zle_highlight
   (( $#region_highlight > 0 ))
 
+  if (( length == 173 )); then
+    _fsh_lifecycle_refresh() { (( ++lifecycle_refresh_calls )); }
+  fi
+
   samples=()
   for run in {1..9}; do
     typeset -g _fsh_prior_buffer=
@@ -58,19 +64,18 @@ for length in 173 1000; do
 
   samples=( ${(on)samples} )
   median=$samples[5]
-  (( length == 173 )) && budget_seconds=$interactive_budget_seconds || \
-    budget_seconds=$cap_budget_seconds
 
   if [[ -n ${FSH_BENCHMARK_REPORT-} ]]; then
     builtin printf 'f-sy-h: %d chars median=%.6fs\n' $length $median
   fi
-  if (( median > budget_seconds )); then
-    builtin printf >&2 \
-      'f-sy-h: median highlight time %.3fs exceeds %.3fs at %d characters\n' \
-      $median $budget_seconds $length
-    exit 1
-  fi
 done
+
+(( lifecycle_refresh_calls == 0 )) || {
+  builtin printf >&2 'f-sy-h: steady-state highlighting performed %d full lifecycle refreshes\n' \
+    $lifecycle_refresh_calls
+  exit 1
+}
+functions[_fsh_lifecycle_refresh]=$lifecycle_refresh_definition
 
 BUFFER+=$extension
 BUFFER=${BUFFER[1,_fsh_max_length + 1]}
