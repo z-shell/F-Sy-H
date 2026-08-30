@@ -26,6 +26,7 @@ typeset -gx XDG_CACHE_HOME=$fixture_root/cache-home
 typeset -gx FSH_DOCKER_MARKER=$fixture_root/docker-ran
 typeset -gx FSH_GIT_COMMAND_MARKER=$fixture_root/git-command-ran
 typeset -gx FSH_GIT_OPTION_MARKER=$fixture_root/git-option-ran
+typeset -gx FSH_ZLE_READY_MARKER=$fixture_root/zle-ready
 typeset -gx PATH=$fixture_root/bin:$PATH
 command mkdir -p -- "$ZDOTDIR" "$fixture_root/bin"
 {
@@ -91,7 +92,7 @@ integer deadline
 zpty -b "$pty_name" \
   "ZDOTDIR=${(q)fixture_root}/interactive-zdotdir FSH_DOCKER_MARKER=${(q)FSH_DOCKER_MARKER} PATH=${(q)fixture_root}/bin:\$PATH zsh -f -i"
 {
-  zpty -w "$pty_name" "PS1='FSH_ASYNC> '; unsetopt prompt_cr prompt_sp; zstyle ':fsh:config' work-dir ${(q)fixture_root}/interactive-work; source ${(q)plugin_root}/F-Sy-H.plugin.zsh; print -r -- FSH_ASYNC_LOADED"
+  zpty -w "$pty_name" "PS1='FSH_ASYNC> '; unsetopt prompt_cr prompt_sp; zstyle ':fsh:config' work-dir ${(q)fixture_root}/interactive-work; source ${(q)plugin_root}/F-Sy-H.plugin.zsh; autoload -Uz add-zle-hook-widget; _fsh_test_signal_zle_ready() { add-zle-hook-widget -d line-init _fsh_test_signal_zle_ready; : > ${(q)FSH_ZLE_READY_MARKER}; }; print -r -- FSH_ASYNC_LOADED"
 
   deadline=$(( SECONDS + 10 ))
   while (( SECONDS < deadline )); do
@@ -131,17 +132,19 @@ zpty -b "$pty_name" \
   # Parser and buffer integration have their own profile. Bind the Git command
   # provider to a test widget so it starts inside active ZLE without depending
   # on prompt repaint timing.
-  zpty -w "$pty_name" "_fsh_chroma_git; _fsh_test_prepare_git_commands() { local -a reply=(); _fsh_chroma_git_get_subcommands; }; zle -N _fsh_test_prepare_git_commands; bindkey '^X^G' _fsh_test_prepare_git_commands; print -r -- FSH_GIT_COMMAND_WIDGET_READY"
+  command rm -f -- "$FSH_ZLE_READY_MARKER"
+  zpty -w "$pty_name" "_fsh_chroma_git; _fsh_test_prepare_git_commands() { local -a reply=(); _fsh_chroma_git_get_subcommands; }; zle -N _fsh_test_prepare_git_commands; bindkey '^X^G' _fsh_test_prepare_git_commands; add-zle-hook-widget line-init _fsh_test_signal_zle_ready; print -r -- FSH_GIT_COMMAND_WIDGET_READY"
   output=
   deadline=$(( SECONDS + 10 ))
   while (( SECONDS < deadline )); do
     if zpty -r -t "$pty_name" chunk; then
       output+=$chunk
-      [[ $output == *FSH_GIT_COMMAND_WIDGET_READY*FSH_ASYNC\>* ]] && break
+      [[ -e $FSH_ZLE_READY_MARKER && $output == *FSH_GIT_COMMAND_WIDGET_READY*FSH_ASYNC\>* ]] && break
     else
       command sleep 0.02
     fi
   done
+  [[ -e $FSH_ZLE_READY_MARKER ]]
   [[ $output == *FSH_GIT_COMMAND_WIDGET_READY*FSH_ASYNC\>* ]]
 
   zpty -w -n "$pty_name" $'\C-X\C-G'
@@ -155,17 +158,19 @@ zpty -b "$pty_name" \
   # Install the dependent provider only after command discovery finishes, then
   # drive it through the same explicit ZLE widget boundary.
   zpty -w -n "$pty_name" $'\C-U'
-  zpty -w "$pty_name" "_fsh_test_prepare_git_options() { _fsh_state[chroma-git-runtime-safe-subcommands]=commit; _fsh_chroma_git_prepare_runtime_options commit; }; zle -N _fsh_test_prepare_git_options; bindkey '^X^G' _fsh_test_prepare_git_options; print -r -- FSH_GIT_OPTION_WIDGET_READY"
+  command rm -f -- "$FSH_ZLE_READY_MARKER"
+  zpty -w "$pty_name" "_fsh_test_prepare_git_options() { _fsh_state[chroma-git-runtime-safe-subcommands]=commit; _fsh_chroma_git_prepare_runtime_options commit; }; zle -N _fsh_test_prepare_git_options; bindkey '^X^G' _fsh_test_prepare_git_options; add-zle-hook-widget line-init _fsh_test_signal_zle_ready; print -r -- FSH_GIT_OPTION_WIDGET_READY"
   output=
   deadline=$(( SECONDS + 10 ))
   while (( SECONDS < deadline )); do
     if zpty -r -t "$pty_name" chunk; then
       output+=$chunk
-      [[ $output == *FSH_GIT_OPTION_WIDGET_READY*FSH_ASYNC\>* ]] && break
+      [[ -e $FSH_ZLE_READY_MARKER && $output == *FSH_GIT_OPTION_WIDGET_READY*FSH_ASYNC\>* ]] && break
     else
       command sleep 0.02
     fi
   done
+  [[ -e $FSH_ZLE_READY_MARKER ]]
   [[ $output == *FSH_GIT_OPTION_WIDGET_READY*FSH_ASYNC\>* ]]
 
   zpty -w -n "$pty_name" $'\C-X\C-G'
