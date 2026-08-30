@@ -149,6 +149,7 @@ if (( $#metadata_seen == $#metadata_keys )); then
       $background == \#[0-9a-fA-F](#c6,6) ]]; then
       _fsh_validate_theme_contrast "$palette" "$foreground" "$background"
       _fsh_validate_theme_distinguishability "$palette" "$foreground" "$background"
+      _fsh_validate_theme_cvd_separation "$palette" "$foreground" "$background"
     fi
   elif [[ $palette == terminal-ansi16 ]]; then
     [[ $foreground == default && $background == default ]] ||

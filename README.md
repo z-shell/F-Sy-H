@@ -332,6 +332,18 @@ suffix-alias styles may intentionally share a rendering. Overlays are checked
 as partial customizations, so standalone overlay validation does not enforce
 these pair relationships against an unknown base theme.
 
+Fixed-palette themes also keep `correct-subtle` and `incorrect-subtle`
+separated under the published
+[Machado, Oliveira, and Fernandes](https://doi.org/10.1109/TVCG.2009.113)
+severity-1.0 protanopia, deuteranopia, and tritanopia simulation matrices. The
+validator converts each simulated foreground and background pair to
+[CIE 1976 L*a*b*](https://www.cie.co.at/publications/colorimetry-part-4-cie-1976-lab-colour-space-1)
+and requires at least one channel to retain a project-defined distance of
+20.0. Terminal-owned ANSI palettes and standalone overlays cannot make a fixed
+color claim, so this check does not apply to them. This regression guard is
+not a WCAG conformance claim or a substitute for a
+[non-color correctness cue](https://www.w3.org/TR/WCAG22/#use-of-color).
+
 The ZUnit command requires the repository's pinned ZUnit toolchain.
 
 ## Documentation and support

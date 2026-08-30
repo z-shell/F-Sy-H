@@ -24,6 +24,16 @@ fi
 [[ $output == *'"code":"indistinguishable-styles"'* ]]
 [[ $output == *'single-hyphen-option and double-hyphen-option resolve to the same rendering'* ]]
 
+command sed 's/^correct-subtle   = bg:55$/correct-subtle   = bg:0/' \
+  "$plugin_root/themes/clean.ini" >| "$fixture_root/cvd-separation-failure.ini"
+if output=$(zsh -f "$plugin_root/tools/validate-themes.zsh" \
+  "$fixture_root/cvd-separation-failure.ini" 2>&1); then
+  builtin print -u2 -r -- 'f-sy-h: CVD-confusable correctness styles unexpectedly passed validation'
+  exit 1
+fi
+[[ $output == *'"code":"cvd-separation-too-low"'* ]]
+[[ $output == *'protanopia separation '*' is below 20.0'* ]]
+
 command sed 's/^double-hyphen-option   = cyan,bold$/double-hyphen-option   = 6/' \
   "$plugin_root/themes/default.ini" >| "$fixture_root/canonical-color-collision.ini"
 if output=$(zsh -f "$plugin_root/tools/validate-themes.zsh" \
@@ -203,6 +213,10 @@ _fsh_theme_color_rgb 196 xterm-256
 [[ ${reply[*]} == '255 0 0' ]]
 _fsh_theme_color_rgb '#123456' xterm-256
 [[ ${reply[*]} == '18 52 86' ]]
+_fsh_theme_color_cvd_lab '#5f0000' protanopia
+typeset cvd_lab_text
+builtin printf -v cvd_lab_text '%.2f %.2f %.2f' "${reply[1]}" "${reply[2]}" "${reply[3]}"
+[[ $cvd_lab_text == '3.01 -0.43 4.51' ]]
 
 normalize_theme_value() {
   emulate -L zsh

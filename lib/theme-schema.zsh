@@ -92,6 +92,18 @@ typeset -gA _fsh_theme_critical_styles=(
   matherr           1
 )
 
+# Fixed-palette correctness signals retain a project-defined CIELAB distance
+# under the published Machado, Oliveira, and Fernandes severity-1.0 models.
+# https://doi.org/10.1109/TVCG.2009.113
+# Matrix rows are kept as ordered strings because Zsh arrays cannot nest.
+typeset -g _fsh_theme_cvd_separation_floor=20.0
+typeset -ga _fsh_theme_cvd_models=( protanopia deuteranopia tritanopia )
+typeset -gA _fsh_theme_cvd_matrices=(
+  protanopia   '0.152286 1.052583 -0.204868 0.114503 0.786281 0.099216 -0.003882 -0.048116 1.051998'
+  deuteranopia '0.367322 0.860646 -0.227968 0.280085 0.672501 0.047413 -0.011820 0.042940 0.968881'
+  tritanopia   '1.255528 -0.076749 -0.178779 -0.078411 0.930809 0.147602 0.004733 0.691367 0.303900'
+)
+
 # Semantic pairs are ordered for deterministic validator diagnostics. Distinct
 # pairs must not resolve to the same effective rendering. Shared pairs document
 # intentional command-family and alias-family grouping.
