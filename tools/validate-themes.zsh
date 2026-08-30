@@ -21,20 +21,74 @@ json_escape() {
   REPLY=${REPLY//$'\t'/\\t}
 }
 
+nearcolor_256_json() {
+  emulate -L zsh
+  setopt extended_glob
+
+  local full_key declared_key value token color mapping
+  local -A colors
+  local -a sorted_colors
+
+  for full_key in ${(k)_fsh_validated_theme_data}; do
+    [[ $full_key == '<theme>_'* ]] && continue
+    declared_key=${full_key#*>_}
+    [[ $declared_key == secondary ]] && continue
+    value=${_fsh_validated_theme_data[$full_key]}
+    for token in ${(s:,:)value}; do
+      [[ $token == bg:* ]] && token=${token#bg:}
+      [[ $token == \#[0-9a-fA-F](#c6,6) ]] || continue
+      color=${(L)token}
+      colors[$color]=1
+    done
+  done
+
+  sorted_colors=( ${(ok)colors} )
+  if (( ! $#sorted_colors )); then
+    REPLY='{}'
+    return 0
+  fi
+
+  mapping=$(TERM=xterm-256color COLORTERM= command zsh -f -c '
+    emulate -R zsh
+    zmodload zsh/nearcolor || exit 2
+
+    local color rendered index
+    local -a pairs
+    for color in "$@"; do
+      rendered=${(%)${:-"%F{$color}"}}
+      [[ $rendered == $'\''\e[38;5;'\''<->m ]] || exit 3
+      index=${rendered#$'\''\e[38;5;'\''}
+      index=${index%m}
+      pairs+=( "\"$color\":$index" )
+    done
+    print -rn -- "{${(j:,:)pairs}}"
+  ' zsh "${sorted_colors[@]}" 2>/dev/null) || return 1
+
+  REPLY=$mapping
+}
+
 typeset -a theme_paths=( "$@" )
 (( $#theme_paths )) || theme_paths=( "$plugin_root"/themes/*.ini(N) )
 
-typeset theme_path path_json diagnostic code message code_json message_json validation_mode
+typeset theme_path path_json diagnostic code message code_json message_json validation_mode nearcolor_json
 integer exit_status=0
 for theme_path in "${theme_paths[@]}"; do
   json_escape "${theme_path:A}"
   path_json=$REPLY
   validation_mode=
   [[ ${theme_path:A:h} == ${plugin_root:A}/themes ]] && validation_mode=shipped
-  if _fsh_validate_theme "$theme_path" "$plugin_root/themes" "$validation_mode"; then
+  _fsh_validate_theme "$theme_path" "$plugin_root/themes" "$validation_mode"
+  if nearcolor_256_json; then
+    nearcolor_json=$REPLY
+  else
+    nearcolor_json='{}'
+    _fsh_theme_validation_errors+=(
+      'nearcolor-unavailable|zsh/nearcolor could not calculate 256-color mappings' )
+  fi
+  if (( ! $#_fsh_theme_validation_errors )); then
     builtin printf \
-      '{"schema":"fsh-theme-validation/v1","path":"%s","status":"ok","code":"ok","message":"","declaredStyles":%d,"resolvedStyles":%d}\n' \
-      "$path_json" $_fsh_theme_declared_count $_fsh_theme_resolved_count
+      '{"schema":"fsh-theme-validation/v1","path":"%s","status":"ok","code":"ok","message":"","declaredStyles":%d,"resolvedStyles":%d,"nearcolor256":%s}\n' \
+      "$path_json" $_fsh_theme_declared_count $_fsh_theme_resolved_count "$nearcolor_json"
     continue
   fi
 
@@ -47,9 +101,9 @@ for theme_path in "${theme_paths[@]}"; do
     json_escape "$message"
     message_json=$REPLY
     builtin printf \
-      '{"schema":"fsh-theme-validation/v1","path":"%s","status":"error","code":"%s","message":"%s","declaredStyles":%d,"resolvedStyles":%d}\n' \
+      '{"schema":"fsh-theme-validation/v1","path":"%s","status":"error","code":"%s","message":"%s","declaredStyles":%d,"resolvedStyles":%d,"nearcolor256":%s}\n' \
       "$path_json" "$code_json" "$message_json" \
-      $_fsh_theme_declared_count $_fsh_theme_resolved_count
+      $_fsh_theme_declared_count $_fsh_theme_resolved_count "$nearcolor_json"
   done
 done
 

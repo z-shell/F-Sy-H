@@ -311,7 +311,11 @@ full parses for targeted invalidation cases and 100 seeded edits.
 `tools/validate-themes.zsh` validates all shipped themes by default and accepts
 explicit INI paths as arguments. It emits one JSON Lines record per result or
 diagnostic using schema `fsh-theme-validation/v1`, and exits non-zero if any
-record has `status` set to `error`.
+record has `status` set to `error`. Each record's `nearcolor256` object maps
+the theme's distinct truecolor style literals to the xterm-256 indices selected
+by the installed Zsh `zsh/nearcolor` module. It is empty when the theme has no
+truecolor styles; an unavailable module produces a structured
+`nearcolor-unavailable` error.
 
 Every shipped theme declares a `[theme]` rendering contract. Fixed-palette
 themes use `palette = xterm-256` with exact `foreground` and `background`
