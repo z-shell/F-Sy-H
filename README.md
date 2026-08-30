@@ -123,6 +123,68 @@ clean interface. Existing configurations need these changes:
 Legacy functions, aliases, parameters, and executable cache formats are not
 retained as a second compatibility interface.
 
+### Migrating from zsh-syntax-highlighting
+
+F-Sy-H is not configuration-compatible with zsh-syntax-highlighting. Remove
+`ZSH_HIGHLIGHT_STYLES` and `ZSH_HIGHLIGHT_HIGHLIGHTERS` configuration when
+switching plugins. F-Sy-H does not read or translate either parameter. If one
+is already declared when F-Sy-H loads, the plugin prints one migration
+diagnostic without reading or changing its values.
+
+[Zsh requires associative arrays to be declared before assigning an
+element](https://zsh.sourceforge.io/Doc/Release/Parameters.html#Array-Parameters).
+For example, [zsh-syntax-highlighting documents this
+sequence](https://github.com/zsh-users/zsh-syntax-highlighting/blob/master/docs/highlighters/main.md#how-to-tweak-it):
+
+```zsh
+typeset -A ZSH_HIGHLIGHT_STYLES
+ZSH_HIGHLIGHT_STYLES[comment]='fg=201'
+```
+
+Without the `typeset -A` line, Zsh reports `assignment to invalid subscript
+range` at the assignment itself. If that assignment appears before the F-Sy-H
+source or manager command, F-Sy-H has not run yet and cannot intercept the
+error. Remove the legacy block instead of moving it after the F-Sy-H load.
+
+Replace the legacy controls as follows:
+
+| zsh-syntax-highlighting                              | F-Sy-H replacement                                                               |
+| ---------------------------------------------------- | -------------------------------------------------------------------------------- |
+| `ZSH_HIGHLIGHT_MAXLENGTH=1000`                       | `zstyle ':fsh:config' max-length 1000`                                           |
+| `ZSH_HIGHLIGHT_HIGHLIGHTERS=(main)`                  | Main syntax highlighting is integrated and always active.                        |
+| Add `brackets` to `ZSH_HIGHLIGHT_HIGHLIGHTERS`       | `zstyle ':fsh:config' bracket-highlighting enabled`                              |
+| Add `pattern`, `regexp`, `cursor`, `root`, or `line` | No direct equivalent. Remove the entry or implement the behavior outside F-Sy-H. |
+| `ZSH_HIGHLIGHT_STYLES[...]`                          | Copy and edit an F-Sy-H INI theme, then apply it with `fsh_theme`.               |
+
+Many common `main` highlighter style names map directly to F-Sy-H theme keys:
+
+| zsh-syntax-highlighting style                                              | F-Sy-H theme key |
+| -------------------------------------------------------------------------- | ---------------- |
+| `unknown-token`, `reserved-word`, `alias`, `suffix-alias`, `global-alias`  | Same name        |
+| `builtin`, `function`, `command`, `precommand`, `hashed-command`           | Same name        |
+| `commandseparator`, `path`, `path_pathseparator`, `globbing`               | Same name        |
+| `history-expansion`, `single-hyphen-option`, `double-hyphen-option`        | Same name        |
+| `back-quoted-argument`, `single-quoted-argument`, `double-quoted-argument` | Same name        |
+| `dollar-quoted-argument`, `assign`, `redirection`, `comment`, `default`    | Same name        |
+
+Other zsh-syntax-highlighting keys do not have a one-to-one mapping. F-Sy-H
+uses more specific keys for arithmetic, loops, case blocks, here strings,
+bracket levels, directories, subcommands, and command option arguments. Start
+from a shipped theme so those F-Sy-H-specific styles retain valid fallbacks:
+
+```zsh
+theme_dir=${XDG_CONFIG_HOME:-$HOME/.config}/f-sy-h
+mkdir -p -- "$theme_dir"
+fsh_theme --copy-shipped-theme default "$theme_dir/migrated"
+# Edit "$theme_dir/migrated.ini", then apply it:
+fsh_theme "$theme_dir/migrated.ini"
+```
+
+Theme INI values use `red,bold` for a foreground and `bg:blue` for a
+background. The corresponding zsh-syntax-highlighting forms are `fg=red,bold`
+and `bg=blue`. Run `fsh_theme --help` for theme commands and see the
+configuration section below for the full `:fsh:config` interface.
+
 ## Configuration
 
 All ordinary settings use `:fsh:config`. Set them before loading the plugin:
