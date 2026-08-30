@@ -50,11 +50,6 @@ map=( "CONFIG:" "${XDG_CONFIG_HOME:-$HOME/.config}/f-sy-h/"
 
 _fsh_work_dir=${${_fsh_work_dir/(#m)(#s)(CONFIG|CACHE|LOCAL|HOME|OPT):(#c0,1)/${map[${MATCH%:}:]}}%/}
 
-[[ -d $_fsh_work_dir ]] || command mkdir -p -- "$_fsh_work_dir" || {
-  print -u2 "f-sy-h: cannot create working directory $_fsh_work_dir"
-  return 1
-}
-
 local OPT_HELP OPT_INFO OPT_VERBOSE OPT_QUIET OPT_RESET OPT_LIST OPT_TEST OPT_SECONDARY OPT_SHOW OPT_COPY OPT_OV_RESET
 local OPT_PALETTE OPT_CDWD OPT_XCHG OPT_OV_XCHG
 local -A opthash
@@ -77,11 +72,25 @@ zparseopts -E -D -A opthash h -help v -verbose q -quiet i -info r -reset l -list
 (( ${+opthash[-x]} + ${+opthash[--xchg]} ))    && OPT_XCHG="-x"
 (( ${+opthash[-y]} + ${+opthash[--ov-xchg]} )) && OPT_OV_XCHG="-y"
 
+local preview_root=
+if [[ -n $OPT_TEST && -z ${_fsh_theme_preview_active-} ]]; then
+  local preview_theme_name=${_fsh_theme_name-}
+  local -A preview_styles=( "${(@kv)_fsh_styles}" )
+  local _fsh_theme_preview_active=1
+  local _fsh_theme_name=$preview_theme_name
+  local -A _fsh_styles=( "${(@kv)preview_styles}" )
+  preview_root=1
+fi
+
 local -a match mbegin mend
 local MATCH; integer MBEGIN MEND
 
 if [[ -n "$OPT_CDWD" ]]; then
-  builtin cd $_fsh_work_dir
+  [[ -d $_fsh_work_dir ]] || command mkdir -p -- "$_fsh_work_dir" || {
+    print -u2 "f-sy-h: cannot create working directory $_fsh_work_dir"
+    return 1
+  }
+  builtin cd -- "$_fsh_work_dir"
   return 0
 fi
 
@@ -123,10 +132,17 @@ fi
 
 if [[ -n "$OPT_SHOW" ]]; then
   local -A saved_theme
-  print -r -- "Currently active theme: ${fg_bold[green]}$_fsh_theme_name$reset_color"
+  local active_source=${_fsh_styles[${_fsh_theme_name}-path]-}
   if [[ -r "$_fsh_work_dir/current_theme.ini" ]] &&
     _fsh_read_ini "$_fsh_work_dir/current_theme.ini" saved_theme ''; then
+    [[ -z $active_source && $_fsh_theme_name == ${saved_theme[<theme>_name]-} ]] &&
+      active_source=${saved_theme[<theme>_path]-}
+  fi
+  print -r -- "Currently active theme: ${fg_bold[green]}${_fsh_theme_name:-default}$reset_color"
+  print -r -- "Active theme source: ${active_source:-built-in defaults}"
+  if (( $#saved_theme )); then
     print -r -- "Main theme (session startup): ${fg_bold[green]}${saved_theme[<theme>_name]}$reset_color"
+    print -r -- "Startup theme source: ${saved_theme[<theme>_path]:-unknown}"
   else
     print -r -- 'No main theme is set'
   fi
@@ -174,8 +190,8 @@ if [[ -n "$OPT_HELP" ]]; then
   print -r -- "   ${fg[cyan]}-R, --ov-reset$reset_color  - unset overlay, use styles only from main-theme (requires restart)"
   print -r -- "   ${fg[cyan]}-p, --palette$reset_color   - just print all 256 colors and exit (useful when creating a theme)"
   print -r -- "   ${fg[cyan]}-r, --reset$reset_color     - unset any theme, use default highlighting (requires restart)"
-  print -r -- "   ${fg[cyan]}-t, --test$reset_color      - show test block of code after switching theme"
-  print -r -- "   ${fg[cyan]}-s, --show$reset_color      - get and display the theme currently being set"
+  print -r -- "   ${fg[cyan]}-t, --test$reset_color      - preview a theme without changing saved or active state"
+  print -r -- "   ${fg[cyan]}-s, --show$reset_color      - display active and startup theme names and sources"
   print -r -- "   ${fg[cyan]}-w, --workdir$reset_color   - cd into the configured theme work directory"
   print -r -- "   ${fg[cyan]}-l, --list$reset_color      - list names of available themes"
   print -r -- "   ${fg[cyan]}-v, --verbose$reset_color   - more messages during operation"
@@ -244,8 +260,15 @@ fi
 local outfile output_path
 [[ -z "$OPT_SECONDARY" ]] && { [[ "$THEME_NAME" = *"overlay"* ]] && outfile="theme_overlay.ini" || outfile="current_theme.ini"; } || outfile="secondary_theme.local.ini"
 
-# Set the runtime theme name. Persisted theme state is written as INI data.
-if [[ -z "$OPT_SECONDARY" && -z "$OPT_XCHG" && -z "$OPT_OV_XCHG" ]]; then
+# Set the runtime theme name. Preview state is dynamically scoped so recursive
+# secondary-theme loading cannot change the active theme.
+if [[ -n ${_fsh_theme_preview_active-} ]]; then
+  if [[ -n $OPT_SECONDARY ]]; then
+    local _fsh_theme_name="$THEME_NAME"
+  elif [[ "$THEME_NAME" != *"overlay"* ]]; then
+    _fsh_theme_name="$THEME_NAME"
+  fi
+elif [[ -z "$OPT_SECONDARY" && -z "$OPT_XCHG" && -z "$OPT_OV_XCHG" ]]; then
   [[ "$THEME_NAME" != *"overlay"* ]] && {
     typeset -g _fsh_theme_name="$THEME_NAME"
   }
@@ -258,15 +281,19 @@ if [[ -n $secondary_name ]]; then
 fi
 
 # Store from which file the theme or overlay is being loaded
-[[ "$THEME_NAME" != *"overlay" && -z "$OPT_OV_XCHG" ]] && _fsh_styles[${_fsh_theme_name}-path]="$THEME_PATH" || _fsh_styles[${_fsh_theme_name}-ov-path]="$THEME_PATH"
+[[ "$THEME_NAME" != *"overlay" && -z "$OPT_OV_XCHG" ]] && _fsh_styles[${_fsh_theme_name}-path]="$theme_source" || _fsh_styles[${_fsh_theme_name}-ov-path]="$theme_source"
 
-if [[ -z "$OPT_XCHG$OPT_OV_XCHG" ]]; then
+if [[ -z "$OPT_XCHG$OPT_OV_XCHG" && -z ${_fsh_theme_preview_active-} ]]; then
+  [[ -d $_fsh_work_dir ]] || command mkdir -p -- "$_fsh_work_dir" || {
+    print -u2 "f-sy-h: cannot create working directory $_fsh_work_dir"
+    return 1
+  }
   output_path="$_fsh_work_dir/$outfile"
   temp_output_path=$(command mktemp "$_fsh_work_dir/.${outfile}.XXXXXXXX") || return 1
   {
     print -r -- '[theme]'
     print -r -- "name=$THEME_NAME"
-    print -r -- "path=$THEME_PATH"
+    print -r -- "path=$theme_source"
     print -r -- '[styles]'
   } >| "$temp_output_path" || return 1
 fi
@@ -346,7 +373,7 @@ for k in "${order[@]}"; do
 
   if [[ "$THEME_NAME" = *"overlay"* || -n "$OPT_OV_XCHG" ]]; then
     (( ++ ov_counter ))
-    if [[ -z "$OPT_XCHG$OPT_OV_XCHG" ]]; then
+    if [[ -z "$OPT_XCHG$OPT_OV_XCHG" && -z ${_fsh_theme_preview_active-} ]]; then
       print -r -- "${_fsh_theme_name}${k}=$result" >>! "$temp_output_path" || return 1
     fi
     # ORIG: Save original value of the overwritten style
@@ -354,7 +381,7 @@ for k in "${order[@]}"; do
     # Overwrite theme's style
     _fsh_styles[${_fsh_theme_name}$k]="$result"
   else
-    if [[ -z "$OPT_XCHG$OPT_OV_XCHG" ]]; then
+    if [[ -z "$OPT_XCHG$OPT_OV_XCHG" && -z ${_fsh_theme_preview_active-} ]]; then
       print -r -- "${_fsh_theme_name}${k}=$result" >>! "$temp_output_path" || return 1
     fi
     _fsh_styles[${_fsh_theme_name}$k]="$result"
@@ -371,8 +398,15 @@ fi
 [[ "$THEME_NAME" != *"overlay"* ]] && [[ -r "$_fsh_work_dir/theme_overlay.ini" ]] &&
   _fsh_theme_load_data "$_fsh_work_dir/theme_overlay.ini" 0
 
+if [[ -n $preview_root ]]; then
+  typeset -g _fsh_preview_theme_name=$_fsh_theme_name
+  typeset -gA _fsh_preview_styles=( "${(@kv)_fsh_styles}" )
+fi
+
 if [[ -z "$OPT_QUIET" ]]; then
-  if [[ "$THEME_NAME" != *"overlay"* ]]; then
+  if [[ -n $preview_root ]]; then
+    print "Previewing theme \`$THEME_NAME' for the next command line"
+  elif [[ "$THEME_NAME" != *"overlay"* ]]; then
     print "Switched to theme \`$THEME_NAME' (current session, and future sessions)" || \
   else
     print "Processed the overlay ($ov_counter keys found), it is now active (for current session, and future sessions)"

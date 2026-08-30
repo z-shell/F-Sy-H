@@ -125,6 +125,13 @@ _fsh_zle_highlight() {
   builtin emulate -L zsh ${=${options[xtrace]:#off}:+-o xtrace}
   builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc_quotes no_auto_pushd localtraps
 
+  if (( ${+_fsh_preview_theme_name} && ${+_fsh_preview_styles} )); then
+    local _fsh_theme_name=$_fsh_preview_theme_name
+    local -A _fsh_styles=( "${(@kv)_fsh_preview_styles}" )
+  fi
+
+  {
+
   # Remove all highlighting in isearch, so that only the underlining done by zsh itself remains.
   # For details see FAQ entry 'Why does syntax highlighting not work while searching history?'.
   if [[ $WIDGET == zle-isearch-update ]] && ! (( $+ISEARCHMATCH_ACTIVE )); then
@@ -206,6 +213,11 @@ _fsh_zle_highlight() {
     typeset -g _fsh_prior_buffer="$BUFFER"
     typeset -g _fsh_prior_region_active="$REGION_ACTIVE"
     typeset -gi _fsh_prior_cursor=$CURSOR
+  }
+  } always {
+    if [[ $WIDGET == zle-line-finish ]]; then
+      builtin unset _fsh_preview_theme_name _fsh_preview_styles 2>/dev/null || true
+    fi
   }
 }
 
