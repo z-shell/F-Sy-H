@@ -14,6 +14,59 @@ output=$(zsh -f "$plugin_root/tools/validate-themes.zsh")
 [[ $output == *'"schema":"fsh-theme-validation/v1"'* ]]
 [[ $output == *'"declaredStyles":61,"resolvedStyles":60'* ]]
 
+command sed '1,5d' "$plugin_root/themes/clean.ini" >| "$fixture_root/custom-no-metadata.ini"
+output=$(zsh -f "$plugin_root/tools/validate-themes.zsh" \
+  "$fixture_root/custom-no-metadata.ini")
+[[ $output == *'"status":"ok"'* ]]
+
+command sed '/^background = #000000$/d' "$plugin_root/themes/clean.ini" >| \
+  "$fixture_root/incomplete-metadata.ini"
+if output=$(zsh -f "$plugin_root/tools/validate-themes.zsh" \
+  "$fixture_root/incomplete-metadata.ini" 2>&1); then
+  builtin print -u2 -r -- 'f-sy-h: incomplete theme metadata unexpectedly passed validation'
+  exit 1
+fi
+[[ $output == *'"code":"incomplete-theme-metadata"'* ]]
+
+command sed 's/^comment          = 243$/comment          = #000000/' \
+  "$plugin_root/themes/clean.ini" >| "$fixture_root/metadata-contrast-failure.ini"
+if output=$(zsh -f "$plugin_root/tools/validate-themes.zsh" \
+  "$fixture_root/metadata-contrast-failure.ini" 2>&1); then
+  builtin print -u2 -r -- 'f-sy-h: metadata contrast failure unexpectedly passed validation'
+  exit 1
+fi
+[[ $output == *'"code":"contrast-too-low"'*'comment contrast 1.00:1'* ]]
+
+command sed 's/^comment          = 243$/comment          = #747474/' \
+  "$plugin_root/themes/clean.ini" >| "$fixture_root/unrounded-boundary.ini"
+if output=$(zsh -f "$plugin_root/tools/validate-themes.zsh" \
+  "$fixture_root/unrounded-boundary.ini" 2>&1); then
+  builtin print -u2 -r -- 'f-sy-h: sub-4.5 contrast unexpectedly passed validation'
+  exit 1
+fi
+[[ $output == *'comment contrast 4.49:1 is below 4.5:1'* ]]
+
+command sed 's/^comment          = 243$/comment          = #757575/' \
+  "$plugin_root/themes/clean.ini" >| "$fixture_root/ordinary-boundary-pass.ini"
+output=$(zsh -f "$plugin_root/tools/validate-themes.zsh" \
+  "$fixture_root/ordinary-boundary-pass.ini")
+[[ $output == *'"status":"ok"'* ]]
+
+command sed 's/^unknown-token    = 210,bold$/unknown-token    = #949494,bold/' \
+  "$plugin_root/themes/clean.ini" >| "$fixture_root/critical-boundary-fail.ini"
+if output=$(zsh -f "$plugin_root/tools/validate-themes.zsh" \
+  "$fixture_root/critical-boundary-fail.ini" 2>&1); then
+  builtin print -u2 -r -- 'f-sy-h: sub-7.0 critical contrast unexpectedly passed validation'
+  exit 1
+fi
+[[ $output == *'unknown-token contrast 6.92:1 is below 7.0:1'* ]]
+
+command sed 's/^unknown-token    = 210,bold$/unknown-token    = #959595,bold/' \
+  "$plugin_root/themes/clean.ini" >| "$fixture_root/critical-boundary-pass.ini"
+output=$(zsh -f "$plugin_root/tools/validate-themes.zsh" \
+  "$fixture_root/critical-boundary-pass.ini")
+[[ $output == *'"status":"ok"'* ]]
+
 command sed \
   -e 's/^command        = 4$/command        = 999/' \
   -e 's/^builtin        = 4$/builtin        = 0300/' \
@@ -27,6 +80,15 @@ fi
 [[ $output == *'"status":"error","code":"invalid-style-value"'* ]]
 [[ $output == *'command has invalid color or style element: 999'* ]]
 [[ $output == *'builtin has invalid color or style element: 0300'* ]]
+
+command sed 's/^command        = 4$/command        = 16/' \
+  "$plugin_root/themes/base16.ini" >| "$fixture_root/adaptive-out-of-range.ini"
+if output=$(zsh -f "$plugin_root/tools/validate-themes.zsh" \
+  "$fixture_root/adaptive-out-of-range.ini" 2>&1); then
+  builtin print -u2 -r -- 'f-sy-h: adaptive palette accepted xterm cube color'
+  exit 1
+fi
+[[ $output == *'"code":"adaptive-palette-out-of-range"'* ]]
 
 {
   builtin print -r -- '[base]'
@@ -48,11 +110,111 @@ output=$(zsh -f "$plugin_root/tools/validate-themes.zsh" \
   "$fixture_root/sample-overlay.ini")
 [[ $output == *'"status":"ok"'*'"declaredStyles":1,"resolvedStyles":0'* ]]
 
+{
+  builtin print -r -- '[theme]'
+  builtin print -r -- 'palette=xterm-256'
+  builtin print -r -- 'foreground=#ffffff'
+  builtin print -r -- 'background=#000000'
+  builtin print -r -- '[base]'
+  builtin print -r -- 'comment=#000000'
+} >| "$fixture_root/metadata-overlay.ini"
+output=$(zsh -f "$plugin_root/tools/validate-themes.zsh" \
+  "$fixture_root/metadata-overlay.ini")
+[[ $output == *'"status":"ok"'*'"declaredStyles":1,"resolvedStyles":0'* ]]
+
 typeset -gx ZDOTDIR=$fixture_root/zdotdir
 typeset -gx XDG_CACHE_HOME=$fixture_root/cache-home
+typeset -gx TERM=xterm-256color
 command mkdir -p -- "$ZDOTDIR"
 zstyle ':fsh:config' work-dir "$fixture_root/work"
+zmodload zsh/termcap
+[[ ${termcap[Co]} == <-> ]] && (( termcap[Co] >= 256 ))
 source "$plugin_root/F-Sy-H.plugin.zsh"
+
+if _fsh_validate_theme "$fixture_root/custom-no-metadata.ini" \
+  "$plugin_root/themes" shipped; then
+  builtin print -u2 -r -- 'f-sy-h: shipped validation accepted missing metadata'
+  exit 1
+fi
+[[ ${_fsh_theme_validation_errors[*]} == *'missing-theme-metadata'* ]]
+
+typeset -a reply
+_fsh_theme_color_rgb 196 xterm-256
+[[ ${reply[*]} == '255 0 0' ]]
+_fsh_theme_color_rgb '#123456' xterm-256
+[[ ${reply[*]} == '18 52 86' ]]
+
+normalize_theme_value() {
+  emulate -L zsh
+  local value=$1 token result= is_background
+
+  for token in ${(s:,:)value}; do
+    if [[ $token == (none|(no-|)(bold|blink|conceal|reverse|standout|underline)) ]]; then
+      result+="${result:+,}$token"
+      continue
+    fi
+    is_background=0
+    if [[ $token == bg:* ]]; then
+      is_background=1
+      token=${token#bg:}
+    fi
+    result+=${result:+,}
+    (( is_background )) && result+='bg=' || result+='fg='
+    result+=$token
+  done
+  REPLY=$result
+}
+
+typeset style candidate inikey expected
+typeset -a candidates
+_fsh_validate_theme "$plugin_root/themes/default.ini" "$plugin_root/themes" shipped
+for style in "${_fsh_theme_style_order[@]}"; do
+  if [[ $style == secondary ]]; then
+    inikey=${_fsh_validated_theme_data[(i)<*>_secondary]}
+    expected=${_fsh_validated_theme_data[$inikey]}
+  else
+    candidates=( ${(s. .)_fsh_theme_style_fallbacks[$style]} default )
+    inikey=
+    for candidate in "${candidates[@]}"; do
+      [[ $candidate == - ]] && candidate=$style
+      inikey=${_fsh_validated_theme_data[(i)<*>_${candidate}]}
+      [[ -n $inikey ]] && break
+    done
+    normalize_theme_value "${_fsh_validated_theme_data[$inikey]}"
+    expected=$REPLY
+  fi
+  [[ ${_fsh_styles[$style]-} == "$expected" ]] || {
+    builtin print -u2 -r -- \
+      "f-sy-h: built-in default style drifted: $style (${_fsh_styles[$style]-} != $expected)"
+    exit 1
+  }
+done
+
+typeset -A persisted_free
+_fsh_read_ini "$plugin_root/share/free_theme.ini" persisted_free ''
+_fsh_validate_theme "$plugin_root/themes/free.ini" "$plugin_root/themes" shipped
+for style in "${_fsh_theme_style_order[@]}"; do
+  if [[ $style == secondary ]]; then
+    inikey=${_fsh_validated_theme_data[(i)<*>_secondary]}
+    expected=${_fsh_validated_theme_data[$inikey]}
+  else
+    candidates=( ${(s. .)_fsh_theme_style_fallbacks[$style]} default )
+    inikey=
+    for candidate in "${candidates[@]}"; do
+      [[ $candidate == - ]] && candidate=$style
+      inikey=${_fsh_validated_theme_data[(i)<*>_${candidate}]}
+      [[ -n $inikey ]] && break
+    done
+    normalize_theme_value "${_fsh_validated_theme_data[$inikey]}"
+    expected=$REPLY
+  fi
+  [[ ${persisted_free[<styles>_free${style}]-} == "$expected" ]] || {
+    builtin print -u2 -r -- \
+      "f-sy-h: packaged free style drifted: $style (${persisted_free[<styles>_free${style}]-} != $expected)"
+    exit 1
+  }
+done
+
 fsh_theme --quiet "$fixture_root/sample-overlay.ini"
 [[ -s $fixture_root/work/theme_overlay.ini ]]
 if fsh_theme --quiet "$fixture_root/invalid-values.ini" 2>"$fixture_root/theme-error"; then

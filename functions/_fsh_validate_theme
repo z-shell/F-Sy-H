@@ -5,6 +5,7 @@
 #
 # $1 - theme INI path
 # $2 - shipped theme directory, used to resolve secondary theme names
+# $3 - optional full, overlay, or shipped validation mode
 #
 # Results:
 # - _fsh_validated_theme_data: parsed INI records
@@ -14,10 +15,10 @@
 builtin emulate -L zsh
 builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc_quotes no_auto_pushd
 
-local theme_path=$1 theme_dir=$2 validation_mode=${3:-} full_key declared_key style candidate inikey value token
-local secondary_key secondary_name secondary_path required_key error
-local -A known declared_seen
-local -a candidates style_colors
+local theme_path=$1 theme_dir=$2 validation_mode=${3:-} style_mode full_key declared_key style candidate inikey value token
+local secondary_key secondary_name secondary_path required_key error metadata_key palette foreground background
+local -A known declared_seen metadata_seen
+local -a candidates style_colors metadata_keys
 
 typeset -gA _fsh_validated_theme_data=()
 typeset -ga _fsh_theme_validation_errors=()
@@ -26,10 +27,11 @@ typeset -gi _fsh_theme_declared_count=0 _fsh_theme_resolved_count=0
 if [[ -z $validation_mode ]]; then
   [[ ${theme_path:t:r} == *overlay* ]] && validation_mode=overlay || validation_mode=full
 fi
-[[ $validation_mode == (full|overlay) ]] || {
+[[ $validation_mode == (full|overlay|shipped) ]] || {
   _fsh_theme_validation_errors+=( "invalid-mode|unknown theme validation mode: $validation_mode" )
   return 1
 }
+[[ $validation_mode == shipped ]] && style_mode=full || style_mode=$validation_mode
 
 _fsh_read_ini "$theme_path" _fsh_validated_theme_data '' || {
   for error in "${_fsh_ini_errors[@]}"; do
@@ -39,6 +41,7 @@ _fsh_read_ini "$theme_path" _fsh_validated_theme_data '' || {
 }
 
 style_colors=( red green blue yellow cyan magenta black white default )
+metadata_keys=( "${_fsh_theme_metadata_keys[@]}" )
 for style in "${_fsh_theme_style_order[@]}"; do
   known[$style]=1
   for candidate in ${(s. .)_fsh_theme_style_fallbacks[$style]}; do
@@ -50,6 +53,15 @@ known[secondary]=1
 
 for full_key in ${(k)_fsh_validated_theme_data}; do
   declared_key=${full_key#*>_}
+  if [[ $full_key == '<theme>_'* ]]; then
+    if (( ${metadata_keys[(Ie)$declared_key]} )); then
+      metadata_seen[$declared_key]=1
+    else
+      _fsh_theme_validation_errors+=(
+        "unknown-theme-metadata|unknown [theme] declaration: $declared_key" )
+    fi
+    continue
+  fi
   if (( ! ${+known[$declared_key]} )); then
     _fsh_theme_validation_errors+=( "unknown-style|unknown style declaration: $declared_key" )
     continue
@@ -78,7 +90,7 @@ for full_key in ${(k)_fsh_validated_theme_data}; do
   done
 done
 
-if [[ $validation_mode == full ]]; then
+if [[ $style_mode == full ]]; then
   for style in "${_fsh_theme_style_order[@]}"; do
     [[ $style == secondary ]] && continue
     candidates=( ${(s. .)_fsh_theme_style_fallbacks[$style]} default )
@@ -99,6 +111,67 @@ if [[ $validation_mode == full ]]; then
       _fsh_theme_validation_errors+=( "unresolved-style|cannot resolve style: $style" )
     fi
   done
+fi
+
+palette=${_fsh_validated_theme_data[<theme>_palette]-}
+foreground=${_fsh_validated_theme_data[<theme>_foreground]-}
+background=${_fsh_validated_theme_data[<theme>_background]-}
+if [[ $validation_mode == shipped ]]; then
+  for metadata_key in "${metadata_keys[@]}"; do
+    (( ${+metadata_seen[$metadata_key]} )) ||
+      _fsh_theme_validation_errors+=(
+        "missing-theme-metadata|missing [theme] declaration: $metadata_key" )
+  done
+fi
+
+if (( $#metadata_seen && $#metadata_seen < $#metadata_keys )) &&
+  [[ $validation_mode != shipped ]]; then
+  for metadata_key in "${metadata_keys[@]}"; do
+    (( ${+metadata_seen[$metadata_key]} )) ||
+      _fsh_theme_validation_errors+=(
+        "incomplete-theme-metadata|missing [theme] declaration: $metadata_key" )
+  done
+fi
+
+if (( $#metadata_seen == $#metadata_keys )); then
+  [[ $palette == (xterm-256|terminal-ansi16) ]] ||
+    _fsh_theme_validation_errors+=(
+      "invalid-theme-palette|unknown theme palette: $palette" )
+
+  if [[ $palette == xterm-256 ]]; then
+    [[ $foreground == \#[0-9a-fA-F](#c6,6) ]] ||
+      _fsh_theme_validation_errors+=(
+        "invalid-theme-color|theme foreground must be an exact #rrggbb color" )
+    [[ $background == \#[0-9a-fA-F](#c6,6) ]] ||
+      _fsh_theme_validation_errors+=(
+        "invalid-theme-color|theme background must be an exact #rrggbb color" )
+    if [[ $style_mode == full && $foreground == \#[0-9a-fA-F](#c6,6) &&
+      $background == \#[0-9a-fA-F](#c6,6) ]]; then
+      _fsh_validate_theme_contrast "$palette" "$foreground" "$background"
+    fi
+  elif [[ $palette == terminal-ansi16 ]]; then
+    [[ $foreground == default && $background == default ]] ||
+      _fsh_theme_validation_errors+=(
+        "invalid-theme-color|terminal-ansi16 foreground and background must be default" )
+    if [[ $style_mode == full ]]; then
+      for full_key in ${(k)_fsh_validated_theme_data}; do
+        [[ $full_key == '<theme>_'* ]] && continue
+        declared_key=${full_key#*>_}
+        [[ $declared_key == secondary ]] && continue
+        value=${_fsh_validated_theme_data[$full_key]}
+        for token in ${(s:,:)value}; do
+          [[ $token == bg:* ]] && token=${token#bg:}
+          [[ $token == (none|(no-|)(bold|blink|conceal|reverse|standout|underline)|default) ||
+            $token == (${(~j:|:)style_colors}) ]] && continue
+          if [[ $token == (0|[1-9][0-9]#) ]] && (( token <= 15 )); then
+            continue
+          fi
+          _fsh_theme_validation_errors+=(
+            "adaptive-palette-out-of-range|$declared_key uses color outside terminal ANSI 0-15: $token" )
+        done
+      done
+    fi
+  fi
 fi
 
 secondary_key=${_fsh_validated_theme_data[(i)<*>_secondary]}

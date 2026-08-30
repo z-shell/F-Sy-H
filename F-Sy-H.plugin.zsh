@@ -406,7 +406,8 @@ zmodload zsh/parameter 2>/dev/null
 zmodload zsh/system 2>/dev/null
 
 builtin autoload -Uz -- is-at-least \
-  _fsh_read_ini _fsh_validate_theme _fsh_run_git_command \
+  _fsh_read_ini _fsh_theme_color_rgb _fsh_validate_theme_contrast \
+  _fsh_validate_theme _fsh_run_git_command \
   _fsh_make_targets _fsh_run_command _fsh_read_all \
   _fsh_async_command _fsh_async_command_callback
 
@@ -505,9 +506,9 @@ fi
   _fsh_styles[defaultsubtle-bg]="bg=blue"
   [[ "${_fsh_styles[variable]}" = "fg=113" ]] && _fsh_styles[variable]="none"
   [[ "${_fsh_styles[globbing-ext]}" = "fg=13" ]] && _fsh_styles[globbing-ext]="fg=blue,bold"
-  [[ "${_fsh_styles[here-string-text]}" = "bg=18" ]] && _fsh_styles[here-string-text]="bg=blue"
+  [[ "${_fsh_styles[here-string-text]}" = "fg=69" ]] && _fsh_styles[here-string-text]="bg=blue"
   [[ "${_fsh_styles[here-string-var]}" = "fg=cyan,bg=18" ]] && _fsh_styles[here-string-var]="fg=cyan,bg=blue"
-  [[ "${_fsh_styles[correct-subtle]}" = "fg=12" ]] && _fsh_styles[correct-subtle]="bg=blue"
+  [[ "${_fsh_styles[correct-subtle]}" = "fg=69" ]] && _fsh_styles[correct-subtle]="bg=blue"
   [[ "${_fsh_styles[subtle-bg]}" = "bg=18" ]] && _fsh_styles[subtle-bg]="bg=blue"
 }
 

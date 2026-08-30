@@ -79,3 +79,15 @@ typeset -ga _fsh_theme_style_order=(
   global-alias subcommand single-sq-bracket double-sq-bracket double-paren
   optarg-string optarg-number recursive-base
 )
+
+# Shipped themes declare their rendering assumptions. External themes may omit
+# this metadata for compatibility, but when it is present the validator applies
+# the same contract used by CI.
+typeset -ga _fsh_theme_metadata_keys=( palette foreground background )
+typeset -g _fsh_theme_contrast_floor=4.5
+typeset -g _fsh_theme_critical_contrast_floor=7.0
+typeset -gA _fsh_theme_critical_styles=(
+  unknown-token     1
+  incorrect-subtle  1
+  matherr           1
+)

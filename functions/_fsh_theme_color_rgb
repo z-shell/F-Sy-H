@@ -1,0 +1,56 @@
+# -*- mode: zsh; sh-indentation: 2; indent-tabs-mode: nil; sh-basic-offset: 2; -*-
+# vim: ft=zsh sw=2 ts=2 et
+#
+# Resolve one color through the canonical xterm-256 reference palette.
+#
+# $1 - named, indexed, or #rrggbb color
+# $2 - palette name
+#
+# Result: reply=( red green blue ) with integer channels from 0 through 255.
+
+builtin emulate -L zsh
+builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc_quotes no_auto_pushd
+
+local color=$1 palette=$2 hex
+local -A named=(
+  black 0 red 1 green 2 yellow 3 blue 4 magenta 5 cyan 6 white 7
+)
+local -a ansi=(
+  0 0 0       205 0 0     0 205 0     205 205 0
+  0 0 238     205 0 205   0 205 205   229 229 229
+  127 127 127 255 0 0     0 255 0     255 255 0
+  92 92 255   255 0 255   0 255 255   255 255 255
+)
+local -a levels=( 0 95 135 175 215 255 )
+integer index offset red green blue
+
+reply=()
+[[ $palette == xterm-256 ]] || return 1
+
+if [[ $color == \#[0-9a-fA-F](#c6,6) ]]; then
+  hex=${color#\#}
+  reply=( $(( 16#${hex[1,2]} )) $(( 16#${hex[3,4]} )) $(( 16#${hex[5,6]} )) )
+  return 0
+fi
+
+if (( ${+named[$color]} )); then
+  index=$named[$color]
+elif [[ $color == (0|[1-9][0-9]#) ]] && (( color <= 255 )); then
+  index=$color
+else
+  return 1
+fi
+
+if (( index < 16 )); then
+  offset=$(( index * 3 + 1 ))
+  reply=( ${ansi[offset]} ${ansi[offset + 1]} ${ansi[offset + 2]} )
+elif (( index < 232 )); then
+  offset=$(( index - 16 ))
+  red=$(( offset / 36 + 1 ))
+  green=$(( (offset % 36) / 6 + 1 ))
+  blue=$(( offset % 6 + 1 ))
+  reply=( ${levels[red]} ${levels[green]} ${levels[blue]} )
+else
+  offset=$(( 8 + (index - 232) * 10 ))
+  reply=( $offset $offset $offset )
+fi
