@@ -294,9 +294,7 @@ _fsh_cursor_moved() {
 # Helper for _fsh_bind_widgets
 # $1 is name of widget to call
 _fsh_call_widget() {
-  builtin emulate -L zsh ${=${options[xtrace]:#off}:+-o xtrace}
-  builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc_quotes no_auto_pushd
-
+  # The saved widget is third-party code and must inherit the caller's options.
   integer ret
   builtin zle "$@"
   ret=$?
