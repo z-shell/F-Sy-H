@@ -1,0 +1,59 @@
+# -*- mode: zsh; sh-indentation: 2; indent-tabs-mode: nil; sh-basic-offset: 2; -*-
+# vim: ft=zsh sw=2 ts=2 et
+#
+# Check correctness signaling under the declared fixed-palette CVD contract.
+#
+# $1 - palette name
+# $2 - declared default foreground
+# $3 - declared default background
+
+builtin emulate -L zsh
+builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc_quotes no_auto_pushd
+
+local palette=$1 default_foreground=$2 default_background=$3 model separation_text REPLY
+local correct_foreground correct_background incorrect_foreground incorrect_background
+local -a reply correct_foreground_lab correct_background_lab
+local -a incorrect_foreground_lab incorrect_background_lab
+float foreground_separation background_separation separation
+
+[[ $palette == xterm-256 ]] || return 0
+
+_fsh_theme_resolve_rendering \
+  correct-subtle "$palette" "$default_foreground" "$default_background" || return 0
+correct_foreground=$reply[1]
+correct_background=$reply[2]
+_fsh_theme_resolve_rendering \
+  incorrect-subtle "$palette" "$default_foreground" "$default_background" || return 0
+incorrect_foreground=$reply[1]
+incorrect_background=$reply[2]
+
+for model in "${_fsh_theme_cvd_models[@]}"; do
+  _fsh_theme_color_cvd_lab "$correct_foreground" "$model" || continue
+  correct_foreground_lab=( "${reply[@]}" )
+  _fsh_theme_color_cvd_lab "$incorrect_foreground" "$model" || continue
+  incorrect_foreground_lab=( "${reply[@]}" )
+  _fsh_theme_color_cvd_lab "$correct_background" "$model" || continue
+  correct_background_lab=( "${reply[@]}" )
+  _fsh_theme_color_cvd_lab "$incorrect_background" "$model" || continue
+  incorrect_background_lab=( "${reply[@]}" )
+
+  (( foreground_separation = (
+    (correct_foreground_lab[1] - incorrect_foreground_lab[1]) ** 2.0 +
+    (correct_foreground_lab[2] - incorrect_foreground_lab[2]) ** 2.0 +
+    (correct_foreground_lab[3] - incorrect_foreground_lab[3]) ** 2.0
+  ) ** 0.5 ))
+  (( background_separation = (
+    (correct_background_lab[1] - incorrect_background_lab[1]) ** 2.0 +
+    (correct_background_lab[2] - incorrect_background_lab[2]) ** 2.0 +
+    (correct_background_lab[3] - incorrect_background_lab[3]) ** 2.0
+  ) ** 0.5 ))
+  (( foreground_separation >= background_separation )) &&
+    separation=$foreground_separation || separation=$background_separation
+
+  if (( separation < _fsh_theme_cvd_separation_floor )); then
+    builtin printf -v separation_text '%.2f' "$separation"
+    _fsh_theme_validation_errors+=(
+      "cvd-separation-too-low|correct-subtle and incorrect-subtle $model separation $separation_text is below $_fsh_theme_cvd_separation_floor"
+    )
+  fi
+done

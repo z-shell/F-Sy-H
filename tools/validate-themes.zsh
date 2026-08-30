@@ -6,8 +6,9 @@ setopt no_unset no_function_argzero posix_argzero
 typeset -r plugin_root=${${(%):-%N}:A:h:h}
 fpath=( "$plugin_root/functions" $fpath )
 source "$plugin_root/lib/theme-schema.zsh"
-autoload -Uz _fsh_read_ini _fsh_theme_color_rgb _fsh_theme_resolve_rendering \
-  _fsh_validate_theme_contrast _fsh_validate_theme_distinguishability \
+autoload -Uz _fsh_read_ini _fsh_theme_color_rgb _fsh_theme_color_cvd_lab \
+  _fsh_theme_resolve_rendering _fsh_validate_theme_contrast \
+  _fsh_validate_theme_cvd_separation _fsh_validate_theme_distinguishability \
   _fsh_validate_theme
 
 json_escape() {
