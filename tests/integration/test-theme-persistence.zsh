@@ -30,6 +30,16 @@ for theme_file in "$plugin_root"/themes/*.ini(N); do
   }
 done
 
+output=$(ZDOTDIR=$fixture_root/list-zdotdir XDG_CACHE_HOME=$fixture_root/list-cache \
+  zsh -f -c '
+    zstyle ":fsh:config" work-dir "$1"
+    source "$2/F-Sy-H.plugin.zsh"
+    fsh_theme --list
+    fsh_plugin_unload
+  ' zsh "$fixture_root/list-work" "$plugin_root")
+[[ $output == *Theme*Background* ]]
+[[ $output == *light*'#ffffff'* ]]
+
 theme_work=$fixture_root/base16/work
 output=$(ZDOTDIR=$fixture_root/reload-zdotdir XDG_CACHE_HOME=$fixture_root/reload-cache \
   zsh -f -c '

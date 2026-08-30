@@ -9,7 +9,7 @@ trap 'command rm -rf -- "$fixture_root"' EXIT HUP INT TERM
 
 typeset output
 output=$(zsh -f "$plugin_root/tools/validate-themes.zsh")
-(( ${#${(f)output}} == 12 ))
+(( ${#${(f)output}} == 13 ))
 [[ $output != *'"status":"error"'* ]]
 [[ $output == *'"schema":"fsh-theme-validation/v1"'* ]]
 [[ $output == *'"declaredStyles":61,"resolvedStyles":60'* ]]
