@@ -31,6 +31,13 @@ _fsh_test_ini_parsed || {
   exit 1
 }
 
+typeset chroma_output
+chroma_output=$(fsh_chroma list) || exit 1
+[[ $chroma_output == *$'docker\t_fsh_chroma_docker\tdedicated\tready'* ]] || {
+  builtin print -u2 -r -- 'fsh_chroma failed under hostile caller options'
+  exit 1
+}
+
 [[ -o ksharrays && -o shwordsplit && -o globsubst ]] || {
   builtin print -u2 -r -- 'autoload function changed caller options'
   exit 1
