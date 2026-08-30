@@ -148,9 +148,17 @@ fi
 
 if [[ -n "$OPT_LIST" ]]; then
   if [[ -z "$OPT_QUIET" ]]; then
+    local theme_path
+    local -A theme_metadata
     print -r -- "${fg_bold[yellow]}Available themes$reset_color:"
     print -r -- ""
-    print -rl -- "$_fsh_base_dir"/themes/*.ini(:t:r)
+    builtin printf '%-20s %s\n' 'Theme' 'Background'
+    for theme_path in "$_fsh_base_dir"/themes/*.ini(N); do
+      theme_metadata=()
+      _fsh_read_ini "$theme_path" theme_metadata '' || return 1
+      builtin printf '%-20s %s\n' \
+        "${theme_path:t:r}" "${theme_metadata[<theme>_background]:-unknown}"
+    done
     print -r -- ""
   fi
   return 0
