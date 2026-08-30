@@ -9,14 +9,19 @@ builtin emulate -L zsh
 builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc_quotes no_auto_pushd
 
 local -a TARGETS
+local -A VARIABLES
 
 _fsh_make_expand_vars() {
   builtin emulate -L zsh
   builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc_quotes no_auto_pushd
 
   local open close var val front='' rest=$1
+  local -a seen
 
   while [[ $rest == (#b)[^$]#($)* ]]; do
+    (( ${seen[(Ie)$rest]} )) && return 1
+    seen+=( "$rest" )
+
     front=$front${rest[1,$mbegin[1]-1]}
     rest=${rest[$mbegin[1],-1]}
     case $rest[2] in
@@ -54,22 +59,10 @@ _fsh_make_expand_vars() {
     fi
 
     val=''
-    if [[ -n ${VAR_ARGS[(i)$var]} ]]; then
-      val=${VAR_ARGS[$var]}
-    else
-      if [[ -n $opt_args[(I)(-e|--environment-overrides)] ]]; then
-        if [[ $parameters[$var] == scalar-export* ]]; then
-          val=${(P)var}
-        elif [[ -n ${VARIABLES[(i)$var]} ]]; then
-          val=${VARIABLES[$var]}
-        fi
-      else
-        if [[ -n ${VARIABLES[(i)$var]} ]]; then
-          val=${VARIABLES[$var]}
-        elif [[ $parameters[$var] == scalar-export* ]]; then
-          val=${(P)var}
-        fi
-      fi
+    if [[ -n ${VARIABLES[(i)$var]} ]]; then
+      val=${VARIABLES[$var]}
+    elif [[ $parameters[$var] == scalar-export* ]]; then
+      val=${(P)var}
     fi
     rest=${rest//\$$open$var$close/$val}
   done
@@ -87,6 +80,24 @@ _fsh_make_parse_makefile() {
   while read input
   do
     case "$input " in
+      # VARIABLE = value OR VARIABLE ?= value
+      ([[:alnum:]][[:alnum:]_]#[" "$TAB]#(\?|)=*)
+      var=${input%%[ $TAB]#(\?|)=*}
+      val=${input#*=}
+      val=${val##[ $TAB]#}
+      VARIABLES[$var]=$val
+      ;;
+
+      # VARIABLE := value OR VARIABLE ::= value
+      # Evaluated immediately
+      ([[:alnum:]][[:alnum:]_]#[" "$TAB]#:(:|)=*)
+      var=${input%%[ $TAB]#:(:|)=*}
+      val=${input#*=}
+      val=${val##[ $TAB]#}
+      val=$(_fsh_make_expand_vars "$val")
+      VARIABLES[$var]=$val
+      ;;
+
       # TARGET: dependencies
       # TARGET1 TARGET2 TARGET3: dependencies
       ([[*?[:alnum:]$][^$TAB:=%]#:[^=]*)

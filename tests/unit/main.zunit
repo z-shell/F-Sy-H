@@ -5,6 +5,26 @@
     _fsh_highlight_fill_option_variables
 }
 
+@test 'make target scan resolves Makefile variable assignments' {
+    local MATCH
+    local -a match mbegin mend reply2
+    integer MBEGIN MEND
+
+    unset '_fsh_state[chroma-make-cache]' '_fsh_state[chroma-make-cache-born-at]'
+    _fsh_make_targets <<'MAKE'
+ROOT = /usr
+PREFIX = $(ROOT)/local
+$(PREFIX)/install:
+LOOP = $(LOOP)
+$(LOOP)/never:
+plain:
+MAKE
+
+    assert "${reply2[1]}" same_as "/usr/local/install"
+    assert "${reply2[2]}" same_as "plain"
+    assert "${#reply2}" same_as "2"
+}
+
 @test 'ls /usr/bin' {
 reply=()
     PREBUFFER=""
