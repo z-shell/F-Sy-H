@@ -88,6 +88,18 @@ output=$(zsh -f "$plugin_root/tools/validate-themes.zsh" \
   "$fixture_root/custom-no-metadata.ini")
 [[ $output == *'"status":"ok"'* ]]
 
+command sed 's/^description =.*$/description =/' \
+  "$plugin_root/themes/clean.ini" >| "$fixture_root/blank-description.ini"
+if output=$(zsh -f "$plugin_root/tools/validate-themes.zsh" \
+  "$fixture_root/blank-description.ini" 2>&1); then
+  builtin print -u2 -r -- 'f-sy-h: blank theme description unexpectedly passed validation'
+  exit 1
+fi
+[[ $output == *'"code":"invalid-theme-description"'* ]]
+
+command sed '/^description =/d' \
+  "$plugin_root/themes/clean.ini" >| "$fixture_root/missing-description.ini"
+
 command sed '/^background = #000000$/d' "$plugin_root/themes/clean.ini" >| \
   "$fixture_root/incomplete-metadata.ini"
 if output=$(zsh -f "$plugin_root/tools/validate-themes.zsh" \
@@ -208,6 +220,13 @@ if _fsh_validate_theme "$fixture_root/custom-no-metadata.ini" \
   exit 1
 fi
 [[ ${_fsh_theme_validation_errors[*]} == *'missing-theme-metadata'* ]]
+
+if _fsh_validate_theme "$fixture_root/missing-description.ini" \
+  "$plugin_root/themes" shipped; then
+  builtin print -u2 -r -- 'f-sy-h: shipped validation accepted a missing description'
+  exit 1
+fi
+[[ ${_fsh_theme_validation_errors[*]} == *'missing [theme] declaration: description'* ]]
 
 typeset -a reply
 _fsh_theme_color_rgb 196 xterm-256

@@ -25,6 +25,7 @@ arguments=(
   {-v,--verbose}'[more messages during operation]'
   {-i,--info}'[additional information]'
   {-l,--list}'[list available themes]'
+  {-g,--gallery}'[compare all shipped themes using a common sample]'
   {-q,--quiet}'[no default messages]'
   {-h,--help}'[display help text]'
 )

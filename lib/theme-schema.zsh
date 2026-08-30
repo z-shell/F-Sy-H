@@ -80,10 +80,11 @@ typeset -ga _fsh_theme_style_order=(
   optarg-string optarg-number recursive-base
 )
 
-# Shipped themes declare their rendering assumptions. External themes may omit
-# this metadata for compatibility, but when it is present the validator applies
-# the same contract used by CI.
-typeset -ga _fsh_theme_metadata_keys=( palette foreground background )
+# Shipped themes declare their rendering assumptions and discovery text.
+# External themes may omit either for compatibility, but a partial rendering
+# contract is invalid because its palette cannot be checked safely.
+typeset -ga _fsh_theme_rendering_metadata_keys=( palette foreground background )
+typeset -ga _fsh_theme_metadata_keys=( palette foreground background description )
 typeset -g _fsh_theme_contrast_floor=4.5
 typeset -g _fsh_theme_critical_contrast_floor=7.0
 typeset -gA _fsh_theme_critical_styles=(
