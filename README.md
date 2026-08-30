@@ -313,6 +313,15 @@ explicit INI paths as arguments. It emits one JSON Lines record per result or
 diagnostic using schema `fsh-theme-validation/v1`, and exits non-zero if any
 record has `status` set to `error`.
 
+Every shipped theme declares a `[theme]` rendering contract. Fixed-palette
+themes use `palette = xterm-256` with exact `foreground` and `background`
+`#rrggbb` values. Their resolved ordinary styles must reach a contrast ratio of
+4.5:1; `unknown-token`, `incorrect-subtle`, and `matherr` must reach 7:1.
+`palette = terminal-ansi16` is adaptive and restricts colors to terminal-owned
+ANSI indices 0 through 15 instead of claiming a fixed contrast ratio. Metadata
+remains optional for external themes, preserving existing user themes; when it
+is present, the same validation contract applies.
+
 The ZUnit command requires the repository's pinned ZUnit toolchain.
 
 ## Documentation and support

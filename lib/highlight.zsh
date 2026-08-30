@@ -56,7 +56,7 @@ _fsh_work_dir=${~_fsh_work_dir}
 typeset -gA _fsh_styles
 # Built-in theme.
 : ${_fsh_styles[default]:=none}
-: ${_fsh_styles[unknown-token]:=fg=red,bold}
+: ${_fsh_styles[unknown-token]:=fg=210,bold}
 : ${_fsh_styles[reserved-word]:=fg=yellow}
 : ${_fsh_styles[subcommand]:=fg=yellow}
 : ${_fsh_styles[alias]:=fg=green}
@@ -68,17 +68,18 @@ typeset -gA _fsh_styles
 : ${_fsh_styles[precommand]:=fg=green}
 : ${_fsh_styles[commandseparator]:=none}
 : ${_fsh_styles[hashed-command]:=fg=green}
-: ${_fsh_styles[path]:=fg=magenta}
-: ${_fsh_styles[path-to-dir]:=fg=magenta,underline}
+: ${_fsh_styles[path]:=fg=13}
+: ${_fsh_styles[path-to-dir]:=fg=13,underline}
 : ${_fsh_styles[path_pathseparator]:=}
-: ${_fsh_styles[globbing]:=fg=blue,bold}
+: ${_fsh_styles[globbing]:=fg=69,bold}
 : ${_fsh_styles[globbing-ext]:=fg=13}
-: ${_fsh_styles[history-expansion]:=fg=blue,bold}
+: ${_fsh_styles[history-expansion]:=fg=69,bold}
 : ${_fsh_styles[single-hyphen-option]:=fg=cyan}
 : ${_fsh_styles[double-hyphen-option]:=fg=cyan}
 : ${_fsh_styles[back-quoted-argument]:=none}
 : ${_fsh_styles[single-quoted-argument]:=fg=yellow}
 : ${_fsh_styles[double-quoted-argument]:=fg=yellow}
+: ${_fsh_styles[optarg-string]:=fg=yellow}
 : ${_fsh_styles[dollar-quoted-argument]:=fg=yellow}
 : ${_fsh_styles[back-or-dollar-double-quoted-argument]:=fg=cyan}
 : ${_fsh_styles[back-dollar-quoted-argument]:=fg=cyan}
@@ -86,17 +87,19 @@ typeset -gA _fsh_styles
 : ${_fsh_styles[redirection]:=none}
 : ${_fsh_styles[comment]:=fg=243}
 : ${_fsh_styles[variable]:=fg=113}
-: ${_fsh_styles[mathvar]:=fg=blue,bold}
-: ${_fsh_styles[mathnum]:=fg=magenta}
-: ${_fsh_styles[matherr]:=fg=red}
+: ${_fsh_styles[mathvar]:=fg=69,bold}
+: ${_fsh_styles[mathnum]:=fg=13}
+: ${_fsh_styles[optarg-number]:=fg=13}
+: ${_fsh_styles[matherr]:=fg=210}
 : ${_fsh_styles[assign-array-bracket]:=fg=green}
 : ${_fsh_styles[for-loop-variable]:=none}
 : ${_fsh_styles[for-loop-operator]:=fg=yellow}
-: ${_fsh_styles[for-loop-number]:=fg=magenta}
+: ${_fsh_styles[for-loop-number]:=fg=13}
 : ${_fsh_styles[for-loop-separator]:=fg=yellow,bold}
 : ${_fsh_styles[here-string-tri]:=fg=yellow}
-: ${_fsh_styles[here-string-text]:=bg=18}
+: ${_fsh_styles[here-string-text]:=fg=69}
 : ${_fsh_styles[here-string-var]:=fg=cyan,bg=18}
+: ${_fsh_styles[exec-descriptor]:=fg=yellow,bold}
 : ${_fsh_styles[case-input]:=fg=green}
 : ${_fsh_styles[case-parentheses]:=fg=yellow}
 : ${_fsh_styles[case-condition]:=bg=blue}
@@ -107,10 +110,11 @@ typeset -gA _fsh_styles
 : ${_fsh_styles[single-sq-bracket]:=fg=green}
 : ${_fsh_styles[double-sq-bracket]:=fg=green}
 : ${_fsh_styles[double-paren]:=fg=yellow}
-: ${_fsh_styles[correct-subtle]:=fg=12}
-: ${_fsh_styles[incorrect-subtle]:=fg=red}
+: ${_fsh_styles[correct-subtle]:=fg=69}
+: ${_fsh_styles[incorrect-subtle]:=fg=210}
 : ${_fsh_styles[subtle-separator]:=fg=green}
 : ${_fsh_styles[subtle-bg]:=bg=18}
+: ${_fsh_styles[recursive-base]:=none}
 : ${_fsh_styles[secondary]:=free}
 
 _fsh_theme_load_data() {

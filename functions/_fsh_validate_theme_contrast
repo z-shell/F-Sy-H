@@ -1,0 +1,112 @@
+# -*- mode: zsh; sh-indentation: 2; indent-tabs-mode: nil; sh-basic-offset: 2; -*-
+# vim: ft=zsh sw=2 ts=2 et
+#
+# Apply the contrast contract to parsed, fully resolved theme data.
+#
+# $1 - palette name
+# $2 - declared default foreground
+# $3 - declared default background
+
+builtin emulate -L zsh
+builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc_quotes no_auto_pushd
+
+local palette=$1 default_foreground=$2 default_background=$3
+local style candidate inikey value token foreground background minimum contrast_text
+local -a candidates reply foreground_rgb background_rgb
+integer reverse component
+float foreground_luminance background_luminance lighter darker contrast channel linear
+
+for style in "${_fsh_theme_style_order[@]}"; do
+  [[ $style == secondary ]] && continue
+
+  candidates=( ${(s. .)_fsh_theme_style_fallbacks[$style]} default )
+  inikey=
+  for candidate in "${candidates[@]}"; do
+    [[ $candidate == - ]] && candidate=$style
+    inikey=${_fsh_validated_theme_data[(i)<*>_${candidate}]}
+    [[ -n $inikey ]] && break
+  done
+  [[ -n $inikey ]] || continue
+
+  value=${_fsh_validated_theme_data[$inikey]}
+  foreground=$default_foreground
+  background=$default_background
+  reverse=0
+  for token in ${(s:,:)value}; do
+    case $token in
+      (none)
+        foreground=$default_foreground
+        background=$default_background
+        reverse=0
+        ;;
+      (reverse) reverse=1 ;;
+      (no-reverse) reverse=0 ;;
+      (bg:*) background=${token#bg:} ;;
+      ((no-|)(bold|blink|conceal|standout|underline)) ;;
+      (*) foreground=$token ;;
+    esac
+  done
+  if (( reverse )); then
+    candidate=$foreground
+    foreground=$background
+    background=$candidate
+  fi
+  [[ $foreground == default ]] && foreground=$default_foreground
+  [[ $background == default ]] && background=$default_background
+
+  _fsh_theme_color_rgb "$foreground" "$palette" || continue
+  foreground_rgb=( "${reply[@]}" )
+  _fsh_theme_color_rgb "$background" "$palette" || continue
+  background_rgb=( "${reply[@]}" )
+
+  foreground_luminance=0.0
+  for candidate in 1 2 3; do
+    component=${foreground_rgb[candidate]}
+    (( channel = component / 255.0 ))
+    if (( channel <= 0.04045 )); then
+      (( linear = channel / 12.92 ))
+    else
+      (( linear = ((channel + 0.055) / 1.055) ** 2.4 ))
+    fi
+    case $candidate in
+      (1) (( foreground_luminance += 0.2126 * linear )) ;;
+      (2) (( foreground_luminance += 0.7152 * linear )) ;;
+      (3) (( foreground_luminance += 0.0722 * linear )) ;;
+    esac
+  done
+
+  background_luminance=0.0
+  for candidate in 1 2 3; do
+    component=${background_rgb[candidate]}
+    (( channel = component / 255.0 ))
+    if (( channel <= 0.04045 )); then
+      (( linear = channel / 12.92 ))
+    else
+      (( linear = ((channel + 0.055) / 1.055) ** 2.4 ))
+    fi
+    case $candidate in
+      (1) (( background_luminance += 0.2126 * linear )) ;;
+      (2) (( background_luminance += 0.7152 * linear )) ;;
+      (3) (( background_luminance += 0.0722 * linear )) ;;
+    esac
+  done
+
+  if (( foreground_luminance >= background_luminance )); then
+    lighter=$foreground_luminance
+    darker=$background_luminance
+  else
+    lighter=$background_luminance
+    darker=$foreground_luminance
+  fi
+  (( contrast = (lighter + 0.05) / (darker + 0.05) ))
+  minimum=$_fsh_theme_contrast_floor
+  (( ${+_fsh_theme_critical_styles[$style]} )) &&
+    minimum=$_fsh_theme_critical_contrast_floor
+  # Compare the unrounded ratio. Formatting is diagnostic output only.
+  if (( contrast < minimum )); then
+    builtin printf -v contrast_text '%.2f' "$contrast"
+    _fsh_theme_validation_errors+=(
+      "contrast-too-low|$style contrast $contrast_text:1 is below ${minimum}:1 ($foreground on $background)"
+    )
+  fi
+done

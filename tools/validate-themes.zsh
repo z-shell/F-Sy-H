@@ -6,7 +6,8 @@ setopt no_unset no_function_argzero posix_argzero
 typeset -r plugin_root=${${(%):-%N}:A:h:h}
 fpath=( "$plugin_root/functions" $fpath )
 source "$plugin_root/lib/theme-schema.zsh"
-autoload -Uz _fsh_read_ini _fsh_validate_theme
+autoload -Uz _fsh_read_ini _fsh_theme_color_rgb _fsh_validate_theme_contrast \
+  _fsh_validate_theme
 
 json_escape() {
   emulate -L zsh
@@ -21,12 +22,14 @@ json_escape() {
 typeset -a theme_paths=( "$@" )
 (( $#theme_paths )) || theme_paths=( "$plugin_root"/themes/*.ini(N) )
 
-typeset theme_path path_json diagnostic code message code_json message_json
+typeset theme_path path_json diagnostic code message code_json message_json validation_mode
 integer exit_status=0
 for theme_path in "${theme_paths[@]}"; do
   json_escape "${theme_path:A}"
   path_json=$REPLY
-  if _fsh_validate_theme "$theme_path" "$plugin_root/themes"; then
+  validation_mode=
+  [[ ${theme_path:A:h} == ${plugin_root:A}/themes ]] && validation_mode=shipped
+  if _fsh_validate_theme "$theme_path" "$plugin_root/themes" "$validation_mode"; then
     builtin printf \
       '{"schema":"fsh-theme-validation/v1","path":"%s","status":"ok","code":"ok","message":"","declaredStyles":%d,"resolvedStyles":%d}\n' \
       "$path_json" $_fsh_theme_declared_count $_fsh_theme_resolved_count
