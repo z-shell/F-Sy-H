@@ -411,7 +411,7 @@ _fsh_highlight_fill_option_variables() {
 _fsh_highlight_process() {
   builtin emulate -L zsh ${=${options[xtrace]:#off}:+-o xtrace}
   builtin setopt extended_glob warn_create_global bare_glob_qual no_nomatch typeset_silent no_short_loops rc_quotes no_auto_pushd localtraps
-  builtin trap '_fsh_lifecycle_refresh' EXIT
+  builtin trap '_fsh_lifecycle_checkpoint' EXIT
 
   [[ $CONTEXT == "select" ]] && return 0
 

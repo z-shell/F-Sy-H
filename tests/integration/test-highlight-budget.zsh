@@ -26,6 +26,8 @@ typeset extension=' /usr/local/bin/foo --verbose --dry-run argument'
 typeset BUFFER= PREBUFFER= WIDGET=self-insert
 integer CURSOR=0 REGION_ACTIVE=0
 typeset -a region_highlight samples
+typeset lifecycle_refresh_definition=${functions[_fsh_lifecycle_refresh]}
+integer lifecycle_refresh_calls=0
 
 (( _fsh_max_length == 1000 ))
 (( ! ${+functions[_fsh_highlight_buffer]} ))
@@ -44,6 +46,10 @@ for length in 173 1000; do
   region_highlight=()
   _fsh_zle_highlight
   (( $#region_highlight > 0 ))
+
+  if (( length == 173 )); then
+    _fsh_lifecycle_refresh() { (( ++lifecycle_refresh_calls )); }
+  fi
 
   samples=()
   for run in {1..9}; do
@@ -71,6 +77,13 @@ for length in 173 1000; do
     exit 1
   fi
 done
+
+(( lifecycle_refresh_calls == 0 )) || {
+  builtin printf >&2 'f-sy-h: steady-state highlighting performed %d full lifecycle refreshes\n' \
+    $lifecycle_refresh_calls
+  exit 1
+}
+functions[_fsh_lifecycle_refresh]=$lifecycle_refresh_definition
 
 BUFFER+=$extension
 BUFFER=${BUFFER[1,_fsh_max_length + 1]}
