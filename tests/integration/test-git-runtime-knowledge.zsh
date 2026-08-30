@@ -11,6 +11,7 @@ typeset -gx ZDOTDIR=$fixture_root/zdotdir
 typeset -gx XDG_CACHE_HOME=$fixture_root/cache-home
 command mkdir -p -- "$ZDOTDIR"
 zstyle ':fsh:config' work-dir "$fixture_root/work"
+typeset -r original_pwd=$PWD
 
 source "$plugin_root/F-Sy-H.plugin.zsh"
 _fsh_chroma_git
@@ -45,12 +46,29 @@ _fsh_chroma_git_get_subcommands
 _fsh_state[chroma-git-subcommands-cache]=$'   commit                  Record changes\n   nebula                  Travel through repositories'
 _fsh_state[chroma-git-subcommands-cache-ready]=1
 _fsh_state[chroma-git-subcommands-cache-born-at]=$SECONDS
-_fsh_state[chroma-git-aliases-cache]=$'alias.safe commit\nalias.shell-alias !touch /tmp/must-not-run'
-_fsh_state[chroma-git-aliases-cache-ready]=1
-_fsh_state[chroma-git-aliases-cache-born-at]=$SECONDS
+typeset alias_cache_key="chroma-git-aliases-${PWD:A}"
+_fsh_state[$alias_cache_key-cache]=$'alias.safe commit\nalias.shell-alias !touch /tmp/must-not-run'
+_fsh_state[$alias_cache_key-cache-ready]=1
+_fsh_state[$alias_cache_key-cache-born-at]=$SECONDS
 _fsh_chroma_git_get_subcommands
 [[ ${(j:,:)reply} == 'commit,nebula,safe' ]]
 (( ! reply[(Ie)shell-alias] ))
+
+# Repository-local aliases from one directory must not leak through the cache
+# after changing to another directory.
+command mkdir -p -- "$fixture_root/repo-a" "$fixture_root/repo-b"
+cd "$fixture_root/repo-a"
+alias_cache_key="chroma-git-aliases-${PWD:A}"
+_fsh_state[$alias_cache_key-cache]=$'alias.repo-a commit'
+_fsh_state[$alias_cache_key-cache-ready]=1
+_fsh_state[$alias_cache_key-cache-born-at]=$SECONDS
+_fsh_chroma_git_get_subcommands
+(( reply[(Ie)repo-a] ))
+
+cd "$fixture_root/repo-b"
+_fsh_chroma_git_get_subcommands
+(( ! reply[(Ie)repo-a] ))
+cd "$original_pwd"
 
 # A failed or unexpectedly empty refresh preserves the last valid runtime
 # result instead of replacing it with an empty command surface.
@@ -78,6 +96,7 @@ _fsh_highlight_process "$PREBUFFER" "$BUFFER" 0
 
 typeset git_source=$(<"$plugin_root/chroma/_fsh_chroma_git")
 [[ $git_source == *'_fsh_async_command chroma-git-subcommands'* ]]
+[[ $git_source == *'_fsh_async_command "$alias_cache_key"'* ]]
 [[ $git_source == *'_fsh_async_command --capture-stderr "$key" env LC_ALL=C git "$subcommand" -h'* ]]
 
 fsh_plugin_unload

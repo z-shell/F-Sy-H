@@ -771,7 +771,7 @@ _fsh_chroma_git_get_subcommands() {
   builtin emulate -L zsh
   builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc_quotes no_auto_pushd
 
-  local line alias_name alias_value alias_target
+  local line alias_name alias_value alias_target alias_cache_key
   local -a fallback runtime_output runtime_subcommands alias_output alias_names _fsh_git_parse_reply
   local -A seen=()
 
@@ -801,12 +801,15 @@ _fsh_chroma_git_get_subcommands() {
   (( $#runtime_subcommands )) || runtime_subcommands=( "${fallback[@]}" )
   _fsh_state[chroma-git-runtime-safe-subcommands]=${(F)runtime_subcommands}
 
-  _fsh_state[chroma-git-aliases-cache-seconds]=$(( 15 * 60 ))
-  _fsh_async_command chroma-git-aliases env LC_ALL=C git config --get-regexp '^alias\.'
+  # Git aliases can be repository-local. Keep their cache distinct from the
+  # repository-independent command and option caches above.
+  alias_cache_key="chroma-git-aliases-${PWD:A}"
+  _fsh_state[$alias_cache_key-cache-seconds]=$(( 15 * 60 ))
+  _fsh_async_command "$alias_cache_key" env LC_ALL=C git config --get-regexp '^alias\.'
   alias_output=( "${_fsh_command_output[@]}" )
   typeset -ga _fsh_chroma_git_aliases
   _fsh_chroma_git_aliases=()
-  if (( ${_fsh_state[chroma-git-aliases-cache-ready]:-0} )); then
+  if (( ${_fsh_state[$alias_cache_key-cache-ready]:-0} )); then
     for line in "${alias_output[@]}"; do
       alias_name=${line%%[[:space:]]*}
       alias_value=${line#${alias_name}}
@@ -831,7 +834,7 @@ _fsh_chroma_git_get_subcommands() {
 # A generic handler
 _fsh_chroma_git_verify_remote() {
   local _wrd="$4"
-  _fsh_run_git_command "git remote" "chroma-git-remotes-$PWD" "" 10
+  _fsh_run_git_command "git remote" "chroma-git-remotes-${PWD:A}" "" 10
   [[ -n ${_fsh_command_output[(r)$_wrd]} ]] && {
     __style=${_fsh_theme_name}correct-subtle; return 0
   } || {
@@ -843,7 +846,7 @@ _fsh_chroma_git_verify_remote() {
 _fsh_chroma_git_verify_ref() {
   local _wrd="$4"
   _wrd="${_wrd%%:*}"
-  _fsh_run_git_command "git for-each-ref --format='%(refname:short)' refs/heads" "chroma-git-refs-$PWD" "refs/heads" 10
+  _fsh_run_git_command "git for-each-ref --format='%(refname:short)' refs/heads" "chroma-git-refs-${PWD:A}" "refs/heads" 10
   [[ -n ${_fsh_command_output[(r)$_wrd]} ]] && \
     { __style=${_fsh_theme_name}correct-subtle; return 0; } || \
     { __style=${_fsh_theme_name}incorrect-subtle; return 1; }
@@ -930,7 +933,7 @@ _fsh_chroma_git_verify_file_or_dir() {
 
 _fsh_chroma_git_verify_branch() {
   local _wrd="$4"
-  _fsh_run_git_command "git for-each-ref --format='%(refname:short)'" "chroma-git-branches-$PWD" "refs/heads" 10
+  _fsh_run_git_command "git for-each-ref --format='%(refname:short)'" "chroma-git-branches-${PWD:A}" "refs/heads" 10
   if [[ -n ${_fsh_command_output[(r)$_wrd]} ]] {
     __style=${_fsh_theme_name}correct-subtle; return 0
   } elif [[ -n ${_fsh_command_output[(r)origin/$_wrd]} ]] {
@@ -942,10 +945,10 @@ _fsh_chroma_git_verify_branch() {
 
 _fsh_chroma_git_verify_unfetched_ref() {
   local _wrd="$4"
-  _fsh_run_git_command "git config --get checkout.defaultRemote" "chroma-git-defaultRemote-$PWD" "" 10
+  _fsh_run_git_command "git config --get checkout.defaultRemote" "chroma-git-defaultRemote-${PWD:A}" "" 10
   local remote="${_fsh_command_output[1]:-origin}"
   _fsh_run_git_command "git rev-list --count --no-walk --glob=\"refs/remotes/$remote/$_wrd\"" \
-  "chroma-git-unfetched-ref-$PWD" "" 10
+  "chroma-git-unfetched-ref-${PWD:A}" "" 10
 
   (( _fsh_command_output[1] )) && { __style=${_fsh_theme_name}correct-subtle; return 0; } || \
   { __style=${_fsh_theme_name}incorrect-subtle; return 1; }
@@ -985,7 +988,7 @@ _fsh_chroma_git_verify_commit() {
   local _wrd="$4"
   _fsh_command_output=()
   _fsh_run_git_command --status "git rev-parse --verify --quiet \"$_wrd\"" \
-  "chroma-git-commits-$PWD-$_wrd" "" $(( 1.5 * 60 ))
+  "chroma-git-commits-${PWD:A}-$_wrd" "" $(( 1.5 * 60 ))
   if (( _fsh_command_output[1] == 0 )); then
     __style=${_fsh_theme_name}correct-subtle
     return 0
@@ -1032,7 +1035,7 @@ _fsh_chroma_git_verify_revision_range_or_file() {
 
 _fsh_chroma_git_verify_tag_name() {
   local _wrd="$4"
-  _fsh_run_git_command "git tag" "chroma-git-tags-$PWD" "" $(( 2*60 ))
+  _fsh_run_git_command "git tag" "chroma-git-tags-${PWD:A}" "" $(( 2*60 ))
   [[ -n ${_fsh_command_output[(r)$_wrd]} ]] && \
   __style=${_fsh_theme_name}correct-subtle || __style=${_fsh_theme_name}incorrect-subtle
 }
