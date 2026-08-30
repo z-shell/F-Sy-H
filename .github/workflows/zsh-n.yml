@@ -67,6 +67,7 @@ jobs:
           zsh -f tests/integration/test-highlight-performance.zsh
           zsh -f tests/integration/test-theme-persistence.zsh
           zsh -f tests/integration/test-chroma-registry.zsh
+          zsh -f tests/integration/test-chroma-validator.zsh
           zsh -f tests/integration/test-chroma-regions.zsh
           zsh -f tests/integration/test-async-chroma.zsh
           zsh -f tests/integration/test-theme-validator.zsh
@@ -139,6 +140,7 @@ jobs:
           zsh -f tests/integration/test-highlight-performance.zsh
           zsh -f tests/integration/test-theme-persistence.zsh
           zsh -f tests/integration/test-chroma-registry.zsh
+          zsh -f tests/integration/test-chroma-validator.zsh
           zsh -f tests/integration/test-chroma-regions.zsh
           zsh -f tests/integration/test-async-chroma.zsh
           zsh -f tests/integration/test-theme-validator.zsh
