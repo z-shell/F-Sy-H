@@ -243,6 +243,13 @@ registered:
 fsh_chroma list
 ```
 
+The `KIND` column distinguishes command-specific `dedicated` handlers from the
+shared `generic` fallback. The generic handler highlights the first non-option
+word as a subcommand, but it does not validate that word or parse
+command-specific options. A generic registry entry therefore does not represent
+the same depth of coverage as a dedicated handler. `STATUS` reports whether the
+target is `ready`, `missing`, or intentionally `disabled`.
+
 Check registry reachability, declarative definitions, active theme styles, and
 session-disabled asynchronous lookups:
 
