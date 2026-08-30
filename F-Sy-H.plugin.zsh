@@ -406,7 +406,8 @@ zmodload zsh/parameter 2>/dev/null
 zmodload zsh/system 2>/dev/null
 
 builtin autoload -Uz -- is-at-least \
-  _fsh_read_ini _fsh_theme_color_rgb _fsh_validate_theme_contrast \
+  _fsh_read_ini _fsh_theme_color_rgb _fsh_theme_resolve_rendering \
+  _fsh_validate_theme_contrast _fsh_validate_theme_distinguishability \
   _fsh_validate_theme _fsh_run_git_command \
   _fsh_make_targets _fsh_run_command _fsh_read_all \
   _fsh_async_command _fsh_async_command_callback

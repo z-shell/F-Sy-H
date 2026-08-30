@@ -1,0 +1,35 @@
+# -*- mode: zsh; sh-indentation: 2; indent-tabs-mode: nil; sh-basic-offset: 2; -*-
+# vim: ft=zsh sw=2 ts=2 et
+#
+# Enforce semantic pair policy against fully resolved theme rendering state.
+#
+# $1 - palette name
+# $2 - declared default foreground
+# $3 - declared default background
+
+builtin emulate -L zsh
+builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc_quotes no_auto_pushd
+
+local palette=$1 default_foreground=$2 default_background=$3
+local pair policy left_style right_style left_signature right_signature REPLY
+local -a fields reply
+
+for pair in "${_fsh_theme_semantic_pair_policy[@]}"; do
+  fields=( ${(s: :)pair} )
+  policy=$fields[1]
+  left_style=$fields[2]
+  right_style=$fields[3]
+  [[ $policy == require-distinct ]] || continue
+
+  _fsh_theme_resolve_rendering \
+    "$left_style" "$palette" "$default_foreground" "$default_background" || continue
+  left_signature=$REPLY
+  _fsh_theme_resolve_rendering \
+    "$right_style" "$palette" "$default_foreground" "$default_background" || continue
+  right_signature=$REPLY
+
+  [[ $left_signature != "$right_signature" ]] ||
+    _fsh_theme_validation_errors+=(
+      "indistinguishable-styles|$left_style and $right_style resolve to the same rendering ($left_signature)"
+    )
+done

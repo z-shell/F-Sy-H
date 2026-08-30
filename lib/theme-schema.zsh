@@ -91,3 +91,15 @@ typeset -gA _fsh_theme_critical_styles=(
   incorrect-subtle  1
   matherr           1
 )
+
+# Semantic pairs are ordered for deterministic validator diagnostics. Distinct
+# pairs must not resolve to the same effective rendering. Shared pairs document
+# intentional command-family and alias-family grouping.
+typeset -ga _fsh_theme_semantic_pair_policy=(
+  'require-distinct single-hyphen-option double-hyphen-option'
+  'require-distinct optarg-string optarg-number'
+  'require-distinct subcommand optarg-string'
+  'allow-shared command builtin'
+  'allow-shared alias suffix-alias'
+  'allow-shared function command'
+)

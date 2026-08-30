@@ -1,0 +1,92 @@
+# -*- mode: zsh; sh-indentation: 2; indent-tabs-mode: nil; sh-basic-offset: 2; -*-
+# vim: ft=zsh sw=2 ts=2 et
+#
+# Resolve one style to a palette-canonical effective rendering.
+#
+# $1 - canonical style name
+# $2 - palette name
+# $3 - declared default foreground
+# $4 - declared default background
+#
+# Results:
+# - reply: foreground, background, bold, blink, conceal, standout, underline
+# - REPLY: stable labelled signature of the same rendering
+
+builtin emulate -L zsh
+builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc_quotes no_auto_pushd
+
+local style=$1 palette=$2 default_foreground=$3 default_background=$4
+local candidate inikey value token foreground=$default_foreground background=$default_background
+local temporary color_role color_value normalized_color
+local -A attributes=( bold 0 blink 0 conceal 0 standout 0 underline 0 )
+local -A ansi_names=(
+  black 0 red 1 green 2 yellow 3 blue 4 magenta 5 cyan 6 white 7
+)
+local -a candidates color_rgb
+integer reverse=0
+
+reply=()
+REPLY=
+candidates=( ${(s. .)_fsh_theme_style_fallbacks[$style]} default )
+for candidate in "${candidates[@]}"; do
+  [[ $candidate == - ]] && candidate=$style
+  inikey=${_fsh_validated_theme_data[(i)<*>_${candidate}]}
+  [[ -n $inikey ]] && break
+done
+[[ -n $inikey ]] || return 1
+
+value=${_fsh_validated_theme_data[$inikey]}
+for token in ${(s:,:)value}; do
+  case $token in
+    (none)
+      foreground=$default_foreground
+      background=$default_background
+      reverse=0
+      attributes=( bold 0 blink 0 conceal 0 standout 0 underline 0 )
+      ;;
+    (reverse) reverse=1 ;;
+    (no-reverse) reverse=0 ;;
+    (bold|blink|conceal|standout|underline) attributes[$token]=1 ;;
+    (no-(bold|blink|conceal|standout|underline)) attributes[${token#no-}]=0 ;;
+    (bg:*) background=${token#bg:} ;;
+    (*) foreground=$token ;;
+  esac
+done
+
+if (( reverse )); then
+  temporary=$foreground
+  foreground=$background
+  background=$temporary
+fi
+[[ $foreground == default ]] && foreground=$default_foreground
+[[ $background == default ]] && background=$default_background
+
+for color_role in foreground background; do
+  [[ $color_role == foreground ]] && color_value=$foreground || color_value=$background
+  if [[ $palette == xterm-256 ]]; then
+    _fsh_theme_color_rgb "$color_value" "$palette" || return 1
+    color_rgb=( "${reply[@]}" )
+    builtin printf -v normalized_color '#%02x%02x%02x' \
+      ${color_rgb[1]} ${color_rgb[2]} ${color_rgb[3]}
+  elif [[ $palette == terminal-ansi16 ]]; then
+    if [[ $color_value == default ]]; then
+      normalized_color=default
+    elif (( ${+ansi_names[$color_value]} )); then
+      normalized_color="ansi:${ansi_names[$color_value]}"
+    elif [[ $color_value == (0|[1-9][0-9]#) ]] && (( color_value <= 15 )); then
+      normalized_color="ansi:$color_value"
+    else
+      return 1
+    fi
+  else
+    return 1
+  fi
+  [[ $color_role == foreground ]] && foreground=$normalized_color || background=$normalized_color
+done
+
+reply=(
+  "$foreground" "$background"
+  ${attributes[bold]} ${attributes[blink]} ${attributes[conceal]}
+  ${attributes[standout]} ${attributes[underline]}
+)
+REPLY="fg=$foreground,bg=$background,bold=${attributes[bold]},blink=${attributes[blink]},conceal=${attributes[conceal]},standout=${attributes[standout]},underline=${attributes[underline]}"

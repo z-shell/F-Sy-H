@@ -322,6 +322,16 @@ ANSI indices 0 through 15 instead of claiming a fixed contrast ratio. Metadata
 remains optional for external themes, preserving existing user themes; when it
 is present, the same validation contract applies.
 
+That contract also keeps semantically opposed styles distinguishable. The
+validator compares resolved rendering state rather than raw INI text, so named
+and indexed equivalents, backgrounds, attributes, `none`, and `reverse` are
+canonicalized before comparison. Single- and double-hyphen options, string and
+numeric option arguments, and subcommands and string option arguments must
+differ. Command and builtin styles, function and command styles, and alias and
+suffix-alias styles may intentionally share a rendering. Overlays are checked
+as partial customizations, so standalone overlay validation does not enforce
+these pair relationships against an unknown base theme.
+
 The ZUnit command requires the repository's pinned ZUnit toolchain.
 
 ## Documentation and support
