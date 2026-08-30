@@ -291,7 +291,6 @@ zsh -f tests/integration/test-git-chroma-regions.zsh
 zsh -f tests/integration/test-passive-safety.zsh
 zsh -f tests/integration/test-hostile-autoloads.zsh
 zsh -f tests/integration/test-highlight-budget.zsh
-zsh -f tests/integration/test-incremental-highlighting.zsh
 zsh -f tests/integration/test-theme-persistence.zsh
 zsh -f tests/integration/test-chroma-registry.zsh
 zsh -f tests/integration/test-chroma-regions.zsh
@@ -301,12 +300,10 @@ zsh -f tools/validate-themes.zsh
 zunit
 ```
 
-The highlight-budget profile compares nine interleaved pairs of full parses and
-eligible end edits at 100, 500, and 1,000 characters. At 1,000 characters, both
-medians must remain at or below 250 ms and the median paired ratio must show at
-least a 30 percent improvement. A buffer above the default limit must take the
-skip path. The incremental-highlighting profile compares ordered regions with
-full parses for targeted invalidation cases and 100 seeded edits.
+The highlight-budget profile measures nine parses of representative,
+delimiter-free single commands at 173 and 1,000 characters after one warm-up
+run. Their medians must remain at or below 100 ms and 250 ms, respectively. A
+buffer above the default limit must take the skip path.
 
 `tools/validate-themes.zsh` validates all shipped themes by default and accepts
 explicit INI paths as arguments. It emits one JSON Lines record per result or
