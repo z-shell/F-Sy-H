@@ -29,6 +29,7 @@ builtin unset \
   "_fsh_state[_fsh-async-fd-$fd-key]"
 
 typeset -g _fsh_prior_buffer=
+_fsh_incremental_reset
 builtin true
 _fsh_zle_highlight
 zle -R
