@@ -14,6 +14,64 @@ output=$(zsh -f "$plugin_root/tools/validate-themes.zsh")
 [[ $output == *'"schema":"fsh-theme-validation/v1"'* ]]
 [[ $output == *'"declaredStyles":61,"resolvedStyles":60'* ]]
 
+command sed 's/^double-hyphen-option   = 143$/double-hyphen-option   = 104/' \
+  "$plugin_root/themes/q-jmnemonic.ini" >| "$fixture_root/semantic-collision.ini"
+if output=$(zsh -f "$plugin_root/tools/validate-themes.zsh" \
+  "$fixture_root/semantic-collision.ini" 2>&1); then
+  builtin print -u2 -r -- 'f-sy-h: identical semantic styles unexpectedly passed validation'
+  exit 1
+fi
+[[ $output == *'"code":"indistinguishable-styles"'* ]]
+[[ $output == *'single-hyphen-option and double-hyphen-option resolve to the same rendering'* ]]
+
+command sed 's/^double-hyphen-option   = cyan,bold$/double-hyphen-option   = 6/' \
+  "$plugin_root/themes/default.ini" >| "$fixture_root/canonical-color-collision.ini"
+if output=$(zsh -f "$plugin_root/tools/validate-themes.zsh" \
+  "$fixture_root/canonical-color-collision.ini" 2>&1); then
+  builtin print -u2 -r -- 'f-sy-h: equivalent named and indexed colours unexpectedly passed validation'
+  exit 1
+fi
+[[ $output == *'"code":"indistinguishable-styles"'* ]]
+
+command sed \
+  -e 's/^single-hyphen-option         = 104$/single-hyphen-option         = none/' \
+  -e 's/^double-hyphen-option   = 143$/double-hyphen-option   = default/' \
+  "$plugin_root/themes/q-jmnemonic.ini" >| "$fixture_root/default-color-collision.ini"
+if output=$(zsh -f "$plugin_root/tools/validate-themes.zsh" \
+  "$fixture_root/default-color-collision.ini" 2>&1); then
+  builtin print -u2 -r -- 'f-sy-h: equivalent default renderings unexpectedly passed validation'
+  exit 1
+fi
+[[ $output == *'"code":"indistinguishable-styles"'* ]]
+
+command sed \
+  -e 's/^single-hyphen-option         = 104$/single-hyphen-option         = black,bg:104,reverse/' \
+  -e 's/^double-hyphen-option   = 143$/double-hyphen-option   = 104/' \
+  "$plugin_root/themes/q-jmnemonic.ini" >| "$fixture_root/reverse-collision.ini"
+if output=$(zsh -f "$plugin_root/tools/validate-themes.zsh" \
+  "$fixture_root/reverse-collision.ini" 2>&1); then
+  builtin print -u2 -r -- 'f-sy-h: reverse-equivalent semantic styles unexpectedly passed validation'
+  exit 1
+fi
+[[ $output == *'"code":"indistinguishable-styles"'* ]]
+
+command sed 's/^double-hyphen-option   = 3,bold$/double-hyphen-option   = yellow/' \
+  "$plugin_root/themes/base16.ini" >| "$fixture_root/adaptive-collision.ini"
+if output=$(zsh -f "$plugin_root/tools/validate-themes.zsh" \
+  "$fixture_root/adaptive-collision.ini" 2>&1); then
+  builtin print -u2 -r -- 'f-sy-h: equivalent adaptive ANSI colours unexpectedly passed validation'
+  exit 1
+fi
+[[ $output == *'"code":"indistinguishable-styles"'* ]]
+
+command sed \
+  -e '/^\[theme\]$/,/^$/d' \
+  -e 's/^double-hyphen-option   = cyan,bold$/double-hyphen-option   = 6/' \
+  "$plugin_root/themes/default.ini" >| "$fixture_root/metadata-free-collision.ini"
+output=$(zsh -f "$plugin_root/tools/validate-themes.zsh" \
+  "$fixture_root/metadata-free-collision.ini")
+[[ $output == *'"status":"ok"'* ]]
+
 command sed '1,5d' "$plugin_root/themes/clean.ini" >| "$fixture_root/custom-no-metadata.ini"
 output=$(zsh -f "$plugin_root/tools/validate-themes.zsh" \
   "$fixture_root/custom-no-metadata.ini")
@@ -117,10 +175,12 @@ output=$(zsh -f "$plugin_root/tools/validate-themes.zsh" \
   builtin print -r -- 'background=#000000'
   builtin print -r -- '[base]'
   builtin print -r -- 'comment=#000000'
+  builtin print -r -- 'single-hyphen-option=104'
+  builtin print -r -- 'double-hyphen-option=104'
 } >| "$fixture_root/metadata-overlay.ini"
 output=$(zsh -f "$plugin_root/tools/validate-themes.zsh" \
   "$fixture_root/metadata-overlay.ini")
-[[ $output == *'"status":"ok"'*'"declaredStyles":1,"resolvedStyles":0'* ]]
+[[ $output == *'"status":"ok"'*'"declaredStyles":3,"resolvedStyles":0'* ]]
 
 typeset -gx ZDOTDIR=$fixture_root/zdotdir
 typeset -gx XDG_CACHE_HOME=$fixture_root/cache-home

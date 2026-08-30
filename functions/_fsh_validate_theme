@@ -148,6 +148,7 @@ if (( $#metadata_seen == $#metadata_keys )); then
     if [[ $style_mode == full && $foreground == \#[0-9a-fA-F](#c6,6) &&
       $background == \#[0-9a-fA-F](#c6,6) ]]; then
       _fsh_validate_theme_contrast "$palette" "$foreground" "$background"
+      _fsh_validate_theme_distinguishability "$palette" "$foreground" "$background"
     fi
   elif [[ $palette == terminal-ansi16 ]]; then
     [[ $foreground == default && $background == default ]] ||
@@ -170,6 +171,7 @@ if (( $#metadata_seen == $#metadata_keys )); then
             "adaptive-palette-out-of-range|$declared_key uses color outside terminal ANSI 0-15: $token" )
         done
       done
+      _fsh_validate_theme_distinguishability "$palette" "$foreground" "$background"
     fi
   fi
 fi

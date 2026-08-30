@@ -58,7 +58,7 @@ typeset -gA _fsh_styles
 : ${_fsh_styles[default]:=none}
 : ${_fsh_styles[unknown-token]:=fg=210,bold}
 : ${_fsh_styles[reserved-word]:=fg=yellow}
-: ${_fsh_styles[subcommand]:=fg=yellow}
+: ${_fsh_styles[subcommand]:=fg=yellow,bold}
 : ${_fsh_styles[alias]:=fg=green}
 : ${_fsh_styles[suffix-alias]:=fg=green}
 : ${_fsh_styles[global-alias]:=bg=blue}
@@ -75,7 +75,7 @@ typeset -gA _fsh_styles
 : ${_fsh_styles[globbing-ext]:=fg=13}
 : ${_fsh_styles[history-expansion]:=fg=69,bold}
 : ${_fsh_styles[single-hyphen-option]:=fg=cyan}
-: ${_fsh_styles[double-hyphen-option]:=fg=cyan}
+: ${_fsh_styles[double-hyphen-option]:=fg=cyan,bold}
 : ${_fsh_styles[back-quoted-argument]:=none}
 : ${_fsh_styles[single-quoted-argument]:=fg=yellow}
 : ${_fsh_styles[double-quoted-argument]:=fg=yellow}
