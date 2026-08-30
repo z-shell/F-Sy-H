@@ -183,7 +183,7 @@ _fsh_chroma_git_def=(
                 (-m)
                   <<>> NO-OP // ::_fsh_chroma_git_commit_message_action
                   <<>> NO-OP // ::_fsh_chroma_git_commit_message_argument_action
-                (-S|--gpg-sign=|--log=|-e|--strategy=|-X|--strategy-option=|-F|--file|--cleanup=|
+                || (-S|--gpg-sign=|--log=|-e|--strategy=|-X|--strategy-option=|-F|--file|--cleanup=|
                 --into-name=)
                   <<>> NO-OP // ::_fsh_chroma_option_action
                   <<>> NO-OP // ::_fsh_chroma_option_argument_action
@@ -341,8 +341,10 @@ _fsh_chroma_git_def=(
                         <<>> NEW_BRANCH_1_arg // COMMIT_2_arg // NO_MATCH_#_arg"
 
     NEW_BRANCH_1_arg "NO-OP // ::_fsh_chroma_git_verify_branch_name"
+    NEW_BRANCH_2_arg "NO-OP // ::_fsh_chroma_git_verify_branch_name"
 
     COMMIT_2_arg "NO-OP // ::_fsh_chroma_git_verify_commit"
+    COMMIT_3_arg "NO-OP // ::_fsh_chroma_git_verify_commit"
 
     CHECKOUT_0_opt "
                     (--conflict=|--recurse-submodules=|--track=|--pathspec-from-file=)
@@ -547,7 +549,7 @@ _fsh_chroma_git_def=(
              || -d:add
                             <<>> TAG_#_arg // NO_MATCH_#_opt
              || -d:del
-                            <<>> TAG_0_opt // TAG_NEW_1_arg // COMMIT_2_arg"
+                            <<>> TAG_0_opt^ // TAG_NEW_1_arg // COMMIT_2_arg"
 
     "TAG_#_arg" "NO-OP // ::_fsh_chroma_git_verify_tag_name"
 
@@ -557,7 +559,7 @@ _fsh_chroma_git_def=(
              || -l:add
                             <<>> TAG_L_0_opt // TAG_PAT_#_arg // NO_MATCH_#_opt
              || -l:del
-                            <<>> TAG_0_opt // TAG_NEW_1_arg // COMMIT_2_arg"
+                            <<>> TAG_0_opt^ // TAG_NEW_1_arg // COMMIT_2_arg"
 
     TAG_L_0_opt "
                 (-n|--contains|--no-contains|--points-at|--column=|--sort=|--format=|
@@ -575,7 +577,7 @@ _fsh_chroma_git_def=(
              || -v:add
                             <<>> TAG_V_0_opt // TAG_#_arg // NO_MATCH_#_opt
              || -v:del
-                            <<>> TAG_0_opt // TAG_NEW_1_arg // COMMIT_2_arg"
+                            <<>> TAG_0_opt^ // TAG_NEW_1_arg // COMMIT_2_arg"
 
     TAG_V_0_opt "
                 --format=
