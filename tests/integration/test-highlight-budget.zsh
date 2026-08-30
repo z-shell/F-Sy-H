@@ -17,103 +17,66 @@ zstyle ':fsh:config' bracket-highlighting disabled
 
 source "$plugin_root/F-Sy-H.plugin.zsh"
 
-float -r budget_seconds=0.250
-float -r incremental_ratio=0.700
+float -r interactive_budget_seconds=0.100
+float -r cap_budget_seconds=0.250
 integer length run
-float started full_elapsed incremental_elapsed
-float full_median incremental_median paired_median
-typeset pattern='echo a; '
-typeset BUFFER= PREBUFFER=
-typeset suffix_char
-typeset -a reply full_samples incremental_samples paired_samples
-typeset -A full_medians incremental_medians paired_medians
+float started elapsed median budget_seconds
+typeset pattern='echo this is a moderately long test command line with several arguments and some paths like /usr/local/bin/foo --verbose --dry-run'
+typeset extension=' /usr/local/bin/foo --verbose --dry-run argument'
+typeset BUFFER= PREBUFFER= WIDGET=self-insert
+integer CURSOR=0 REGION_ACTIVE=0
+typeset -a region_highlight samples
 
 (( _fsh_max_length == 1000 ))
+(( ! ${+functions[_fsh_highlight_buffer]} ))
+(( ! ${+_fsh_incremental_collect} ))
 
-# Interleave full parses with eligible end edits across short, medium, and
-# capped buffers. Paired ratios remove phase-to-phase runner drift while
-# medians tolerate an isolated noisy pair.
-for length in 100 500 1000; do
-  BUFFER=
+for length in 173 1000; do
+  BUFFER=$pattern
   while (( $#BUFFER < length )); do
-    BUFFER+=$pattern
+    BUFFER+=$extension
   done
   BUFFER=${BUFFER[1,length]}
   (( $#BUFFER == length ))
 
-  _fsh_highlight_process "$PREBUFFER" "$BUFFER" 0
-  (( $#reply > 0 ))
-  full_samples=()
-  incremental_samples=()
-  paired_samples=()
-  for run in {1..9}; do
-    _fsh_incremental_reset
-    started=$EPOCHREALTIME
-    _fsh_highlight_buffer "$PREBUFFER" "$BUFFER"
-    full_elapsed=$(( EPOCHREALTIME - started ))
-    full_samples+=( $full_elapsed )
-    (( ! _fsh_incremental_last_used ))
-    (( $#reply > 0 ))
+  CURSOR=$#BUFFER
+  typeset -g _fsh_prior_buffer=
+  region_highlight=()
+  _fsh_zle_highlight
+  (( $#region_highlight > 0 ))
 
-    (( run % 2 )) && suffix_char=x || suffix_char=y
-    BUFFER=${BUFFER[1,-2]}$suffix_char
+  samples=()
+  for run in {1..9}; do
+    typeset -g _fsh_prior_buffer=
+    region_highlight=()
     started=$EPOCHREALTIME
-    _fsh_highlight_buffer "$PREBUFFER" "$BUFFER"
-    incremental_elapsed=$(( EPOCHREALTIME - started ))
-    incremental_samples+=( $incremental_elapsed )
-    paired_samples+=( $(( incremental_elapsed / full_elapsed )) )
-    (( _fsh_incremental_last_used ))
-    (( $#reply > 0 ))
+    _fsh_zle_highlight
+    elapsed=$(( EPOCHREALTIME - started ))
+    samples+=( $elapsed )
+    (( $#region_highlight > 0 ))
   done
 
-  full_samples=( ${(on)full_samples} )
-  incremental_samples=( ${(on)incremental_samples} )
-  paired_samples=( ${(on)paired_samples} )
-  full_median=$full_samples[5]
-  incremental_median=$incremental_samples[5]
-  paired_median=$paired_samples[5]
-  full_medians[$length]=$full_median
-  incremental_medians[$length]=$incremental_median
-  paired_medians[$length]=$paired_median
+  samples=( ${(on)samples} )
+  median=$samples[5]
+  (( length == 173 )) && budget_seconds=$interactive_budget_seconds || \
+    budget_seconds=$cap_budget_seconds
 
   if [[ -n ${FSH_BENCHMARK_REPORT-} ]]; then
-    builtin printf \
-      'f-sy-h: %d chars full=%.6fs incremental=%.6fs paired-ratio=%.3f\n' \
-      $length $full_median $incremental_median $paired_median
+    builtin printf 'f-sy-h: %d chars median=%.6fs\n' $length $median
+  fi
+  if (( median > budget_seconds )); then
+    builtin printf >&2 \
+      'f-sy-h: median highlight time %.3fs exceeds %.3fs at %d characters\n' \
+      $median $budget_seconds $length
+    exit 1
   fi
 done
 
-full_median=$full_medians[1000]
-incremental_median=$incremental_medians[1000]
-paired_median=$paired_medians[1000]
-if (( full_median > budget_seconds )); then
-  builtin printf >&2 \
-    'f-sy-h: median full highlight time %.3fs exceeds %.3fs at 1000 characters\n' \
-    $full_median $budget_seconds
-  exit 1
-fi
-if (( incremental_median > budget_seconds )); then
-  builtin printf >&2 \
-    'f-sy-h: median incremental highlight time %.3fs exceeds %.3fs at 1000 characters\n' \
-    $incremental_median $budget_seconds
-  exit 1
-fi
-if (( paired_median > incremental_ratio )); then
-  builtin printf >&2 \
-    'f-sy-h: median paired incremental/full ratio %.3f exceeds %.3f at 1000 characters\n' \
-    $paired_median $incremental_ratio
-  exit 1
-fi
-
-BUFFER=
-while (( $#BUFFER <= _fsh_max_length )); do
-  BUFFER+=$pattern
-done
+BUFFER+=$extension
 BUFFER=${BUFFER[1,_fsh_max_length + 1]}
 (( $#BUFFER == _fsh_max_length + 1 ))
 region_highlight=( sentinel )
 _fsh_zle_highlight
 [[ $region_highlight == sentinel ]]
-(( ! _fsh_incremental_cache_valid ))
 
 fsh_plugin_unload

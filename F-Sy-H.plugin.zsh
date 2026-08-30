@@ -128,7 +128,6 @@ _fsh_zle_highlight() {
   # Remove all highlighting in isearch, so that only the underlining done by zsh itself remains.
   # For details see FAQ entry 'Why does syntax highlighting not work while searching history?'.
   if [[ $WIDGET == zle-isearch-update ]] && ! (( $+ISEARCHMATCH_ACTIVE )); then
-    _fsh_incremental_reset
     region_highlight=()
     return $ret
   fi
@@ -138,21 +137,16 @@ _fsh_zle_highlight() {
 
   # Skip highlighting above the configured buffer-length limit. Long buffers
   # are commonly pasted commands or generated lists.
-  if [[ -n ${_fsh_max_length:-} ]] && [[ $#BUFFER -gt $_fsh_max_length ]]; then
-    _fsh_incremental_reset
-    return $ret
-  fi
+  [[ -n ${_fsh_max_length:-} ]] && [[ $#BUFFER -gt $_fsh_max_length ]] && return $ret
 
   # Do not highlight if there are pending inputs (copy/paste).
-  if [[ $PENDING -gt 0 ]]; then
-    _fsh_incremental_reset
-    return $ret
-  fi
+  [[ $PENDING -gt 0 ]] && return $ret
 
   # Reset region highlight to build it from scratch
   # may need to remove path_prefix highlighting when the line ends
   if [[ $WIDGET == zle-line-finish ]] || _fsh_buffer_modified; then
-    _fsh_highlight_buffer "$PREBUFFER" "$BUFFER"
+    _fsh_highlight_init
+    _fsh_highlight_process "$PREBUFFER" "$BUFFER" 0
     (( _fsh_state[use_brackets] )) && {
       _fsh_main_cache=( $reply )
       _fsh_highlight_string_process "$PREBUFFER" "$BUFFER"
@@ -372,7 +366,6 @@ _fsh_preexec_hook() {
   typeset -gi _fsh_prior_cursor=0
   typeset -ga _fsh_main_cache
   _fsh_main_cache=()
-  _fsh_incremental_reset
 }
 
 if [[ -o interactive ]]; then
