@@ -155,7 +155,7 @@ jobs:
           git worktree add --detach "$base_dir" "$BASE_SHA"
 
           base_output=$(FSH_BENCHMARK_REPORT=1 \
-            zsh -f "$base_dir/tests/integration/test-highlight-budget.zsh") || true
+            zsh -f "$base_dir/tests/integration/test-highlight-performance.zsh") || true
           pr_output=$(FSH_BENCHMARK_REPORT=1 \
             zsh -f tests/integration/test-highlight-performance.zsh)
 
