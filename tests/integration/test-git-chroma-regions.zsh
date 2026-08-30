@@ -13,13 +13,28 @@ typeset -gx XDG_CACHE_HOME=$fixture_root/cache-home
 typeset -gx _fsh_work_dir=$fixture_root/work
 command mkdir -p -- \
   "$ZDOTDIR" \
-  "$fixture_repo/some/folder/with/changes"
+  "$fixture_repo/some/folder/with/changes" \
+  "$fixture_repo/modules/demo"
 command touch -- \
   "$fixture_repo/some/file.lua" \
-  "$fixture_repo/some/folder/with/changes/changed.lua"
+  "$fixture_repo/some/folder/with/changes/changed.lua" \
+  "$fixture_repo/tracked.txt"
+
+command git init -q "$fixture_repo"
+command git -C "$fixture_repo" symbolic-ref HEAD refs/heads/main
+builtin cd -- "$fixture_repo"
+command git add -- some/file.lua some/folder/with/changes/changed.lua tracked.txt
+command git -c user.name=Fixture -c user.email=fixture@example.invalid \
+  commit -qm fixture
+command git branch topic
+command git worktree add -q --detach "$fixture_root/existing-worktree"
+builtin print -r -- changed >| tracked.txt
+command git stash push -qm fixture -- tracked.txt
 
 source "$plugin_root/F-Sy-H.plugin.zsh"
-builtin cd -- "$fixture_repo"
+# Test this checkout even when the caller exports another F-Sy-H in FPATH.
+fpath=( "$_fsh_base_dir"/{functions,completions,chroma} "${(@)fpath:#$_fsh_base_dir/(functions|completions|chroma)}" )
+source "$plugin_root/tests/integration/chroma-fixture.zsh"
 
 _fsh_styles[correct-subtle]=fg=green
 _fsh_styles[incorrect-subtle]=fg=red
@@ -119,3 +134,70 @@ assert_trailing_token_style 'git commit missing/path/' fg=red || exit $?
 assert_trailing_token_style 'git commit --dry-run NOOUT' fg=cyan || exit $?
 assert_trailing_token_style 'git commit --dry-run NOOUT missing/path/' fg=red || exit $?
 assert_trailing_token_style 'git commit -m MESSAGE missing/path/' fg=red || exit $?
+
+fsh_assert_exact_regions 'git switch topic' \
+  "0 3 ${_fsh_styles[command]}" \
+  "4 10 ${_fsh_styles[subcommand]}" \
+  "11 16 ${_fsh_styles[correct-subtle]}" || exit $?
+fsh_assert_exact_regions 'git switch missing' \
+  "0 3 ${_fsh_styles[command]}" \
+  "4 10 ${_fsh_styles[subcommand]}" \
+  "11 18 ${_fsh_styles[incorrect-subtle]}" || exit $?
+fsh_assert_exact_regions 'git restore tracked.txt' \
+  "0 3 ${_fsh_styles[command]}" \
+  "4 11 ${_fsh_styles[subcommand]}" \
+  "12 23 ${_fsh_styles[correct-subtle]}" || exit $?
+fsh_assert_exact_regions 'git restore missing.txt' \
+  "0 3 ${_fsh_styles[command]}" \
+  "4 11 ${_fsh_styles[subcommand]}" \
+  "12 23 ${_fsh_styles[incorrect-subtle]}" || exit $?
+fsh_assert_exact_regions 'git stash pop stash@{0}' \
+  "0 3 ${_fsh_styles[command]}" \
+  "4 9 ${_fsh_styles[subcommand]}" \
+  "10 13 ${_fsh_styles[subcommand]}" \
+  "14 23 ${_fsh_styles[correct-subtle]}" || exit $?
+fsh_assert_exact_regions 'git stash pop missing' \
+  "0 3 ${_fsh_styles[command]}" \
+  "4 9 ${_fsh_styles[subcommand]}" \
+  "10 13 ${_fsh_styles[subcommand]}" \
+  "14 21 ${_fsh_styles[incorrect-subtle]}" || exit $?
+fsh_assert_exact_regions 'git rebase main topic' \
+  "0 3 ${_fsh_styles[command]}" \
+  "4 10 ${_fsh_styles[subcommand]}" \
+  "11 15 ${_fsh_styles[correct-subtle]}" \
+  "16 21 ${_fsh_styles[correct-subtle]}" || exit $?
+fsh_assert_exact_regions 'git rebase main missing' \
+  "0 3 ${_fsh_styles[command]}" \
+  "4 10 ${_fsh_styles[subcommand]}" \
+  "11 15 ${_fsh_styles[correct-subtle]}" \
+  "16 23 ${_fsh_styles[incorrect-subtle]}" || exit $?
+fsh_assert_exact_regions 'git worktree remove ../existing-worktree' \
+  "0 3 ${_fsh_styles[command]}" \
+  "4 12 ${_fsh_styles[subcommand]}" \
+  "13 19 ${_fsh_styles[subcommand]}" \
+  "20 40 ${_fsh_styles[correct-subtle]}" || exit $?
+fsh_assert_exact_regions 'git worktree remove ../missing-worktree' \
+  "0 3 ${_fsh_styles[command]}" \
+  "4 12 ${_fsh_styles[subcommand]}" \
+  "13 19 ${_fsh_styles[subcommand]}" \
+  "20 39 ${_fsh_styles[incorrect-subtle]}" || exit $?
+fsh_assert_exact_regions 'git submodule status modules/demo' \
+  "0 3 ${_fsh_styles[command]}" \
+  "4 13 ${_fsh_styles[subcommand]}" \
+  "14 20 ${_fsh_styles[subcommand]}" \
+  "21 33 ${_fsh_styles[correct-subtle]}" || exit $?
+fsh_assert_exact_regions 'git submodule status modules/missing' \
+  "0 3 ${_fsh_styles[command]}" \
+  "4 13 ${_fsh_styles[subcommand]}" \
+  "14 20 ${_fsh_styles[subcommand]}" \
+  "21 36 ${_fsh_styles[incorrect-subtle]}" || exit $?
+fsh_assert_exact_regions 'git branch -d topic' \
+  "0 3 ${_fsh_styles[command]}" \
+  "4 10 ${_fsh_styles[subcommand]}" \
+  "11 13 ${_fsh_styles[single-hyphen-option]}" \
+  "14 19 ${_fsh_styles[correct-subtle]}" || exit $?
+fsh_assert_exact_regions 'git branch -d missing' \
+  "0 3 ${_fsh_styles[command]}" \
+  "4 10 ${_fsh_styles[subcommand]}" \
+  "11 13 ${_fsh_styles[single-hyphen-option]}" \
+  "14 21 ${_fsh_styles[incorrect-subtle]}" || exit $?
