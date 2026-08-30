@@ -222,6 +222,13 @@ The settings are:
 For boolean-like settings, `disabled`, `false`, `no`, `off`, and `0` disable
 the feature; any other value enables it.
 
+At or below `max-length`, edits to independent simple command lists can reuse
+highlighting before a parser-confirmed top-level semicolon or newline. Quoting,
+redirections, assignments, aliases, chroma, control structures, changed theme
+or shell context, and other ambiguous input use a full parse. Bracket and
+string highlighting still scan the complete buffer. Buffers above the limit
+remain unhighlighted rather than switching to a degraded highlighting mode.
+
 Theme file examples and additional usage guidance are documented in the
 [wiki guide](https://wiki.zshell.dev/ecosystem/plugins/f-sy-h).
 
@@ -284,6 +291,7 @@ zsh -f tests/integration/test-git-chroma-regions.zsh
 zsh -f tests/integration/test-passive-safety.zsh
 zsh -f tests/integration/test-hostile-autoloads.zsh
 zsh -f tests/integration/test-highlight-budget.zsh
+zsh -f tests/integration/test-incremental-highlighting.zsh
 zsh -f tests/integration/test-theme-persistence.zsh
 zsh -f tests/integration/test-chroma-registry.zsh
 zsh -f tests/integration/test-chroma-regions.zsh
@@ -293,9 +301,12 @@ zsh -f tools/validate-themes.zsh
 zunit
 ```
 
-The highlight-budget profile measures five parses of a fixed 1,000-character
-buffer after one warm-up run. Its median must remain at or below 250 ms, and a
-buffer above the default limit must take the skip path.
+The highlight-budget profile compares five full parses and five eligible end
+edits at 100, 500, and 1,000 characters. At 1,000 characters, both medians must
+remain at or below 250 ms and the incremental median must be at least 30 percent
+faster. A buffer above the default limit must take the skip path. The
+incremental-highlighting profile compares ordered regions with full parses for
+targeted invalidation cases and 100 seeded edits.
 
 `tools/validate-themes.zsh` validates all shipped themes by default and accepts
 explicit INI paths as arguments. It emits one JSON Lines record per result or
