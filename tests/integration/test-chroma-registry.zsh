@@ -64,6 +64,7 @@ output=$(fsh_chroma list)
 [[ $output == *$'COMMAND\tTARGET\tKIND\tSTATUS'* ]]
 [[ $output == *$'docker\t_fsh_chroma_docker\tdedicated\tready'* ]]
 [[ $output == *$'_fsh_chroma_ogit\tretired'* ]]
+[[ $OSTYPE != darwin* || $output == *$'_fsh_chroma_whatis\tplatform-disabled'* ]]
 
 output=$(fsh_chroma doctor)
 [[ $output == *'ok registry loaded without duplicate keys'* ]]

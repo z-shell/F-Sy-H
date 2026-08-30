@@ -19,6 +19,7 @@ tree_roles=(
   _fsh_chroma_which opt-in
   _fsh_chroma_zi provider
 )
+[[ $OSTYPE == darwin* ]] && tree_roles[_fsh_chroma_whatis]=platform-disabled
 
 if (( $# )); then
   shift
