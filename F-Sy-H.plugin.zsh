@@ -51,6 +51,11 @@ if (( $#lifecycle_collisions )); then
   return 2
 fi
 
+if (( ${+ZSH_HIGHLIGHT_STYLES} || ${+ZSH_HIGHLIGHT_HIGHLIGHTERS} )); then
+  builtin print -u2 -r -- \
+    'f-sy-h: detected unsupported zsh-syntax-highlighting configuration; see README.md: Migrating from zsh-syntax-highlighting'
+fi
+
 builtin source -- "$plugin_dir/lib/lifecycle.zsh" || return
 _fsh_lifecycle_begin "${lifecycle_modules[@]}" || return
 builtin source -- "$plugin_dir/lib/theme-schema.zsh" || {

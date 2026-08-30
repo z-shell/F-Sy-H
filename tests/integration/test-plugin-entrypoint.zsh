@@ -7,10 +7,11 @@ typeset -r plugin_root=${${(%):-%N}:A:h:h:h}
 typeset -r fixture_root=$(command mktemp -d "${TMPDIR:-/tmp}/fsyh-entrypoint.XXXXXXXX")
 trap 'command rm -rf -- "$fixture_root"' EXIT HUP INT TERM
 
+typeset -gx HOME=$fixture_root/home
 typeset -gx ZDOTDIR=$fixture_root/zdotdir
 typeset -gx XDG_CACHE_HOME=$fixture_root/cache-home
 typeset -gx PMSPEC=0fuUpiPs
-command mkdir -p -- "$ZDOTDIR"
+command mkdir -p -- "$HOME" "$ZDOTDIR"
 zstyle ':fsh:config' work-dir "$fixture_root/work"
 zstyle ':fsh:config' max-length 321
 zstyle ':fsh:config' chroma-cache-seconds 7
@@ -28,6 +29,50 @@ count_fpath_entry() {
   done
   REPLY=$count
 }
+
+typeset -r migration_warning='f-sy-h: detected unsupported zsh-syntax-highlighting configuration; see README.md: Migrating from zsh-syntax-highlighting'
+typeset legacy_case legacy_output
+for legacy_case in styles highlighters both; do
+  legacy_output=$(
+    command zsh -f -c '
+      builtin emulate -R zsh
+      builtin setopt err_exit no_unset
+
+      case $2 in
+        (styles)
+          typeset -A ZSH_HIGHLIGHT_STYLES=( comment "fg=201" )
+          ;;
+        (highlighters)
+          typeset -a ZSH_HIGHLIGHT_HIGHLIGHTERS=( main brackets )
+          ;;
+        (both)
+          typeset -A ZSH_HIGHLIGHT_STYLES=( comment "fg=201" )
+          typeset -a ZSH_HIGHLIGHT_HIGHLIGHTERS=( main brackets )
+          ;;
+      esac
+
+      builtin source "$1"
+      builtin source "$1"
+
+      if [[ $2 == styles || $2 == both ]]; then
+        [[ ${ZSH_HIGHLIGHT_STYLES[comment]} == "fg=201" ]]
+      fi
+      if [[ $2 == highlighters || $2 == both ]]; then
+        [[ ${(j: :)ZSH_HIGHLIGHT_HIGHLIGHTERS} == "main brackets" ]]
+      fi
+
+      fsh_plugin_unload
+
+      if [[ $2 == styles || $2 == both ]]; then
+        [[ ${ZSH_HIGHLIGHT_STYLES[comment]} == "fg=201" ]]
+      fi
+      if [[ $2 == highlighters || $2 == both ]]; then
+        [[ ${(j: :)ZSH_HIGHLIGHT_HIGHLIGHTERS} == "main brackets" ]]
+      fi
+    ' zsh "$plugin_root/F-Sy-H.plugin.zsh" "$legacy_case" 2>&1
+  )
+  [[ $legacy_output == "$migration_warning" ]]
+done
 
 source "$plugin_root/F-Sy-H.plugin.zsh"
 
