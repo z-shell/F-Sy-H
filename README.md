@@ -33,6 +33,7 @@
 - Provides command-specific chroma highlighters for tools such as Git, Docker,
   grep, and make.
 - Supports shipped and user-defined themes through `fsh_theme`.
+- Inspects command-specific highlighters and their health through `fsh_chroma`.
 - Highlights nested command substitutions, arithmetic, strings, paths, and
   shell control structures.
 
@@ -47,13 +48,14 @@
 
 - Project identifier: `fsh`
 - Authoritative entrypoint: `F-Sy-H.plugin.zsh`
-- Public functions: `fsh_theme` and `fsh_plugin_unload`
+- Public functions: `fsh_chroma`, `fsh_theme`, and `fsh_plugin_unload`
 - Public configuration context: `:fsh:config`
 - Autoload paths: `functions/`, `completions/`, and the private `chroma/`
 
 The plugin has no public aliases or public parameters. Persistent implementation
 state and callbacks use the private `_fsh_` prefix. Native completion naming is
-the one required exception: the completion for `fsh_theme` is `_fsh_theme`.
+the required exceptions: completions for `fsh_chroma` and `fsh_theme` are
+`_fsh_chroma` and `_fsh_theme`.
 
 ### Repository layout
 
@@ -70,7 +72,7 @@ the one required exception: the completion for `fsh_theme` is `_fsh_theme`.
 
 ### Owned shell state
 
-- Public functions: `fsh_theme` and `fsh_plugin_unload`
+- Public functions: `fsh_chroma`, `fsh_theme`, and `fsh_plugin_unload`
 - Private persistent functions and parameters: names beginning with `_fsh_`
 - Direct module requests: `zsh/parameter`, `zsh/system`, optional
   `zsh/nearcolor`, and interactive-only `zsh/zleparameter`
@@ -233,6 +235,31 @@ Theme file examples and additional usage guidance are documented in the
 [wiki guide](https://wiki.zshell.dev/ecosystem/plugins/f-sy-h).
 
 ## Usage
+
+List registered command highlighters and classify files that are not directly
+registered:
+
+```zsh
+fsh_chroma list
+```
+
+Check registry reachability, declarative definitions, active theme styles, and
+session-disabled asynchronous lookups:
+
+```zsh
+fsh_chroma doctor
+```
+
+Add a nine-run median of end-to-end highlighting time for one command line:
+
+```zsh
+fsh_chroma doctor --sample 'docker image rm deadbeef'
+```
+
+The sample runs outside active ZLE, so it does not start asynchronous lookup
+workers. It measures the complete highlighting pass, not isolated chroma
+function time. `doctor` returns status `0` when healthy and `1` when it finds a
+problem; invalid command usage returns status `2`.
 
 List available themes:
 

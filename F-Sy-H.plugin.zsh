@@ -409,6 +409,7 @@ zmodload zsh/parameter 2>/dev/null
 zmodload zsh/system 2>/dev/null
 
 builtin autoload -Uz -- is-at-least \
+  fsh_chroma \
   _fsh_read_ini _fsh_theme_color_rgb _fsh_theme_color_cvd_lab \
   _fsh_theme_resolve_rendering _fsh_validate_theme_contrast \
   _fsh_validate_theme_cvd_separation _fsh_validate_theme_distinguishability \

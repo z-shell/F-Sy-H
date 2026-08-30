@@ -54,6 +54,9 @@ command chmod 755 "$fixture_root/bin/docker"
 } >| "$fixture_root/bin/git"
 command chmod 755 "$fixture_root/bin/git"
 zstyle ':fsh:config' work-dir "$fixture_root/work"
+# Test this checkout even when the caller exports another F-Sy-H in FPATH.
+fpath=( "$plugin_root"/{functions,completions,chroma} \
+  "${(@)fpath:#$plugin_root/(functions|completions|chroma)}" )
 
 source "$plugin_root/F-Sy-H.plugin.zsh"
 
@@ -71,6 +74,14 @@ elapsed=$(( EPOCHREALTIME - started ))
 (( elapsed < 0.250 ))
 [[ ! -e $FSH_DOCKER_MARKER ]]
 (( ! ${_fsh_state[chroma-docker-list-pending]:-0} ))
+
+_fsh_state[chroma-timeout-fixture-pending]=1
+_fsh_state[chroma-timeout-fixture-started-at]=$(( SECONDS - _fsh_chroma_timeout_seconds ))
+_fsh_state[chroma-timeout-fixture-warned]=1
+_fsh_async_command chroma-timeout-fixture command true
+(( _fsh_state[chroma-timeout-fixture-disabled] ))
+[[ ${_fsh_state[chroma-timeout-fixture-disabled-reason]} == \
+  "timeout after ${_fsh_chroma_timeout_seconds}s" ]]
 
 fsh_plugin_unload
 

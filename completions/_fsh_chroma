@@ -1,0 +1,14 @@
+#compdef fsh_chroma
+# -*- mode: zsh; sh-indentation: 2; indent-tabs-mode: nil; sh-basic-offset: 2; -*-
+# vim: ft=zsh sw=2 ts=2 et
+
+builtin emulate -L zsh
+builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc_quotes no_auto_pushd
+
+if [[ $words[2] == doctor ]]; then
+  _arguments \
+    '1:action:(list doctor)' \
+    '--sample[measure end-to-end highlighting time]:command line:'
+else
+  _arguments '1:action:(list doctor)'
+fi

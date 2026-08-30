@@ -58,8 +58,8 @@ _fsh_test_read_until() {
   fi
 
   if (( test_status == 0 )); then
-    zpty -w "$pty_name" "zstyle ':fsh:config' work-dir ${(q)test_dir}; source ${(q)plugin_path}; autoload -Uz compinit; compinit -D -i; PS1='FSH_INTERRUPT_READY> '; print -r -- FSH_\${:-LOAD}_NEW:\${+functions[_fsh_highlight_process]}:OLD:\${+functions[-fast-highlight-process]}"
-    _fsh_test_read_until '*FSH_LOAD_NEW:[01]:OLD:[01]*FSH_INTERRUPT_READY*' || \
+    zpty -w "$pty_name" "zstyle ':fsh:config' work-dir ${(q)test_dir}; source ${(q)plugin_path}; autoload -Uz compinit; compinit -D -i; PS1='FSH_INTERRUPT_READY> '; print -r -- FSH_\${:-LOAD}_NEW:\${+functions[_fsh_highlight_process]}:OLD:\${+functions[-fast-highlight-process]}:CHROMA:\${_comps[fsh_chroma]-}"
+    _fsh_test_read_until '*FSH_LOAD_NEW:[01]:OLD:[01]:CHROMA:_fsh_chroma*FSH_INTERRUPT_READY*' || \
       _fsh_test_fail "F-Sy-H did not load in the interactive Zsh: ${(V)REPLY[1,1000]}"
     load_output=$REPLY
   fi
@@ -75,6 +75,8 @@ _fsh_test_read_until() {
 
   [[ $load_output == *FSH_LOAD_NEW:1:OLD:0* ]] || \
     _fsh_test_fail 'plugin did not expose only the private _fsh helper namespace'
+  [[ $load_output == *CHROMA:_fsh_chroma* ]] || \
+    _fsh_test_fail 'compinit did not register the fsh_chroma completion'
   [[ $completion_output != *-fast-highlight* && $completion_output != *-fsh_sy_h* ]] || \
     _fsh_test_fail 'dash-prefixed F-Sy-H functions leaked into time completion'
 } always {

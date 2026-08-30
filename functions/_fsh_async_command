@@ -49,6 +49,7 @@ if (( ${_fsh_state[$key-pending]:-0} )); then
     fi
     _fsh_state[$key-pending]=0
     _fsh_state[$key-disabled]=1
+    _fsh_state[$key-disabled-reason]="timeout after ${_fsh_chroma_timeout_seconds}s"
     if (( ! ${_fsh_state[$key-warned]:-0} )); then
       zle -M "f-sy-h: disabled slow chroma lookup: $key"
       _fsh_state[$key-warned]=1

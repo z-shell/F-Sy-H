@@ -136,7 +136,7 @@ _fsh_test_noninteractive() {
 
     for name in ${(k)functions}; do
       case $name in
-        (_fsh_*|fsh_theme|add-zsh-hook|is-at-least|colors)
+        (_fsh_*|fsh_chroma|fsh_theme|add-zsh-hook|is-at-least|colors)
           before_owned_functions[$name]=${functions[$name]}
           ;;
       esac
@@ -171,6 +171,8 @@ _fsh_test_noninteractive() {
       _fsh_test_fail 'non-interactive loading installed a preexec hook'
 
     command mkdir -p -- "$_fsh_work_dir"
+    fsh_chroma list >/dev/null ||
+      _fsh_test_fail 'cannot exercise the chroma command before unload'
     fsh_theme --secondary --quiet default ||
       _fsh_test_fail 'cannot exercise lazy theme functions before unload'
     if (( ${+before_owned_functions[colors]} )); then
@@ -241,7 +243,7 @@ _fsh_test_noninteractive() {
 
     for name in ${(k)functions}; do
       case $name in
-        (_fsh_*|fsh_theme|add-zsh-hook|is-at-least|colors)
+        (_fsh_*|fsh_chroma|fsh_theme|add-zsh-hook|is-at-least|colors)
           (( ${+before_owned_functions[$name]} )) ||
             [[ $name == _fsh_buffer_modified ]] || {
               _fsh_test_fail "unload left a lazy plugin function: $name"

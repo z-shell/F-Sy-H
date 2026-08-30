@@ -9,7 +9,7 @@ _fsh_lifecycle_function_owned() {
 
   case $1 in
     (_fsh_lifecycle_*) return 1 ;;
-    (_fsh_*|fsh_theme|add-zsh-hook|is-at-least|colors) return 0 ;;
+    (_fsh_*|fsh_chroma|fsh_theme|add-zsh-hook|is-at-least|colors) return 0 ;;
     (*) return 1 ;;
   esac
 }

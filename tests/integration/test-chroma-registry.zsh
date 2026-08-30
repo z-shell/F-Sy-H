@@ -14,6 +14,8 @@ zstyle ':fsh:config' work-dir "$fixture_root/work"
 
 source "$plugin_root/F-Sy-H.plugin.zsh"
 
+(( ${+functions[fsh_chroma]} ))
+
 (( ! ${+_fsh_state[chroma-example]} ))
 (( ! ${+_fsh_state[chroma-vim]} ))
 (( ! ${+_fsh_state[chroma-which]} ))
@@ -57,9 +59,55 @@ for function_name in ${(k)functions}; do
   }
 done
 
+typeset output
+output=$(fsh_chroma list)
+[[ $output == *$'COMMAND\tTARGET\tKIND\tSTATUS'* ]]
+[[ $output == *$'docker\t_fsh_chroma_docker\tdedicated\tready'* ]]
+[[ $output == *$'_fsh_chroma_ogit\tretired'* ]]
+
+output=$(fsh_chroma doctor)
+[[ $output == *'ok registry loaded without duplicate keys'* ]]
+[[ $output == *'ok declarative definitions:'* ]]
+[[ $output == *'ok active theme: default'* ]]
+
+output=$(fsh_chroma doctor --sample 'docker image rm deadbeef')
+[[ $output == *'sample end-to-end median:'* ]]
+[[ $output == *'sample handler: docker -> _fsh_chroma_docker'* ]]
+
+_fsh_state[chroma-test-disabled]=1
+_fsh_state[chroma-test-disabled-reason]='fixture timeout'
+output=$(fsh_chroma doctor)
+[[ $output == *'warning async lookup disabled: chroma-test (fixture timeout)'* ]]
+builtin unset '_fsh_state[chroma-test-disabled]' '_fsh_state[chroma-test-disabled-reason]'
+
+_fsh_state[chroma-test-missing]=_fsh_chroma_missing
+if output=$(fsh_chroma doctor 2>&1); then
+  builtin print -u2 -r -- 'f-sy-h: chroma doctor accepted an unreachable registry target'
+  exit 1
+fi
+[[ $output == *'error registry target is not loadable: test-missing -> _fsh_chroma_missing'* ]]
+builtin unset '_fsh_state[chroma-test-missing]'
+
+if fsh_chroma doctor --unknown >/dev/null 2>&1; then
+  builtin print -u2 -r -- 'f-sy-h: invalid fsh_chroma arguments unexpectedly succeeded'
+  exit 1
+fi
+
 fsh_plugin_unload
 
-typeset output
+output=$(ZDOTDIR=$fixture_root/disabled-zdotdir XDG_CACHE_HOME=$fixture_root/disabled-cache \
+  zsh -f -c '
+    zstyle ":fsh:config" work-dir "$1"
+    zstyle ":fsh:config" theme-manager disabled
+    source "$2/F-Sy-H.plugin.zsh"
+    fsh_chroma doctor
+    fsh_plugin_unload
+  ' zsh "$fixture_root/disabled-work" "$plugin_root" 2>&1) || {
+    builtin print -u2 -r -- "f-sy-h: chroma doctor rejected a disabled theme manager: $output"
+    exit 1
+  }
+[[ $output == *'info registry target configured disabled: fsh_theme'* ]]
+
 output=$(ZDOTDIR=$fixture_root/opt-in-zdotdir XDG_CACHE_HOME=$fixture_root/opt-in-cache \
   zsh -f -c '
     zstyle ":fsh:config" work-dir "$1"

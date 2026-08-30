@@ -1,0 +1,189 @@
+# -*- mode: zsh; sh-indentation: 2; indent-tabs-mode: nil; sh-basic-offset: 2; -*-
+# vim: ft=zsh sw=2 ts=2 et
+
+builtin emulate -L zsh
+builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc_quotes no_auto_pushd
+
+{
+local action=${1-} sample= key target handler source_file role style style_key
+local command_name validator_output reason row_status kind theme_manager=enabled
+local -a registry_keys source_files samples
+local -A registry_targets tree_roles
+integer failures=0 missing_styles=0 sample_requested=0 run
+
+tree_roles=(
+  _fsh_chroma_example documentation
+  _fsh_chroma_git provider
+  _fsh_chroma_ogit retired
+  _fsh_chroma_vim opt-in
+  _fsh_chroma_which opt-in
+  _fsh_chroma_zi provider
+)
+
+if (( $# )); then
+  shift
+else
+  builtin print -u2 -r -- 'usage: fsh_chroma list | fsh_chroma doctor [--sample command-line]'
+  return 2
+fi
+
+case $action in
+  list)
+    (( $# == 0 )) || {
+      builtin print -u2 -r -- 'usage: fsh_chroma list'
+      return 2
+    }
+    ;;
+  doctor)
+    if (( $# == 2 )) && [[ $1 == --sample ]]; then
+      sample_requested=1
+      sample=$2
+    elif (( $# != 0 )); then
+      builtin print -u2 -r -- 'usage: fsh_chroma doctor [--sample command-line]'
+      return 2
+    fi
+    ;;
+  *)
+    builtin print -u2 -r -- 'usage: fsh_chroma list | fsh_chroma doctor [--sample command-line]'
+    return 2
+    ;;
+esac
+
+for key in ${(ok)_fsh_state}; do
+  target=${_fsh_state[$key]-}
+  [[ $key == chroma-* && $target == _fsh_chroma_* ]] || continue
+  registry_keys+=( "$key" )
+  registry_targets[${target%%%*}]=1
+done
+source_files=( "$_fsh_base_dir"/chroma/_fsh_chroma_*(N-.) )
+zstyle -s ':fsh:config' theme-manager theme_manager || theme_manager=enabled
+
+if [[ $action == list ]]; then
+  builtin print -r -- $'COMMAND\tTARGET\tKIND\tSTATUS'
+  for key in "${registry_keys[@]}"; do
+    command_name=${key#chroma-}
+    target=${_fsh_state[$key]}
+    handler=${target%%%*}
+    source_file=$_fsh_base_dir/chroma/$handler
+    kind=dedicated
+    [[ $handler == _fsh_chroma_subcommand ]] && kind=generic
+    if [[ $handler == _fsh_chroma_theme && $theme_manager == (disabled|false|no|off|0) ]]; then
+      row_status=disabled
+    else
+      row_status=ready
+      (( ${+functions[$handler]} )) && [[ -r $source_file ]] || row_status=missing
+    fi
+    builtin print -r -- "$command_name"$'\t'"$target"$'\t'"$kind"$'\t'"$row_status"
+  done
+  builtin print -r -- $'\nTREE-ONLY\tROLE'
+  for source_file in "${source_files[@]}"; do
+    handler=${source_file:t}
+    (( ${+registry_targets[$handler]} )) && continue
+    builtin print -r -- "$handler"$'\t'"${tree_roles[$handler]:-unclassified}"
+  done
+  return 0
+fi
+
+builtin print -r -- 'fsh_chroma doctor'
+builtin print -r -- 'ok registry loaded without duplicate keys'
+
+for key in "${registry_keys[@]}"; do
+  target=${_fsh_state[$key]}
+  handler=${target%%%*}
+  source_file=$_fsh_base_dir/chroma/$handler
+  if [[ $handler == _fsh_chroma_theme && $theme_manager == (disabled|false|no|off|0) ]]; then
+    builtin print -r -- 'info registry target configured disabled: fsh_theme'
+    continue
+  fi
+  if (( ! ${+functions[$handler]} )) || [[ ! -r $source_file ]]; then
+    builtin print -u2 -r -- "error registry target is not loadable: ${key#chroma-} -> $target"
+    (( ++failures ))
+  fi
+done
+(( failures )) || builtin print -r -- \
+  "ok registry handlers: $#registry_keys commands, $#registry_targets targets"
+
+for source_file in "${source_files[@]}"; do
+  handler=${source_file:t}
+  (( ${+registry_targets[$handler]} )) && continue
+  role=${tree_roles[$handler]-}
+  if [[ -z $role ]]; then
+    builtin print -u2 -r -- "error unclassified tree-only chroma: $handler"
+    (( ++failures ))
+  else
+    builtin print -r -- "info tree-only chroma: $handler ($role)"
+  fi
+done
+
+if validator_output=$(command zsh -f "$_fsh_base_dir/tools/validate-chromas.zsh" 2>&1); then
+  local -a validator_lines=( "${(@f)validator_output}" )
+  builtin print -r -- "ok declarative definitions: $#validator_lines files"
+else
+  builtin print -u2 -r -- 'error declarative chroma validation failed'
+  [[ -n $validator_output ]] && builtin print -u2 -r -- "$validator_output"
+  (( ++failures ))
+fi
+
+for style in "${_fsh_theme_style_order[@]}"; do
+  style_key=${_fsh_theme_name}${style}
+  (( ${+_fsh_styles[$style_key]} )) || {
+    builtin print -u2 -r -- "error active theme style is unresolved: $style"
+    (( ++missing_styles ))
+  }
+done
+(( failures += missing_styles ))
+(( missing_styles )) || builtin print -r -- \
+  "ok active theme: ${_fsh_theme_name:-default} ($#_fsh_theme_style_order resolved styles)"
+
+for key in ${(ok)_fsh_state}; do
+  [[ $key == *-disabled ]] || continue
+  (( ${_fsh_state[$key]:-0} )) || continue
+  reason=${_fsh_state[${key%-disabled}-disabled-reason]:-reason not recorded}
+  builtin print -r -- "warning async lookup disabled: ${key%-disabled} ($reason)"
+done
+
+if (( sample_requested )); then
+  (
+    local command_word sample_target sample_handler
+    local -a reply=()
+    local -A measured_handlers
+    local -F6 SECONDS median
+    typeset BUFFER=$sample PREBUFFER=
+
+    _fsh_highlight_init
+    _fsh_highlight_process "$PREBUFFER" "$BUFFER" 0 || return 1
+    for run in {1..9}; do
+      reply=()
+      SECONDS=0
+      _fsh_highlight_process "$PREBUFFER" "$BUFFER" 0 || return 1
+      samples+=( "$SECONDS" )
+    done
+    samples=( ${(on)samples} )
+    median=$samples[5]
+
+    for command_word in "${_fsh_last_commands[@]}"; do
+      command_name=${${(Q)command_word}:t}
+      sample_target=${_fsh_state[chroma-$command_name]-}
+      [[ $sample_target == _fsh_chroma_* ]] || continue
+      measured_handlers[$command_name]=$sample_target
+    done
+
+    builtin printf 'sample end-to-end median: %.6fs (9 runs)\n' "$median"
+    if (( $#measured_handlers )); then
+      for command_name in ${(ok)measured_handlers}; do
+        sample_handler=${measured_handlers[$command_name]}
+        builtin print -r -- "sample handler: $command_name -> $sample_handler"
+      done
+    else
+      builtin print -r -- 'sample handler: none'
+    fi
+  ) || {
+    builtin print -u2 -r -- 'error sample highlighting failed'
+    (( ++failures ))
+  }
+fi
+
+(( failures == 0 ))
+} always {
+  _fsh_lifecycle_refresh
+}

@@ -34,7 +34,7 @@ requirement.
 
 Public shell API:
 
-- functions: `fsh_theme`, `fsh_plugin_unload`
+- functions: `fsh_chroma`, `fsh_theme`, `fsh_plugin_unload`
 - configuration: `zstyle ':fsh:config' ...`
 - private state and callbacks: `_fsh_*`
 
