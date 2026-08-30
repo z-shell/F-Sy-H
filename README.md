@@ -268,6 +268,19 @@ Apply a theme:
 fsh_theme clean
 ```
 
+### Match a Tinted Theming terminal palette
+
+If [Tinty](https://github.com/tinted-theming/tinty) or another Base16 manager
+sets your terminal's ANSI 16-color palette, select the shipped adaptive theme:
+
+```zsh
+fsh_theme base16
+```
+
+This theme uses the terminal-owned foreground, background, and ANSI colors, so
+changing the terminal scheme also changes F-Sy-H without generating or
+downloading another theme file.
+
 ## Lifecycle and side effects
 
 Interactive loading:
