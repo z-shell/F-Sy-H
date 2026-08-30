@@ -1,6 +1,9 @@
 #!/usr/bin/env zunit
 @setup {
+    zstyle ':fsh:config' work-dir "${TMPDIR:-/tmp}/fsh-zunit-$$"
     load "../../F-Sy-H.plugin.zsh"
+    # Test this checkout even when the caller exports another F-Sy-H in FPATH.
+    fpath=( "$_fsh_base_dir"/{functions,completions,chroma} "${(@)fpath:#$_fsh_base_dir/(functions|completions|chroma)}" )
     setopt interactive_comments
     _fsh_highlight_fill_option_variables
 }
