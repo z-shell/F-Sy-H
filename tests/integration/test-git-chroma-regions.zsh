@@ -20,7 +20,8 @@ command touch -- \
   "$fixture_repo/some/folder/with/changes/changed.lua" \
   "$fixture_repo/tracked.txt"
 
-command git init -q -b main "$fixture_repo"
+command git init -q "$fixture_repo"
+command git -C "$fixture_repo" symbolic-ref HEAD refs/heads/main
 builtin cd -- "$fixture_repo"
 command git add -- some/file.lua some/folder/with/changes/changed.lua tracked.txt
 command git -c user.name=Fixture -c user.email=fixture@example.invalid \
