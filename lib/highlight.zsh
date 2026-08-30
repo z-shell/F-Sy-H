@@ -1582,9 +1582,10 @@ _fsh_incremental_capture_command_types() {
   builtin emulate -L zsh
 
   local command
+  local -aU unique_commands
   _fsh_incremental_command_types=()
-  for command in "${_fsh_incremental_commands[@]}"; do
-    (( ${+_fsh_incremental_command_types[(e)$command]} )) && continue
+  unique_commands=( "${_fsh_incremental_commands[@]}" )
+  for command in "${unique_commands[@]}"; do
     _fsh_highlight_main_type "$command"
     _fsh_incremental_command_types[(e)$command]=$REPLY
   done
@@ -1621,7 +1622,7 @@ _fsh_incremental_try() {
   local prebuffer=$1 buffer=$2 suffix command
   local -a prefix_regions prefix_commands suffix_regions suffix_commands
   local -a retained_checkpoints retained_region_counts retained_command_counts
-  local -A checked_commands
+  local -aU unique_prefix_commands
   integer common=0 common_limit checkpoint_index=0 checkpoint=0
   integer region_count=0 command_count=0 index parse_status
 
@@ -1654,9 +1655,8 @@ _fsh_incremental_try() {
     prefix_commands=( "${(@)_fsh_incremental_commands[1,command_count]}" )
   }
   _fsh_highlight_init
-  for command in "${prefix_commands[@]}"; do
-    (( ${+checked_commands[(e)$command]} )) && continue
-    checked_commands[(e)$command]=1
+  unique_prefix_commands=( "${prefix_commands[@]}" )
+  for command in "${unique_prefix_commands[@]}"; do
     _fsh_highlight_main_type "$command"
     [[ $REPLY == ${_fsh_incremental_command_types[(e)$command]-} ]] || return 1
   done

@@ -20,18 +20,19 @@ source "$plugin_root/F-Sy-H.plugin.zsh"
 float -r budget_seconds=0.250
 float -r incremental_ratio=0.700
 integer length run
-float started elapsed full_median incremental_median
+float started full_elapsed incremental_elapsed
+float full_median incremental_median paired_median
 typeset pattern='echo a; '
 typeset BUFFER= PREBUFFER=
 typeset suffix_char
-typeset -a reply samples
-typeset -A full_medians incremental_medians
+typeset -a reply full_samples incremental_samples paired_samples
+typeset -A full_medians incremental_medians paired_medians
 
 (( _fsh_max_length == 1000 ))
 
-# Compare full parses with eligible end edits across short, medium, and capped
-# buffers. Medians tolerate an isolated noisy runner while preserving a fixed
-# per-keystroke ceiling at the configured cap.
+# Interleave full parses with eligible end edits across short, medium, and
+# capped buffers. Paired ratios remove phase-to-phase runner drift while
+# medians tolerate an isolated noisy pair.
 for length in 100 500 1000; do
   BUFFER=
   while (( $#BUFFER < length )); do
@@ -42,47 +43,49 @@ for length in 100 500 1000; do
 
   _fsh_highlight_process "$PREBUFFER" "$BUFFER" 0
   (( $#reply > 0 ))
-  samples=()
-  for run in {1..5}; do
+  full_samples=()
+  incremental_samples=()
+  paired_samples=()
+  for run in {1..9}; do
     _fsh_incremental_reset
     started=$EPOCHREALTIME
     _fsh_highlight_buffer "$PREBUFFER" "$BUFFER"
-    elapsed=$(( EPOCHREALTIME - started ))
-    samples+=( $elapsed )
+    full_elapsed=$(( EPOCHREALTIME - started ))
+    full_samples+=( $full_elapsed )
     (( ! _fsh_incremental_last_used ))
     (( $#reply > 0 ))
-  done
-  samples=( ${(on)samples} )
-  full_median=$samples[3]
-  full_medians[$length]=$full_median
 
-  _fsh_incremental_reset
-  _fsh_highlight_buffer "$PREBUFFER" "$BUFFER"
-  samples=()
-  for run in {1..5}; do
     (( run % 2 )) && suffix_char=x || suffix_char=y
     BUFFER=${BUFFER[1,-2]}$suffix_char
     started=$EPOCHREALTIME
     _fsh_highlight_buffer "$PREBUFFER" "$BUFFER"
-    elapsed=$(( EPOCHREALTIME - started ))
-    samples+=( $elapsed )
+    incremental_elapsed=$(( EPOCHREALTIME - started ))
+    incremental_samples+=( $incremental_elapsed )
+    paired_samples+=( $(( incremental_elapsed / full_elapsed )) )
     (( _fsh_incremental_last_used ))
     (( $#reply > 0 ))
   done
-  samples=( ${(on)samples} )
-  incremental_median=$samples[3]
+
+  full_samples=( ${(on)full_samples} )
+  incremental_samples=( ${(on)incremental_samples} )
+  paired_samples=( ${(on)paired_samples} )
+  full_median=$full_samples[5]
+  incremental_median=$incremental_samples[5]
+  paired_median=$paired_samples[5]
+  full_medians[$length]=$full_median
   incremental_medians[$length]=$incremental_median
+  paired_medians[$length]=$paired_median
 
   if [[ -n ${FSH_BENCHMARK_REPORT-} ]]; then
     builtin printf \
-      'f-sy-h: %d chars full=%.6fs incremental=%.6fs ratio=%.3f\n' \
-      $length $full_median $incremental_median \
-      $(( incremental_median / full_median ))
+      'f-sy-h: %d chars full=%.6fs incremental=%.6fs paired-ratio=%.3f\n' \
+      $length $full_median $incremental_median $paired_median
   fi
 done
 
 full_median=$full_medians[1000]
 incremental_median=$incremental_medians[1000]
+paired_median=$paired_medians[1000]
 if (( full_median > budget_seconds )); then
   builtin printf >&2 \
     'f-sy-h: median full highlight time %.3fs exceeds %.3fs at 1000 characters\n' \
@@ -95,10 +98,10 @@ if (( incremental_median > budget_seconds )); then
     $incremental_median $budget_seconds
   exit 1
 fi
-if (( incremental_median > full_median * incremental_ratio )); then
+if (( paired_median > incremental_ratio )); then
   builtin printf >&2 \
-    'f-sy-h: median incremental time %.3fs is not at least 30%% faster than %.3fs at 1000 characters\n' \
-    $incremental_median $full_median
+    'f-sy-h: median paired incremental/full ratio %.3f exceeds %.3f at 1000 characters\n' \
+    $paired_median $incremental_ratio
   exit 1
 fi
 

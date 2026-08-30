@@ -301,12 +301,12 @@ zsh -f tools/validate-themes.zsh
 zunit
 ```
 
-The highlight-budget profile compares five full parses and five eligible end
-edits at 100, 500, and 1,000 characters. At 1,000 characters, both medians must
-remain at or below 250 ms and the incremental median must be at least 30 percent
-faster. A buffer above the default limit must take the skip path. The
-incremental-highlighting profile compares ordered regions with full parses for
-targeted invalidation cases and 100 seeded edits.
+The highlight-budget profile compares nine interleaved pairs of full parses and
+eligible end edits at 100, 500, and 1,000 characters. At 1,000 characters, both
+medians must remain at or below 250 ms and the median paired ratio must show at
+least a 30 percent improvement. A buffer above the default limit must take the
+skip path. The incremental-highlighting profile compares ordered regions with
+full parses for targeted invalidation cases and 100 seeded edits.
 
 `tools/validate-themes.zsh` validates all shipped themes by default and accepts
 explicit INI paths as arguments. It emits one JSON Lines record per result or
