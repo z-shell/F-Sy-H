@@ -88,7 +88,7 @@ _fsh_highlight_process "$PREBUFFER" "$BUFFER" 0
 typeset expected_highlights=
 expected_highlights="0 3 ${_fsh_styles[command]}"$'\n'\
 "4 10 ${_fsh_styles[subcommand]}"$'\n'\
-"11 24 ${_fsh_styles[correct-subtle]}"
+"11 24 ${_fsh_styles[double-hyphen-option]}"
 [[ ${(F)reply} == "$expected_highlights" ]]
 [[ ${_fsh_chroma_main_git[subcmd:commit]} == \
   *'GIT_RUNTIME_commit_R_#_opt // NO_MATCH_#_opt'* ]]
