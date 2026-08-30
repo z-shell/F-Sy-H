@@ -13,6 +13,7 @@ output=$(zsh -f "$plugin_root/tools/validate-themes.zsh")
 [[ $output != *'"status":"error"'* ]]
 [[ $output == *'"schema":"fsh-theme-validation/v1"'* ]]
 [[ $output == *'"declaredStyles":61,"resolvedStyles":60'* ]]
+[[ $output == *'"nearcolor256":{"#0550ae":25,"#116329":22,"#57606a":59,"#6639ba":98,"#7d4e00":94,"#82071e":52,"#dafbe1":194,"#ddf4ff":195,"#f6f8fa":231,"#fff8c5":230,"#ffffff":231}'* ]]
 
 command sed 's/^double-hyphen-option   = 143$/double-hyphen-option   = 104/' \
   "$plugin_root/themes/q-jmnemonic.ini" >| "$fixture_root/semantic-collision.ini"
