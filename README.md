@@ -240,11 +240,16 @@ List available themes:
 fsh_theme --list
 ```
 
-Test a theme for the current session:
+Preview a theme on the next command line:
 
 ```zsh
 fsh_theme --test clean
 ```
+
+Previewing does not change the active theme or saved theme files. Inspection
+commands (`--help`, `--info`, `--palette`, `--list`, and `--show`) also leave
+the theme work directory untouched. `fsh_theme --show` reports both the active
+and session-startup theme names and source paths.
 
 Apply a theme:
 
@@ -273,9 +278,10 @@ widget, function, or parameter changed after loading is preserved.
 
 Loading performs no network request and does not create the cache directory.
 The explicit `fsh_theme` command creates storage only when it needs to write
-theme state. Saved state uses `current_theme.ini`, `theme_overlay.ini`, and
-`secondary_theme.local.ini`. These files are parsed as data. Legacy writable
-`*.zsh` theme caches are deliberately ignored and never sourced.
+theme state. Preview and inspection do not create it. Saved state uses
+`current_theme.ini`, `theme_overlay.ini`, and `secondary_theme.local.ini`.
+These files are parsed as data. Legacy writable `*.zsh` theme caches are
+deliberately ignored and never sourced.
 
 ## Verification
 
