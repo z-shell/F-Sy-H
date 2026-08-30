@@ -39,6 +39,63 @@ _fsh_test_count_value() {
   REPLY=$count
 }
 
+_fsh_test_widget_option_boundary() {
+  builtin emulate -L zsh
+
+  local fixture_root pty_name=fsyh-widget-options chunk output=
+  integer deadline
+
+  fixture_root=$(command mktemp -d "${TMPDIR:-/tmp}/fsyh-widget-options.XXXXXXXX") || return 1
+  {
+    command mkdir -p -- "$fixture_root/home" "$fixture_root/zdotdir" || return 1
+    zmodload zsh/zpty || {
+      _fsh_test_fail 'zsh/zpty is unavailable'
+      return
+    }
+    zpty -b "$pty_name" \
+      "HOME=${(q)fixture_root}/home ZDOTDIR=${(q)fixture_root}/zdotdir zsh -f -i" || {
+        _fsh_test_fail 'cannot start isolated interactive Zsh'
+        return
+      }
+
+    zpty -w "$pty_name" \
+      "PS1='FSH_WIDGET> '; unsetopt prompt_cr prompt_sp warn_create_global; setopt auto_pushd; third_party_widget() { THIRD_PARTY_GLOBAL=1; builtin print -r -- FSH_WIDGET_OPTIONS:\${options[autopushd]}:\${options[warncreateglobal]}; zle .accept-line; }; zle -N third-party-widget third_party_widget; bindkey '^X^O' third-party-widget; source ${(q)plugin_path}; print -r -- FSH_WIDGET_READY"
+    deadline=$(( SECONDS + 10 ))
+    while (( SECONDS < deadline )); do
+      if zpty -r -t "$pty_name" chunk; then
+        output+=$chunk
+        [[ $output == *FSH_WIDGET_READY*FSH_WIDGET\>* ]] && break
+      else
+        command sleep 0.02
+      fi
+    done
+    [[ $output == *FSH_WIDGET_READY*FSH_WIDGET\>* ]] || {
+      _fsh_test_fail 'interactive widget probe did not become ready'
+      return
+    }
+
+    output=
+    zpty -w -n "$pty_name" $'\C-X\C-O'
+    deadline=$(( SECONDS + 10 ))
+    while (( SECONDS < deadline )); do
+      if zpty -r -t "$pty_name" chunk; then
+        output+=$chunk
+        [[ $output == *FSH_WIDGET_OPTIONS:*FSH_WIDGET\>* ]] && break
+      else
+        command sleep 0.02
+      fi
+    done
+
+    [[ $output == *FSH_WIDGET_OPTIONS:on:off* ]] ||
+      _fsh_test_fail "wrapped widget changed caller options: ${(V)output[1,1000]}"
+    [[ $output != *'created globally in function third_party_widget'* ]] ||
+      _fsh_test_fail 'wrapped widget enabled warn_create_global in third-party code'
+  } always {
+    (( ${+builtins[zpty]} )) && zpty -d "$pty_name" 2>/dev/null
+    command rm -rf -- "$fixture_root"
+  }
+}
+
 _fsh_test_noninteractive() {
   builtin emulate -L zsh
 
@@ -227,6 +284,9 @@ _fsh_test_interactive() {
     _fsh_test_fail 'interactive lifecycle case requires zsh -i'
     return
   }
+
+  _fsh_test_widget_option_boundary ||
+    _fsh_test_fail 'wrapped widget option boundary probe failed'
 
   zmodload zsh/parameter zsh/zleparameter || {
     _fsh_test_fail 'required observer modules are unavailable'
