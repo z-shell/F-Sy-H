@@ -16,9 +16,10 @@ builtin emulate -L zsh
 builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc_quotes no_auto_pushd
 
 local theme_path=$1 theme_dir=$2 validation_mode=${3:-} style_mode full_key declared_key style candidate inikey value token
-local secondary_key secondary_name secondary_path required_key error metadata_key palette foreground background
+local secondary_key secondary_name secondary_path required_key error metadata_key palette foreground background description
 local -A known declared_seen metadata_seen
-local -a candidates style_colors metadata_keys
+local -a candidates style_colors metadata_keys rendering_metadata_keys
+integer rendering_metadata_count=0
 
 typeset -gA _fsh_validated_theme_data=()
 typeset -ga _fsh_theme_validation_errors=()
@@ -42,6 +43,7 @@ _fsh_read_ini "$theme_path" _fsh_validated_theme_data '' || {
 
 style_colors=( red green blue yellow cyan magenta black white default )
 metadata_keys=( "${_fsh_theme_metadata_keys[@]}" )
+rendering_metadata_keys=( "${_fsh_theme_rendering_metadata_keys[@]}" )
 for style in "${_fsh_theme_style_order[@]}"; do
   known[$style]=1
   for candidate in ${(s. .)_fsh_theme_style_fallbacks[$style]}; do
@@ -116,6 +118,7 @@ fi
 palette=${_fsh_validated_theme_data[<theme>_palette]-}
 foreground=${_fsh_validated_theme_data[<theme>_foreground]-}
 background=${_fsh_validated_theme_data[<theme>_background]-}
+description=${_fsh_validated_theme_data[<theme>_description]-}
 if [[ $validation_mode == shipped ]]; then
   for metadata_key in "${metadata_keys[@]}"; do
     (( ${+metadata_seen[$metadata_key]} )) ||
@@ -124,16 +127,24 @@ if [[ $validation_mode == shipped ]]; then
   done
 fi
 
-if (( $#metadata_seen && $#metadata_seen < $#metadata_keys )) &&
+for metadata_key in "${rendering_metadata_keys[@]}"; do
+  (( ${+metadata_seen[$metadata_key]} )) && (( ++rendering_metadata_count ))
+done
+if (( rendering_metadata_count && rendering_metadata_count < $#rendering_metadata_keys )) &&
   [[ $validation_mode != shipped ]]; then
-  for metadata_key in "${metadata_keys[@]}"; do
+  for metadata_key in "${rendering_metadata_keys[@]}"; do
     (( ${+metadata_seen[$metadata_key]} )) ||
       _fsh_theme_validation_errors+=(
         "incomplete-theme-metadata|missing [theme] declaration: $metadata_key" )
   done
 fi
 
-if (( $#metadata_seen == $#metadata_keys )); then
+if (( ${+metadata_seen[description]} )) && [[ -z $description ]]; then
+  _fsh_theme_validation_errors+=(
+    'invalid-theme-description|theme description must not be empty' )
+fi
+
+if (( rendering_metadata_count == $#rendering_metadata_keys )); then
   [[ $palette == (xterm-256|terminal-ansi16) ]] ||
     _fsh_theme_validation_errors+=(
       "invalid-theme-palette|unknown theme palette: $palette" )

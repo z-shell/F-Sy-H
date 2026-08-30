@@ -240,6 +240,15 @@ List available themes:
 fsh_theme --list
 ```
 
+The listing includes each theme's intended background, whether its palette is
+fixed or terminal-owned, and a short description.
+
+Compare every shipped theme using the same highlighted sample:
+
+```zsh
+fsh_theme --gallery
+```
+
 Preview a theme on the next command line:
 
 ```zsh
@@ -247,9 +256,11 @@ fsh_theme --test clean
 ```
 
 Previewing does not change the active theme or saved theme files. Inspection
-commands (`--help`, `--info`, `--palette`, `--list`, and `--show`) also leave
-the theme work directory untouched. `fsh_theme --show` reports both the active
-and session-startup theme names and source paths.
+commands (`--help`, `--info`, `--palette`, `--list`, `--gallery`, and `--show`)
+also leave the theme work directory untouched. The gallery preserves an
+existing one-shot preview as well as the active and saved themes.
+`fsh_theme --show` reports both the active and session-startup theme names and
+source paths.
 
 Apply a theme:
 
@@ -322,14 +333,15 @@ by the installed Zsh `zsh/nearcolor` module. It is empty when the theme has no
 truecolor styles; an unavailable module produces a structured
 `nearcolor-unavailable` error.
 
-Every shipped theme declares a `[theme]` rendering contract. Fixed-palette
-themes use `palette = xterm-256` with exact `foreground` and `background`
-`#rrggbb` values. Their resolved ordinary styles must reach a contrast ratio of
-4.5:1; `unknown-token`, `incorrect-subtle`, and `matherr` must reach 7:1.
-`palette = terminal-ansi16` is adaptive and restricts colors to terminal-owned
-ANSI indices 0 through 15 instead of claiming a fixed contrast ratio. Metadata
-remains optional for external themes, preserving existing user themes; when it
-is present, the same validation contract applies.
+Every shipped theme declares a `[theme]` rendering contract and a one-line
+`description`. Fixed-palette themes use `palette = xterm-256` with exact
+`foreground` and `background` `#rrggbb` values. Their resolved ordinary styles
+must reach a contrast ratio of 4.5:1; `unknown-token`, `incorrect-subtle`, and
+`matherr` must reach 7:1. `palette = terminal-ansi16` is adaptive and restricts
+colors to terminal-owned ANSI indices 0 through 15 instead of claiming a fixed
+contrast ratio. Rendering metadata and descriptions remain optional for
+external themes, preserving existing user themes. A supplied rendering
+contract receives the same validation as a shipped theme.
 
 That contract also keeps semantically opposed styles distinguishable. The
 validator compares resolved rendering state rather than raw INI text, so named

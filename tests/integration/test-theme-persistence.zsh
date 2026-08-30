@@ -1,7 +1,7 @@
 #!/usr/bin/env zsh
 
 emulate -R zsh
-setopt err_exit no_unset no_function_argzero posix_argzero
+setopt err_exit no_unset no_function_argzero posix_argzero extended_glob
 
 typeset -g _fsh_test_file=${${(%):-%N}:A}
 TRAPZERR() {
@@ -29,7 +29,7 @@ _fsh_test_read_until() {
   return 1
 }
 
-typeset theme theme_file theme_work output
+typeset theme theme_file theme_work output plain_output gallery_line
 for theme_file in "$plugin_root"/themes/*.ini(N); do
   theme=${theme_file:t:r}
   theme_work=$fixture_root/$theme
@@ -63,8 +63,27 @@ output=$(ZDOTDIR=$fixture_root/list-zdotdir XDG_CACHE_HOME=$fixture_root/list-ca
     fsh_theme --list
     fsh_plugin_unload
   ' zsh "$fixture_root/list-work" "$plugin_root")
-[[ $output == *Theme*Background* ]]
-[[ $output == *light*'#ffffff'* ]]
+[[ $output == *Theme*Background*Palette*Description* ]]
+[[ $output == *base16*default*terminal-owned*'Terminal-adaptive ANSI 16-color theme.'* ]]
+[[ $output == *light*'#ffffff'*fixed*'GitHub-inspired light theme.'* ]]
+
+output=$(TERM=xterm-256color ZDOTDIR=$fixture_root/gallery-zdotdir \
+  XDG_CACHE_HOME=$fixture_root/gallery-cache \
+  zsh -f -c '
+    fpath=( "$2/functions" $fpath )
+    unfunction fsh_theme 2>/dev/null || true
+    zstyle ":fsh:config" work-dir "$1"
+    source "$2/F-Sy-H.plugin.zsh"
+    fsh_theme --gallery
+    fsh_plugin_unload
+  ' zsh "$fixture_root/gallery-work" "$plugin_root")
+[[ ! -e $fixture_root/gallery-work ]]
+plain_output=${output//$'\e'\[[0-9;]##m/}
+for theme_file in "$plugin_root"/themes/*.ini(N); do
+  theme=${theme_file:t:r}
+  gallery_line=${${(M)${(f)plain_output}:#$theme*}[1]-}
+  [[ $gallery_line == *"git commit --amend 'message' # comment"* ]]
+done
 
 theme_work=$fixture_root/inspection-work
 output=$(ZDOTDIR=$fixture_root/inspection-zdotdir XDG_CACHE_HOME=$fixture_root/inspection-cache \
@@ -74,7 +93,7 @@ output=$(ZDOTDIR=$fixture_root/inspection-zdotdir XDG_CACHE_HOME=$fixture_root/i
     zstyle ":fsh:config" work-dir "$1"
     source "$2/F-Sy-H.plugin.zsh"
     typeset operation
-    for operation in --help --info --palette --list --show --reset --ov-reset; do
+    for operation in --help --info --palette --list --gallery --show --reset --ov-reset; do
       fsh_theme "$operation" >/dev/null
     done
     fsh_theme --test --quiet clean
@@ -149,6 +168,13 @@ output=$(ZDOTDIR=$fixture_root/preview-zdotdir XDG_CACHE_HOME=$fixture_root/prev
       command cp -- "$1/$state_file" "$1/$state_file.before"
     done
 
+    fsh_theme --gallery >/dev/null
+    [[ $_fsh_theme_name == $before_name ]]
+    [[ $(typeset -p _fsh_styles) == $before_styles ]]
+    for state_file in current_theme.ini secondary_theme.local.ini theme_overlay.ini; do
+      command cmp -s -- "$1/$state_file.before" "$1/$state_file"
+    done
+
     fsh_theme --test --quiet clean
     [[ $_fsh_theme_name == $before_name ]]
     [[ $(typeset -p _fsh_styles) == $before_styles ]]
@@ -158,6 +184,11 @@ output=$(ZDOTDIR=$fixture_root/preview-zdotdir XDG_CACHE_HOME=$fixture_root/prev
     [[ ${_fsh_preview_styles[zdharmacommand]} == fg=63 ]]
     [[ ${_fsh_preview_styles[clean-path]} == "$2/themes/clean.ini" ]]
     (( ! ${+_fsh_theme_preview_active} ))
+    typeset preview_name=$_fsh_preview_theme_name
+    typeset preview_styles=$(typeset -p _fsh_preview_styles)
+    fsh_theme --gallery >/dev/null
+    [[ $_fsh_preview_theme_name == $preview_name ]]
+    [[ $(typeset -p _fsh_preview_styles) == $preview_styles ]]
     for state_file in current_theme.ini secondary_theme.local.ini theme_overlay.ini; do
       command cmp -s -- "$1/$state_file.before" "$1/$state_file"
     done
