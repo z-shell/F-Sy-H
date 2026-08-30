@@ -326,26 +326,6 @@ typeset -gA _fsh_assigns_seen
 # for other scripts to process
 typeset -ga _fsh_last_commands
 
-# Conservative incremental-highlighting state. Checkpoints are emitted by the
-# main parser only for complete simple-command prefixes. Anything outside that
-# narrow grammar makes the full parser the sole source of highlighting output.
-typeset -gi _fsh_incremental_cache_valid=0
-typeset -gi _fsh_incremental_collect=0
-typeset -gi _fsh_incremental_last_used=0
-typeset -gi _fsh_incremental_parse_safe=0
-typeset -g _fsh_incremental_buffer=
-typeset -g _fsh_incremental_fingerprint=
-typeset -g _fsh_incremental_prebuffer=
-typeset -ga _fsh_incremental_checkpoints
-typeset -ga _fsh_incremental_checkpoint_command_counts
-typeset -ga _fsh_incremental_checkpoint_region_counts
-typeset -gA _fsh_incremental_command_types
-typeset -ga _fsh_incremental_commands
-typeset -ga _fsh_incremental_parse_checkpoints
-typeset -ga _fsh_incremental_parse_command_counts
-typeset -ga _fsh_incremental_parse_region_counts
-typeset -ga _fsh_incremental_regions
-
 # Get the type of a command.
 #
 # Uses the zsh/parameter module if available to avoid forks, and a
@@ -446,7 +426,7 @@ _fsh_highlight_process() {
   # __arg_type can be 0, 1, 2 or 3, i.e. precommand, control flow, command separator
   # __idx and _end_idx are used in sub-functions
   # for this_word and next_word look below at commented integers and at state machine description
-  integer __arg_type=0 MBEGIN MEND in_redirection __len=${#__buf} __PBUFLEN=${#1} already_added offset __idx _end_idx this_word=1 next_word=0 __pos  __asize __delimited=0 itmp iitmp incremental_collect=$_fsh_incremental_collect
+  integer __arg_type=0 MBEGIN MEND in_redirection __len=${#__buf} __PBUFLEN=${#1} already_added offset __idx _end_idx this_word=1 next_word=0 __pos  __asize __delimited=0 itmp iitmp
   integer chroma_global_alias chroma_reply_count chroma_start_pos chroma_already_added chroma_status
   local -a match mbegin mend __inputs __list
 
@@ -511,7 +491,6 @@ _fsh_highlight_process() {
   _fsh_state[chroma-zi-ice-elements-id-as]=""
 
   [[ -n $ZCALC_ACTIVE ]] && {
-    (( incremental_collect )) && _fsh_incremental_parse_safe=0
     _start_pos=0; _end_pos=__len; __arg=$__buf
     _fsh_highlight_math_string
     return 0
@@ -562,12 +541,6 @@ _fsh_highlight_process() {
 
       proc_buf=${proc_buf[offset + __asize + 1,__len]}
       _start_pos=$_end_pos
-      if (( incremental_collect && _fsh_incremental_parse_safe &&
-        ! in_array_assignment && this_word == 1 )) && [[ -z $braces_stack ]]; then
-        _fsh_incremental_parse_checkpoints+=( $(( _end_pos - __PBUFLEN )) )
-        _fsh_incremental_parse_region_counts+=( $#reply )
-        _fsh_incremental_parse_command_counts+=( $#_fsh_last_commands )
-      fi
       continue
     else
       offset=0
@@ -638,7 +611,6 @@ _fsh_highlight_process() {
    fi
 
    if (( this_word & 8192 )); then
-     (( incremental_collect )) && _fsh_incremental_parse_safe=0
      __list=( ${(z@)${aliases[$active_command]:-${active_command##*/}}##[[:space:]]#(command|builtin|exec|noglob|nocorrect|pkexec)[[:space:]]#} )
      (( chroma_global_alias = ${+galiases[(e)${(Q)__arg}]} ))
      if (( chroma_global_alias )); then
@@ -662,7 +634,6 @@ _fsh_highlight_process() {
      _mybuf=${${aliases[$active_command]:-${active_command##*/}}##[[:space:]]#(command|builtin|exec|noglob|nocorrect|pkexec)[[:space:]]#}
      [[ "$_mybuf" = (#b)(FPATH+(#c0,1)=)* ]] && _mybuf="${match[1]} ${(j: :)${(s,:,)${_mybuf#FPATH+(#c0,1)=}}}"
      [[ -n ${_fsh_state[chroma-${_mybuf%% *}]} ]] && {
-       (( incremental_collect )) && _fsh_incremental_parse_safe=0
        __list=( ${(z@)_mybuf} )
        if (( ${#__list} > 1 )) || [[ $active_command != $_mybuf ]]; then
          __style=${_fsh_theme_name}alias
@@ -697,11 +668,9 @@ _fsh_highlight_process() {
     (( next_word = 1 | (this_word & BIT_case_code) ))
   elif (( (this_word & 1) && (in_redirection == 0) )) || [[ $braces_stack = T* ]]; then # T - typedef, etc.
     if (( __arg_type == 1 )); then
-      (( incremental_collect )) && _fsh_incremental_parse_safe=0
       __style=${_fsh_theme_name}precommand
       [[ $__arg = "command" || $__arg = "exec" ]] && (( next_word = next_word | 64 ))
     elif [[ $__arg = (sudo|doas) ]]; then
-      (( incremental_collect )) && _fsh_incremental_parse_safe=0
       __style=${_fsh_theme_name}precommand
       (( next_word = (next_word & ~2) | 4 | 1 ))
     else
@@ -721,7 +690,6 @@ _fsh_highlight_process() {
 
       case $REPLY in
         reserved)       # reserved word
-          (( incremental_collect )) && _fsh_incremental_parse_safe=0
           [[ $__arg = "[[" ]] && __style=${_fsh_theme_name}double-sq-bracket || __style=${_fsh_theme_name}reserved-word
           if [[ $__arg == $'\x7b' ]]; then # Y - '{'
             braces_stack='Y'$braces_stack
@@ -748,15 +716,12 @@ _fsh_highlight_process() {
           fi
         ;;
         'suffix alias')
-          (( incremental_collect )) && _fsh_incremental_parse_safe=0
           __style=${_fsh_theme_name}suffix-alias
           ;;
         'global alias')
-          (( incremental_collect )) && _fsh_incremental_parse_safe=0
           __style=${_fsh_theme_name}global-alias
           ;;
         alias)
-          (( incremental_collect )) && _fsh_incremental_parse_safe=0
           if [[ $__arg = ?*'='* ]]; then
             # The so called (by old code) "insane_alias"
             __style=${_fsh_theme_name}unknown-token
@@ -1153,7 +1118,6 @@ _fsh_highlight_process() {
                  elif (( in_redirection == 2 )); then
                    __style=${_fsh_theme_name}redirection
                  elif (( ${+galiases[(e)${(Q)__arg}]} )); then
-                   (( incremental_collect )) && _fsh_incremental_parse_safe=0
                    __style=${_fsh_theme_name}global-alias
                  else
                    if [[ ${_fsh_state[no_check_paths]} != 1 ]]; then
@@ -1553,191 +1517,6 @@ _fsh_highlight_dollar_string() {
 _fsh_highlight_init() {
   _fsh_complex_brackets=()
   _fsh_command_type_cache=()
-}
-
-_fsh_incremental_reset() {
-  builtin emulate -L zsh
-
-  _fsh_incremental_cache_valid=0
-  _fsh_incremental_buffer=
-  _fsh_incremental_fingerprint=
-  _fsh_incremental_prebuffer=
-  _fsh_incremental_checkpoints=()
-  _fsh_incremental_checkpoint_command_counts=()
-  _fsh_incremental_checkpoint_region_counts=()
-  _fsh_incremental_command_types=()
-  _fsh_incremental_commands=()
-  _fsh_incremental_regions=()
-}
-
-_fsh_incremental_make_fingerprint() {
-  builtin emulate -L zsh
-
-  local fingerprint=$_fsh_theme_name
-  fingerprint+=$'\x1f'${(qqq)${(kv)_fsh_styles}}
-  fingerprint+=$'\x1c'${(qqq)${(kv)galiases}}
-  fingerprint+=$'\x1d'$PWD$'\x1d'$PATH$'\x1d'${CDPATH-}
-  fingerprint+=$'\x1d'${_fsh_state[no_check_paths]-}$'\x1d'${_fsh_state[use_async]-}
-  fingerprint+=$'\x1d'${_fsh_state[use_brackets]-}$'\x1d'${LASTWIDGET-}
-  REPLY=$fingerprint
-}
-
-_fsh_incremental_capture_command_types() {
-  builtin emulate -L zsh
-
-  local command
-  local -aU unique_commands
-  _fsh_incremental_command_types=()
-  unique_commands=( "${_fsh_incremental_commands[@]}" )
-  for command in "${unique_commands[@]}"; do
-    _fsh_highlight_main_type "$command"
-    _fsh_incremental_command_types[(e)$command]=$REPLY
-  done
-}
-
-_fsh_incremental_store_full() {
-  builtin emulate -L zsh
-
-  local prebuffer=$1 buffer=$2
-
-  if [[ -n $prebuffer ]] || (( ! _fsh_incremental_parse_safe )) ||
-    (( ! $#_fsh_incremental_parse_checkpoints )); then
-    _fsh_incremental_reset
-    return 0
-  fi
-
-  _fsh_incremental_make_fingerprint
-  _fsh_incremental_fingerprint=$REPLY
-  _fsh_incremental_prebuffer=$prebuffer
-  _fsh_incremental_buffer=$buffer
-  _fsh_incremental_regions=( "${reply[@]}" )
-  _fsh_incremental_commands=( "${_fsh_last_commands[@]}" )
-  _fsh_incremental_checkpoints=( "${_fsh_incremental_parse_checkpoints[@]}" )
-  _fsh_incremental_checkpoint_region_counts=( "${_fsh_incremental_parse_region_counts[@]}" )
-  _fsh_incremental_checkpoint_command_counts=( "${_fsh_incremental_parse_command_counts[@]}" )
-  _fsh_incremental_capture_command_types
-  _fsh_incremental_cache_valid=1
-}
-
-_fsh_incremental_try() {
-  builtin emulate -L zsh
-  builtin setopt extended_glob typeset_silent
-
-  local prebuffer=$1 buffer=$2 suffix command
-  local -a prefix_regions prefix_commands suffix_regions suffix_commands
-  local -a retained_checkpoints retained_region_counts retained_command_counts
-  local -aU unique_prefix_commands
-  integer common=0 common_limit checkpoint_index=0 checkpoint=0
-  integer region_count=0 command_count=0 index parse_status
-
-  (( _fsh_incremental_cache_valid )) || return 1
-  [[ -z $prebuffer && $prebuffer == $_fsh_incremental_prebuffer ]] || return 1
-  [[ $buffer != $_fsh_incremental_buffer ]] || return 1
-  [[ $buffer == [[:alnum:][:space:]_./,:@%+\;-]# && $buffer != *';;'* ]] || return 1
-
-  _fsh_incremental_make_fingerprint
-  [[ $REPLY == $_fsh_incremental_fingerprint ]] || return 1
-
-  (( common_limit = $#buffer < $#_fsh_incremental_buffer ? $#buffer : $#_fsh_incremental_buffer ))
-  while (( common < common_limit )) &&
-    [[ ${buffer[common + 1]} == ${_fsh_incremental_buffer[common + 1]} ]]; do
-    (( ++common ))
-  done
-
-  for (( index = 1; index <= $#_fsh_incremental_checkpoints; ++index )); do
-    (( _fsh_incremental_checkpoints[index] <= common )) || break
-    checkpoint_index=$index
-  done
-  (( checkpoint_index )) || return 1
-
-  checkpoint=$_fsh_incremental_checkpoints[checkpoint_index]
-  region_count=$_fsh_incremental_checkpoint_region_counts[checkpoint_index]
-  command_count=$_fsh_incremental_checkpoint_command_counts[checkpoint_index]
-
-  (( region_count )) && prefix_regions=( "${(@)_fsh_incremental_regions[1,region_count]}" )
-  (( command_count )) && {
-    prefix_commands=( "${(@)_fsh_incremental_commands[1,command_count]}" )
-  }
-  _fsh_highlight_init
-  unique_prefix_commands=( "${prefix_commands[@]}" )
-  for command in "${unique_prefix_commands[@]}"; do
-    _fsh_highlight_main_type "$command"
-    [[ $REPLY == ${_fsh_incremental_command_types[(e)$command]-} ]] || return 1
-  done
-  suffix=${buffer[checkpoint + 1,-1]}
-  _fsh_incremental_collect=1
-  _fsh_incremental_parse_safe=1
-  _fsh_incremental_parse_checkpoints=()
-  _fsh_incremental_parse_region_counts=()
-  _fsh_incremental_parse_command_counts=()
-  reply=()
-  if _fsh_highlight_process '' "$suffix" "$checkpoint"; then
-    parse_status=0
-  else
-    parse_status=$?
-  fi
-  _fsh_incremental_collect=0
-
-  (( parse_status == 0 && _fsh_incremental_parse_safe )) || return 1
-  suffix_regions=( "${reply[@]}" )
-  suffix_commands=( "${_fsh_last_commands[@]}" )
-  reply=( "${prefix_regions[@]}" "${suffix_regions[@]}" )
-  _fsh_last_commands=( "${prefix_commands[@]}" "${suffix_commands[@]}" )
-
-  retained_checkpoints=( "${(@)_fsh_incremental_checkpoints[1,checkpoint_index]}" )
-  retained_region_counts=( "${(@)_fsh_incremental_checkpoint_region_counts[1,checkpoint_index]}" )
-  retained_command_counts=( "${(@)_fsh_incremental_checkpoint_command_counts[1,checkpoint_index]}" )
-  _fsh_incremental_checkpoints=( "${retained_checkpoints[@]}" )
-  _fsh_incremental_checkpoint_region_counts=( "${retained_region_counts[@]}" )
-  _fsh_incremental_checkpoint_command_counts=( "${retained_command_counts[@]}" )
-  for (( index = 1; index <= $#_fsh_incremental_parse_checkpoints; ++index )); do
-    _fsh_incremental_checkpoints+=( $_fsh_incremental_parse_checkpoints[index] )
-    _fsh_incremental_checkpoint_region_counts+=( $(( region_count + _fsh_incremental_parse_region_counts[index] )) )
-    _fsh_incremental_checkpoint_command_counts+=( $(( command_count + _fsh_incremental_parse_command_counts[index] )) )
-  done
-
-  _fsh_incremental_buffer=$buffer
-  _fsh_incremental_regions=( "${reply[@]}" )
-  _fsh_incremental_commands=( "${_fsh_last_commands[@]}" )
-  _fsh_incremental_capture_command_types
-  _fsh_incremental_last_used=1
-  return 0
-}
-
-_fsh_highlight_buffer() {
-  builtin emulate -L zsh
-  builtin setopt extended_glob
-
-  local prebuffer=$1 buffer=$2
-  integer parse_status
-
-  _fsh_incremental_last_used=0
-  _fsh_incremental_try "$prebuffer" "$buffer" && return 0
-
-  _fsh_highlight_init
-  if [[ -z $prebuffer && $buffer == [[:alnum:][:space:]_./,:@%+\;-]# &&
-    $buffer != *';;'* ]]; then
-    _fsh_incremental_collect=1
-    _fsh_incremental_parse_safe=1
-  else
-    _fsh_incremental_collect=0
-    _fsh_incremental_parse_safe=0
-  fi
-  _fsh_incremental_parse_checkpoints=()
-  _fsh_incremental_parse_region_counts=()
-  _fsh_incremental_parse_command_counts=()
-  reply=()
-  if _fsh_highlight_process "$prebuffer" "$buffer" 0; then
-    parse_status=0
-  else
-    parse_status=$?
-  fi
-  _fsh_incremental_collect=0
-  if (( parse_status != 0 )); then
-    _fsh_incremental_reset
-    return $parse_status
-  fi
-  _fsh_incremental_store_full "$prebuffer" "$buffer"
 }
 
 typeset -ga _fsh_style_ranges
