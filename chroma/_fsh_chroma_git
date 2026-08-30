@@ -583,6 +583,115 @@ _fsh_chroma_git_def=(
                             <<>> NO-OP // ::_fsh_chroma_option_argument_action"
 
     ##
+    ## Modern porcelain positional arguments
+    ##
+
+    subcmd:switch "SWITCH_NEW_0_opt^ // SWITCH_DETACH_0_opt^ //
+                   SWITCH_BRANCH_1_arg // NO_MATCH_#_opt"
+
+    "SWITCH_NEW_0_opt^" "
+                (-c|-C|--orphan)
+                            <<>> NO-OP // ::_fsh_chroma_option_action
+             || (-c|-C|--orphan):del
+                            <<>> SWITCH_BRANCH_1_arg
+             || (-c|-C|--orphan):add
+                            <<>> NEW_BRANCH_1_arg // COMMIT_2_arg // NO_MATCH_#_arg"
+
+    "SWITCH_DETACH_0_opt^" "
+                --detach
+                            <<>> NO-OP // ::_fsh_chroma_option_action
+             || --detach:del
+                            <<>> SWITCH_BRANCH_1_arg
+             || --detach:add
+                            <<>> COMMIT_1_arg // NO_MATCH_#_arg"
+
+    SWITCH_BRANCH_1_arg "NO-OP // ::_fsh_chroma_git_verify_branch"
+
+    subcmd:restore "FILE_OR_DIR_#_arg // NO_MATCH_#_arg // NO_MATCH_#_opt"
+
+    subcmd:stash "STASH_REF_1_arg // STASH_BRANCH_1_arg // STASH_PUSH_1_arg //
+                  STASH_MESSAGE_1_arg // STASH_STORE_1_arg // STASH_NOARG_1_arg //
+                  FILE_OR_DIR_#_arg"
+
+    STASH_REF_1_arg "(show|drop|pop|apply) ::::: __style=${_fsh_theme_name}subcommand // NO-OP <<>>
+                     del:FILE_OR_DIR_#_arg <<>>
+                     add:COMMIT_#_arg // NO_MATCH_#_arg"
+    STASH_BRANCH_1_arg "branch ::::: __style=${_fsh_theme_name}subcommand // NO-OP <<>>
+                        del:FILE_OR_DIR_#_arg <<>>
+                        add:NEW_BRANCH_2_arg // COMMIT_3_arg // NO_MATCH_#_arg"
+    STASH_PUSH_1_arg "push ::::: __style=${_fsh_theme_name}subcommand // NO-OP"
+    STASH_MESSAGE_1_arg "(save|create) ::::: __style=${_fsh_theme_name}subcommand // NO-OP <<>>
+                         del:FILE_OR_DIR_#_arg <<>>
+                         add:STASH_MESSAGE_#_arg"
+    STASH_STORE_1_arg "store ::::: __style=${_fsh_theme_name}subcommand // NO-OP <<>>
+                       del:FILE_OR_DIR_#_arg <<>>
+                       add:COMMIT_#_arg // NO_MATCH_#_arg"
+    STASH_NOARG_1_arg "(list|clear) ::::: __style=${_fsh_theme_name}subcommand // NO-OP <<>>
+                       del:FILE_OR_DIR_#_arg <<>>
+                       add:NO_MATCH_#_arg"
+    STASH_MESSAGE_\#_arg "__style=${_fsh_theme_name}optarg-string // NO-OP"
+
+    subcmd:rebase "COMMIT_1_arg // BRANCH_2_arg // NO_MATCH_#_arg // NO_MATCH_#_opt"
+    BRANCH_2_arg "NO-OP // ::_fsh_chroma_git_verify_branch"
+
+    subcmd:worktree "WORKTREE_ADD_1_arg // WORKTREE_MOVE_1_arg //
+                     WORKTREE_PATH_1_arg // WORKTREE_NOARG_1_arg"
+    WORKTREE_ADD_1_arg "add ::::: __style=${_fsh_theme_name}subcommand // NO-OP <<>>
+                        add:NEW_PATH_2_arg // COMMIT_3_arg // NO_MATCH_#_arg"
+    WORKTREE_MOVE_1_arg "move ::::: __style=${_fsh_theme_name}subcommand // NO-OP <<>>
+                         add:FILE_OR_DIR_2_arg // NEW_PATH_3_arg // NO_MATCH_#_arg"
+    WORKTREE_PATH_1_arg "(lock|remove|repair|unlock) ::::: __style=${_fsh_theme_name}subcommand // NO-OP <<>>
+                         add:FILE_OR_DIR_#_arg // NO_MATCH_#_arg"
+    WORKTREE_NOARG_1_arg "(list|prune) ::::: __style=${_fsh_theme_name}subcommand // NO-OP <<>>
+                          add:NO_MATCH_#_arg"
+    NEW_PATH_2_arg "NO-OP // ::_fsh_chroma_git_verify_new_path"
+    NEW_PATH_3_arg "NO-OP // ::_fsh_chroma_git_verify_new_path"
+    FILE_OR_DIR_2_arg "NO-OP // ::_fsh_chroma_git_verify_file_or_dir"
+
+    subcmd:submodule "SUBMODULE_ADD_1_arg // SUBMODULE_SET_URL_1_arg //
+                      SUBMODULE_PATH_1_arg // SUBMODULE_FOREACH_1_arg"
+    SUBMODULE_ADD_1_arg "add ::::: __style=${_fsh_theme_name}subcommand // NO-OP <<>>
+                         add:SUBMODULE_URL_2_arg // NEW_PATH_3_arg // NO_MATCH_#_arg"
+    SUBMODULE_SET_URL_1_arg "set-url ::::: __style=${_fsh_theme_name}subcommand // NO-OP <<>>
+                             add:FILE_OR_DIR_2_arg // SUBMODULE_URL_3_arg // NO_MATCH_#_arg"
+    SUBMODULE_PATH_1_arg "(status|init|deinit|update|set-branch|summary|sync|absorbgitdirs) ::::: __style=${_fsh_theme_name}subcommand // NO-OP <<>>
+                          add:FILE_OR_DIR_#_arg // NO_MATCH_#_arg"
+    SUBMODULE_FOREACH_1_arg "foreach ::::: __style=${_fsh_theme_name}subcommand // NO-OP <<>>
+                             add:SUBMODULE_COMMAND_#_arg"
+    SUBMODULE_URL_2_arg "NO-OP // ::_fsh_chroma_verify_url"
+    SUBMODULE_URL_3_arg "NO-OP // ::_fsh_chroma_verify_url"
+    SUBMODULE_COMMAND_\#_arg "__style=${_fsh_theme_name}optarg-string // NO-OP"
+
+    subcmd:branch "BRANCH_DELETE_0_opt^ // BRANCH_MOVE_COPY_0_opt^ //
+                   BRANCH_LIST_0_opt^ // BRANCH_NEW_1_arg // COMMIT_2_arg //
+                   NO_MATCH_#_opt"
+    "BRANCH_DELETE_0_opt^" "
+                (-d|-D)
+                            <<>> NO-OP // ::_fsh_chroma_option_action
+             || (-d|-D):del
+                            <<>> BRANCH_NEW_1_arg // COMMIT_2_arg
+             || (-d|-D):add
+                            <<>> BRANCH_EXISTING_#_arg // NO_MATCH_#_arg"
+    "BRANCH_MOVE_COPY_0_opt^" "
+                (-m|-M|-c|-C)
+                            <<>> NO-OP // ::_fsh_chroma_option_action
+             || (-m|-M|-c|-C):del
+                            <<>> BRANCH_NEW_1_arg // COMMIT_2_arg
+             || (-m|-M|-c|-C):add
+                            <<>> BRANCH_NAME_OR_NEW_1_arg // NEW_BRANCH_2_arg // NO_MATCH_#_arg"
+    "BRANCH_LIST_0_opt^" "
+                --list
+                            <<>> NO-OP // ::_fsh_chroma_option_action
+             || --list:del
+                            <<>> BRANCH_NEW_1_arg // COMMIT_2_arg
+             || --list:add
+                            <<>> BRANCH_PATTERN_#_arg"
+    BRANCH_NEW_1_arg "NO-OP // ::_fsh_chroma_git_verify_branch_name"
+    BRANCH_EXISTING_\#_arg "NO-OP // ::_fsh_chroma_git_verify_branch"
+    BRANCH_NAME_OR_NEW_1_arg "NO-OP // ::_fsh_chroma_git_verify_branch_or_new"
+    BRANCH_PATTERN_\#_arg "NO-OP // ::_fsh_chroma_verify_pattern"
+
+    ##
     ## All remaining subcommands
     ##
     ## {{{
@@ -981,6 +1090,18 @@ _fsh_chroma_git_verify_branch_name() {
     "$_wrd" != */ && "$_wrd" != *.lock && "$_wrd" != *\\* ]] && \
       { __style=${_fsh_theme_name}correct-subtle; return 0; } || \
       { __style=${_fsh_theme_name}incorrect-subtle; return 1; }
+}
+
+_fsh_chroma_git_verify_branch_or_new() {
+  _fsh_chroma_git_verify_branch "$@" && return 0
+  _fsh_chroma_git_verify_branch_name "$@"
+}
+
+_fsh_chroma_git_verify_new_path() {
+  local _wrd="$4" parent=${4:h}
+  [[ ! -e $_wrd && -d $parent ]] && \
+    { __style=${_fsh_theme_name}correct-subtle; return 0; } || \
+    { __style=${_fsh_theme_name}incorrect-subtle; return 1; }
 }
 
 # A generic handler that checks if given commit reference is correct
