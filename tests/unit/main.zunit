@@ -170,8 +170,8 @@ reply=()
     assert "$state" same_as "0"
 }
 
-@test 'default highlighting stays within the performance budget' {
-    run zsh -f ./tests/integration/test-highlight-budget.zsh
+@test 'default highlighting reports performance and preserves invariants' {
+    run zsh -f ./tests/integration/test-highlight-performance.zsh
 
     assert "$output" is_empty
     assert "$state" same_as "0"

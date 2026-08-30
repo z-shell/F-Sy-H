@@ -137,6 +137,8 @@ _fsh_test_noninteractive() {
     local PREBUFFER= BUFFER='git status'
     _fsh_highlight_process "$PREBUFFER" "$BUFFER" 0 ||
       _fsh_test_fail 'cannot exercise lazy chroma functions before unload'
+    _fsh_highlight_process '' 'echo changed runtime state' 0 ||
+      _fsh_test_fail 'cannot exercise steady-state highlighting before unload'
 
     for name in ${(k)widgets}; do
       [[ ${widgets[$name]} == "${before_widgets[$name]-}" ]] || {

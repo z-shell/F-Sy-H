@@ -91,12 +91,30 @@ _fsh_lifecycle_begin() {
   typeset -gA _fsh_lifecycle_original_functions=()
   typeset -gA _fsh_lifecycle_applied_function_set=()
   typeset -gA _fsh_lifecycle_applied_functions=()
+  typeset -gA _fsh_lifecycle_pending_autoloads=()
   typeset -gA _fsh_lifecycle_touched_functions=()
   typeset -gA _fsh_lifecycle_original_parameter_set=()
   typeset -gA _fsh_lifecycle_original_parameters=()
   typeset -gA _fsh_lifecycle_applied_parameter_set=()
   typeset -gA _fsh_lifecycle_applied_parameters=()
   typeset -gA _fsh_lifecycle_touched_parameters=()
+  # Highlighting owns the final values of these private runtime parameters.
+  typeset -gA _fsh_lifecycle_runtime_parameters=(
+    _fsh_assigns_seen 1
+    _fsh_command_output 1
+    _fsh_command_type_cache 1
+    _fsh_complex_brackets 1
+    _fsh_last_commands 1
+    _fsh_main_cache 1
+    _fsh_prior_buffer 1
+    _fsh_prior_cursor 1
+    _fsh_prior_region_active 1
+    _fsh_state 1
+    _fsh_style_ranges 1
+    _fsh_styles 1
+    _fsh_theme_name 1
+    _fsh_token_types 1
+  )
   typeset -gA _fsh_lifecycle_original_module_set=()
   typeset -ga _fsh_lifecycle_owned_modules=()
   typeset -ga _fsh_lifecycle_original_fpath=( "${fpath[@]}" )
@@ -174,6 +192,12 @@ _fsh_lifecycle_finalize() {
     _fsh_lifecycle_touched_functions[$name]=1
   done
 
+  _fsh_lifecycle_pending_autoloads=()
+  for name in ${(k)_fsh_lifecycle_touched_functions}; do
+    [[ ${_fsh_lifecycle_applied_functions[$name]-} == *'builtin autoload -X'* ]] &&
+      _fsh_lifecycle_pending_autoloads[$name]=1
+  done
+
   names=( ${(k)_fsh_lifecycle_original_parameter_set} )
   for name in ${(k)parameters}; do
     _fsh_lifecycle_parameter_owned "$name" && names+=( "$name" )
@@ -234,6 +258,28 @@ _fsh_lifecycle_refresh() {
 
   (( ${+parameters[_fsh_lifecycle_started]} && _fsh_lifecycle_started )) || return 0
   _fsh_lifecycle_finalize
+}
+
+_fsh_lifecycle_checkpoint() {
+  builtin emulate -L zsh
+
+  local name
+  local -A touched_parameters
+
+  (( ${+parameters[_fsh_lifecycle_started]} && _fsh_lifecycle_started )) || return 0
+
+  for name in ${(k)_fsh_lifecycle_pending_autoloads}; do
+    [[ ${functions[$name]-} == "${_fsh_lifecycle_applied_functions[$name]-}" ]] || {
+      # A materialized autoload may add more plugin-owned shell resources.
+      touched_parameters=( "${(@kv)_fsh_lifecycle_touched_parameters}" )
+      _fsh_lifecycle_refresh
+      for name in ${(k)_fsh_lifecycle_touched_parameters}; do
+        (( ${+touched_parameters[$name]} )) ||
+          _fsh_lifecycle_runtime_parameters[$name]=1
+      done
+      return
+    }
+  done
 }
 
 _fsh_lifecycle_restore_widget() {
@@ -333,13 +379,15 @@ _fsh_lifecycle_restore_parameters() {
   for name in ${(k)_fsh_lifecycle_touched_parameters}; do
     applied_set=${_fsh_lifecycle_applied_parameter_set[$name]:-0}
     applied=${_fsh_lifecycle_applied_parameters[$name]-}
-    if (( applied_set )); then
-      (( ${+parameters[$name]} )) || continue
-      _fsh_lifecycle_parameter_declaration "$name"
-      current=$REPLY
-      [[ $current == "$applied" ]] || continue
-    else
-      (( ${+parameters[$name]} )) && continue
+    if (( ! ${+_fsh_lifecycle_runtime_parameters[$name]} )); then
+      if (( applied_set )); then
+        (( ${+parameters[$name]} )) || continue
+        _fsh_lifecycle_parameter_declaration "$name"
+        current=$REPLY
+        [[ $current == "$applied" ]] || continue
+      else
+        (( ${+parameters[$name]} )) && continue
+      fi
     fi
 
     original_set=${+_fsh_lifecycle_original_parameter_set[$name]}
@@ -421,6 +469,7 @@ fsh_plugin_unload() {
     _fsh_lifecycle_capture_widgets
     _fsh_lifecycle_finalize
     _fsh_lifecycle_refresh
+    _fsh_lifecycle_checkpoint
     _fsh_lifecycle_restore_widget
     _fsh_lifecycle_restore_widgets
     _fsh_lifecycle_restore_functions
@@ -433,12 +482,14 @@ fsh_plugin_unload() {
   builtin unset _fsh_lifecycle_original_functions
   builtin unset _fsh_lifecycle_applied_function_set
   builtin unset _fsh_lifecycle_applied_functions
+  builtin unset _fsh_lifecycle_pending_autoloads
   builtin unset _fsh_lifecycle_touched_functions
   builtin unset _fsh_lifecycle_original_parameter_set
   builtin unset _fsh_lifecycle_original_parameters
   builtin unset _fsh_lifecycle_applied_parameter_set
   builtin unset _fsh_lifecycle_applied_parameters
   builtin unset _fsh_lifecycle_touched_parameters
+  builtin unset _fsh_lifecycle_runtime_parameters
   builtin unset _fsh_lifecycle_original_module_set
   builtin unset _fsh_lifecycle_owned_modules
   builtin unset _fsh_lifecycle_original_fpath
