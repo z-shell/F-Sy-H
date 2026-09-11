@@ -38,6 +38,22 @@ _fsh_chroma_apply_action() {
   __style=$style
 }
 
+# A pending query is not evidence that an alternative is invalid. Keep a
+# successful filesystem alternative, otherwise paint neutrally until repaint.
+_fsh_chroma_run_handler() {
+  builtin emulate -L zsh
+  builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc_quotes no_auto_pushd
+  integer __query_pending=0 result
+  local -a saved_reply=( "${reply[@]}" )
+  "$@"
+  result=$?
+  if (( __query_pending && result != 0 )); then
+    reply=( "${saved_reply[@]}" )
+    __style=${_fsh_theme_name}default
+  fi
+  return $result
+}
+
 local __chroma_name="${1#\%}" __first_call="$2" __wrd="$3" __start_pos="$4" __end_pos="$5"
 
 # Not a well formed chroma name
@@ -49,7 +65,7 @@ local __chroma_name="${1#\%}" __first_call="$2" __wrd="$3" __start_pos="$4" __en
 
 _fsh_chroma_debug -r -- @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 _fsh_chroma_debug -r -- @@@@@@@  local __chroma_name="${1#\%}" __first_call="$2" __wrd="$3" __start_pos="$4" __end_pos="$5" @@@@@@@
-local __style __entry __value __action __handler __tmp __svalue __subcmd_hook __hspaces=$'\t ' __nl=$'\n' __ch_def_name
+local REPLY __style __entry __value __action __handler __tmp __svalue __subcmd_hook __hspaces=$'\t ' __nl=$'\n' __ch_def_name
 integer __idx1 __idx2 __start __end __ivalue __have_value=0
 local -a _fsh_command_output __avalue
 local -A map
@@ -258,7 +274,7 @@ _fsh_chroma_process_token() {
             _fsh_state[chroma-${_fsh_state[chroma-current]}-added-nodes]+="${(j: :)__split[1,__ivalue]} "
           fi
           [[ "$__handler" = ::[^[:space:]]* ]] && __handler="${__handler#::}" || __handler=""
-          [[ -n "$__handler" && "$__handler" != "NO-OP" ]] && { _fsh_chroma_debug -rl -- "Running handler(1): $__handler" ; "$__handler" "${_fsh_state[chroma-${_fsh_state[chroma-current]}-subcommand]:-NULL}" "$__start" "$__end" "$__wrd"; }
+          [[ -n "$__handler" && "$__handler" != "NO-OP" ]] && { _fsh_chroma_debug -rl -- "Running handler(1): $__handler" ; _fsh_chroma_run_handler "$__handler" "${_fsh_state[chroma-${_fsh_state[chroma-current]}-subcommand]:-NULL}" "$__start" "$__end" "$__wrd"; }
           [[ "$__have_value" -ne 2 && -n "$__action" && "$__action" != "NO-OP" ]] && { _fsh_chroma_debug -rl "Running action (1): $__action"; _fsh_chroma_apply_action "$__action"; }
           [[ "$__val" != *\* ]] && break
         else
@@ -284,7 +300,7 @@ _fsh_chroma_process_token() {
           { _fsh_chroma_debug -r "mismatch ${__sp[1]%% ##:::::*} != $__wrd, continuing" ; continue; }
         _fsh_chroma_debug -l -- "Got action record for $__val, i.e. the split:" "${__sp[@]//(#s)/-\t}" "_________"
         [[ "${__sp[2]}" = ::[^[:space:]]* ]] && __handler="${__sp[2]#::}" || { [[ -n "$__handler" && "$__handler" != "NO-OP" ]] && _fsh_chroma_debug "=== Error === In chroma definition: a handler entry ${(q)__sp[2]} without leading \`::'" ; }
-        [[ -n "$__handler" && "$__handler" != "NO-OP" ]] && { _fsh_chroma_debug -rl -- "Running handler(3): $__handler" ; "$__handler" "${_fsh_state[chroma-${_fsh_state[chroma-current]}-subcommand]:-NULL}" "$__start" "$__end" "$__wrd"; }
+        [[ -n "$__handler" && "$__handler" != "NO-OP" ]] && { _fsh_chroma_debug -rl -- "Running handler(3): $__handler" ; _fsh_chroma_run_handler "$__handler" "${_fsh_state[chroma-${_fsh_state[chroma-current]}-subcommand]:-NULL}" "$__start" "$__end" "$__wrd"; }
         [[ -n "$__action" && "$__action" != "NO-OP" ]] && { _fsh_chroma_debug -rl -- "Running action(3): $__action"; _fsh_chroma_apply_action "$__action"; }
         # Check for argument directives (like :add)
         if (( ${#__split} >= 2 )); then
@@ -324,7 +340,7 @@ _fsh_chroma_process_token() {
       __handler="${__split[2]}"
       [[ "$__handler" = ::[^[:space:]]* ]] && __handler="${__handler#::}"
       [[ -n "$__handler" && "$__handler" != "NO-OP" ]] && \
-      {_fsh_chroma_debug -rl -- "Running handler(2): $__handler" ; "$__handler" "${_fsh_state[chroma-${_fsh_state[chroma-current]}-subcommand]:-NULL}" "$__start" "$__end" "$__wrd"; }
+      {_fsh_chroma_debug -rl -- "Running handler(2): $__handler" ; _fsh_chroma_run_handler "$__handler" "${_fsh_state[chroma-${_fsh_state[chroma-current]}-subcommand]:-NULL}" "$__start" "$__end" "$__wrd"; }
       [[ -n "$__action" && "$__action" != "NO-OP" ]] && \
       { _fsh_chroma_debug -rl -- "Running action(2): $__action"; _fsh_chroma_apply_action "$__action"; }
       _fsh_chroma_debug -rl -- "The __action value: [$__value]"

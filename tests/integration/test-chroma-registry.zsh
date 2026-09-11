@@ -22,6 +22,11 @@ source "$plugin_root/F-Sy-H.plugin.zsh"
 (( ! ${+_fsh_state[chroma-vim]} ))
 (( ! ${+_fsh_state[chroma-which]} ))
 (( ! ${+functions[_fsh_chroma_ogit]} ))
+(( ! ${+functions[_fsh_chroma_hub]} ))
+(( ! ${+functions[_fsh_chroma_lab]} ))
+(( ! ${+_fsh_state[chroma-zmanage]} ))
+[[ ${_fsh_state[chroma-hub]} == _fsh_chroma_subcommand ]]
+[[ ${_fsh_state[chroma-lab]} == _fsh_chroma_subcommand ]]
 [[ ${_fsh_state[chroma-svnadmin]} == _fsh_chroma_subversion ]]
 
 # The whatis chroma is platform-gated. Autoload state and registry state must
@@ -66,6 +71,8 @@ output=$(fsh_chroma list)
 [[ $output == *$'COMMAND\tTARGET\tKIND\tSTATUS'* ]]
 [[ $output == *$'docker\t_fsh_chroma_docker\tdedicated\tready'* ]]
 [[ $output == *$'_fsh_chroma_ogit\tretired'* ]]
+[[ $output == *$'_fsh_chroma_hub\tretired'* ]]
+[[ $output == *$'_fsh_chroma_lab\tretired'* ]]
 [[ $OSTYPE != darwin* || $output == *$'_fsh_chroma_whatis\tplatform-disabled'* ]]
 
 output=$(fsh_chroma doctor)

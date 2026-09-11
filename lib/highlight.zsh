@@ -213,8 +213,8 @@ local -a registry=(
   chroma-ssh           _fsh_chroma_ssh
 
   chroma-git           _fsh_chroma_main%git
-  chroma-hub           _fsh_chroma_hub
-  chroma-lab           _fsh_chroma_lab
+  chroma-hub           _fsh_chroma_subcommand
+  chroma-lab           _fsh_chroma_subcommand
   chroma-svn           _fsh_chroma_subversion
   chroma-svnadmin      _fsh_chroma_subversion
   chroma-svndumpfilter _fsh_chroma_subversion
@@ -282,7 +282,6 @@ local -a registry=(
   chroma-travis        _fsh_chroma_subcommand
   chroma-udisksctl     _fsh_chroma_subcommand
   chroma-xdotool       _fsh_chroma_subcommand
-  chroma-zmanage       _fsh_chroma_subcommand
   chroma-zsystem       _fsh_chroma_subcommand
   chroma-zypper        _fsh_chroma_subcommand
 

@@ -41,11 +41,11 @@ if (( ${_fsh_state[$key-pending]:-0} )); then
       pid=${_fsh_lifecycle_owned_fd_pids[$fd]-}
       zle -F -w "$fd" 2>/dev/null || zle -F "$fd" 2>/dev/null || true
       [[ $pid == <-> ]] && builtin kill -TERM "$pid" 2>/dev/null || true
-      [[ $pid == <-> ]] && builtin wait "$pid" 2>/dev/null || true
       owned_fd=$fd
       { exec {owned_fd}<&- } 2>/dev/null || true
       _fsh_lifecycle_release_fd "$fd"
       builtin unset "_fsh_state[_fsh-async-fd-$fd-key]"
+      builtin unset "_fsh_state[$key-buffer]"
     fi
     _fsh_state[$key-pending]=0
     _fsh_state[$key-disabled]=1
@@ -59,8 +59,8 @@ if (( ${_fsh_state[$key-pending]:-0} )); then
 fi
 
 (( ${_fsh_state[$key-disabled]:-0} )) && return 0
-if (( ${+_fsh_state[$key-cache-ready]} )); then
-  age=$(( SECONDS - _fsh_state[$key-cache-born-at] ))
+if (( ${+_fsh_state[$key-checked-at]} || ${+_fsh_state[$key-cache-ready]} )); then
+  age=$(( SECONDS - ${_fsh_state[$key-checked-at]:-${_fsh_state[$key-cache-born-at]:-0}} ))
   (( age <= cache_seconds )) && return 0
 fi
 
@@ -68,24 +68,38 @@ fi
 # start a worker from non-interactive parsing or test-only direct calls.
 zle >/dev/null 2>&1 || return 0
 
-if (( capture_stderr )); then
-  exec {fd}< <(command "${command_args[@]}" 2>&1)
-else
-  exec {fd}< <(command "${command_args[@]}" 2>/dev/null)
-fi
+# A final NUL-delimited status distinguishes an empty success from failure.
+# The child owns the command and forwards cancellation without waiting in ZLE.
+exec {fd}< <(
+  integer worker_pid=0 cancelled=0 result
+  # Retain cancellation delivered between child launch and PID assignment.
+  trap 'cancelled=1; if (( worker_pid > 1 )); then builtin kill -KILL "$worker_pid" 2>/dev/null; exit 143; fi' TERM HUP INT
+  if (( capture_stderr )); then
+    command "${command_args[@]}" 2>&1 &
+  else
+    command "${command_args[@]}" 2>/dev/null &
+  fi
+  worker_pid=$!
+  if (( cancelled )); then
+    (( worker_pid > 1 )) && builtin kill -KILL "$worker_pid" 2>/dev/null
+    exit 143
+  fi
+  builtin wait "$worker_pid"
+  result=$?
+  worker_pid=0
+  builtin printf '\0%d' "$result"
+)
 pid=${sysparams[procsubstpid]-}
-command true
 
 _fsh_state[$key-pending]=1
 _fsh_state[$key-started-at]=$SECONDS
 _fsh_state[$key-fd]=$fd
 _fsh_state[_fsh-async-fd-$fd-key]=$key
-_fsh_lifecycle_register_fd "$fd" _fsh_async_command_callback "$pid" || return 1
-zle -F -w "$fd" _fsh_async_command_callback || {
+if ! _fsh_lifecycle_register_fd "$fd" _fsh_async_command_callback "$pid" ||
+    ! zle -F -w "$fd" _fsh_async_command_callback; then
   owned_fd=$fd
   { exec {owned_fd}<&- } 2>/dev/null || true
   [[ $pid == <-> ]] && builtin kill -TERM "$pid" 2>/dev/null || true
-  [[ $pid == <-> ]] && builtin wait "$pid" 2>/dev/null || true
   _fsh_lifecycle_release_fd "$fd"
   builtin unset \
     "_fsh_state[$key-pending]" \
@@ -93,6 +107,6 @@ zle -F -w "$fd" _fsh_async_command_callback || {
     "_fsh_state[$key-fd]" \
     "_fsh_state[_fsh-async-fd-$fd-key]"
   return 1
-}
+fi
 
 return 0

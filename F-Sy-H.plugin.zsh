@@ -427,9 +427,7 @@ builtin autoload -Uz -- \
   _fsh_chroma_fpath_assignment \
   _fsh_chroma_git \
   _fsh_chroma_grep \
-  _fsh_chroma_hub \
   _fsh_chroma_ionice \
-  _fsh_chroma_lab \
   _fsh_chroma_make \
   _fsh_chroma_nice \
   _fsh_chroma_nmcli \

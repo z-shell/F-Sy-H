@@ -27,6 +27,7 @@ command git add -- some/file.lua some/folder/with/changes/changed.lua tracked.tx
 command git -c user.name=Fixture -c user.email=fixture@example.invalid \
   commit -qm fixture
 command git branch topic
+command git update-ref refs/remotes/origin/remote-only HEAD
 command git worktree add -q --detach "$fixture_root/existing-worktree"
 builtin print -r -- changed >| tracked.txt
 command git stash push -qm fixture -- tracked.txt
@@ -135,6 +136,39 @@ assert_trailing_token_style 'git commit --dry-run NOOUT' fg=cyan || exit $?
 assert_trailing_token_style 'git commit --dry-run NOOUT missing/path/' fg=red || exit $?
 assert_trailing_token_style 'git commit -m MESSAGE missing/path/' fg=red || exit $?
 
+# Cold knowledge must not turn an existing branch red. Warm the fixture's
+# query caches explicitly outside highlighting, then retain exact warm-region
+# assertions below. Real worker/callback transitions have their own PTY test.
+fsh_assert_exact_regions 'git switch topic' \
+  "0 3 ${_fsh_styles[command]}" \
+  "4 10 ${_fsh_styles[subcommand]}" \
+  "11 16 ${_fsh_styles[default]}" || exit $?
+prime_git_query() {
+  local REPLY __style
+  _fsh_chroma_git_query 120 '0 1' "$@" || true
+  _fsh_state[$REPLY-cache]=$(command git "$@" 2>/dev/null)
+  _fsh_state[$REPLY-cache-ready]=1
+  _fsh_state[$REPLY-cache-born-at]=$SECONDS
+}
+prime_git_query for-each-ref '--format=%(refname:short)'
+prime_git_query config --get checkout.defaultRemote
+for query_ref in main topic missing 'stash@{0}'; do
+  prime_git_query rev-parse --verify --quiet --end-of-options "$query_ref"
+  prime_git_query rev-parse --verify --quiet --end-of-options "refs/remotes/origin/$query_ref"
+done
+prime_git_query rev-parse --verify --quiet --end-of-options refs/remotes/origin/remote-only
+typeset REPLY __style
+_fsh_chroma_git_verify_unfetched_ref checkout 0 11 remote-only
+[[ $__style == ${_fsh_theme_name}correct-subtle ]] || {
+  print -u2 -r -- "remote-only ref was not validated: $__style, ${(qqq)_fsh_command_output}"
+  exit 1
+}
+_fsh_chroma_git_verify_unfetched_ref checkout 0 7 missing
+[[ $__style == ${_fsh_theme_name}incorrect-subtle ]] || {
+  print -u2 -r -- "missing ref reused another query: $__style, ${(qqq)_fsh_command_output}"
+  exit 1
+}
+
 fsh_assert_exact_regions 'git switch topic' \
   "0 3 ${_fsh_styles[command]}" \
   "4 10 ${_fsh_styles[subcommand]}" \
@@ -201,3 +235,11 @@ fsh_assert_exact_regions 'git branch -d missing' \
   "4 10 ${_fsh_styles[subcommand]}" \
   "11 13 ${_fsh_styles[single-hyphen-option]}" \
   "14 21 ${_fsh_styles[incorrect-subtle]}" || exit $?
+
+# A different directory must not inherit this repository's warm branch cache.
+command mkdir -- "$fixture_root/other"
+builtin cd -- "$fixture_root/other"
+fsh_assert_exact_regions 'git switch topic' \
+  "0 3 ${_fsh_styles[command]}" \
+  "4 10 ${_fsh_styles[subcommand]}" \
+  "11 16 ${_fsh_styles[default]}" || exit $?

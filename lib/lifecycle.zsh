@@ -72,7 +72,6 @@ _fsh_lifecycle_cleanup_fds() {
     fi
     if [[ $pid == <-> ]] && (( pid > 1 && pid != $$ )); then
       builtin kill -TERM "$pid" 2>/dev/null || true
-      builtin wait "$pid" 2>/dev/null || true
     fi
     owned_fd=$fd
     { exec {owned_fd}<&- } 2>/dev/null || true

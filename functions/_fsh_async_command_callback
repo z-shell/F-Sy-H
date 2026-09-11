@@ -6,24 +6,43 @@
 builtin emulate -L zsh
 builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc_quotes no_auto_pushd
 
-local fd=$1 key input= pid
-integer owned_fd=$fd
+local fd=$1 key input= chunk result
+local -a accepted
+integer owned_fd=$fd read_status count
 
 key=${_fsh_state[_fsh-async-fd-$fd-key]-}
 [[ -n $key ]] || return 1
 
-_fsh_read_all "$fd" input || true
+# Never wait for a streaming producer to close its pipe. Bound each callback
+# so a continuously writing command still yields back to the line editor.
+for count in {1..16}; do
+  chunk=
+  sysread -t 0 -s 65535 -i "$fd" chunk
+  read_status=$?
+  _fsh_state[$key-buffer]+=$chunk
+  (( read_status == 0 )) || break
+done
+(( read_status == 0 || read_status == 4 )) && return 0
+input=${_fsh_state[$key-buffer]-}
 zle -F -w "$fd" 2>/dev/null || zle -F "$fd" 2>/dev/null || true
-pid=${_fsh_lifecycle_owned_fd_pids[$fd]-}
 { exec {owned_fd}<&- } 2>/dev/null || true
-[[ $pid == <-> ]] && builtin wait "$pid" 2>/dev/null || true
 _fsh_lifecycle_release_fd "$fd"
 
-_fsh_state[$key-cache]=${input%$'\n'}
-_fsh_state[$key-cache-ready]=1
-_fsh_state[$key-cache-born-at]=$SECONDS
+result=${input##*$'\0'}
+[[ $input == *$'\0'* && $result == <0-255> ]] || result=255
+accepted=( ${=_fsh_state[$key-success-statuses]:-0} )
+_fsh_state[$key-last-status]=$result
+_fsh_state[$key-checked-at]=$SECONDS
+if (( accepted[(Ie)$result] )); then
+  input=${input%$'\0'*}
+  _fsh_state[$key-cache]=${input%$'\n'}
+  _fsh_state[$key-cache-status]=$result
+  _fsh_state[$key-cache-ready]=1
+  _fsh_state[$key-cache-born-at]=$SECONDS
+fi
 _fsh_state[$key-pending]=0
 builtin unset \
+  "_fsh_state[$key-buffer]" \
   "_fsh_state[$key-started-at]" \
   "_fsh_state[$key-fd]" \
   "_fsh_state[_fsh-async-fd-$fd-key]"

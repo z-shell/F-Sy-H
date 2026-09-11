@@ -19,7 +19,7 @@ _fsh_make_expand_vars() {
   local -a seen
 
   while [[ $rest == (#b)[^$]#($)* ]]; do
-    (( ${seen[(Ie)$rest]} )) && return 1
+    (( ${seen[(Ie)$rest]} )) && { REPLY=; return 1; }
     seen+=( "$rest" )
 
     front=$front${rest[1,$mbegin[1]-1]}
@@ -44,7 +44,7 @@ _fsh_make_expand_vars() {
         var=$rest[2]
         ;;
       (*)           # bad parameter name
-        print -r -- "${front}${rest}"
+        REPLY=${front}${rest}
         return 1
         ;;
     esac
@@ -53,7 +53,7 @@ _fsh_make_expand_vars() {
       if [[ $rest == \$$open(#b)([[:alnum:]_]##)(#B)$close* ]]; then
         var=$match
       else  # unmatched () or {}, or bad parameter name
-        print -r -- "${front}${rest}"
+        REPLY=${front}${rest}
         return 1
       fi
     fi
@@ -67,7 +67,7 @@ _fsh_make_expand_vars() {
     rest=${rest//\$$open$var$close/$val}
   done
 
-  print -r -- "${front}${rest}"
+  REPLY=${front}${rest}
 }
 
 
@@ -75,7 +75,7 @@ _fsh_make_parse_makefile() {
   builtin emulate -L zsh
   builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc_quotes no_auto_pushd
 
-  local input var val target dep TAB=$'\t' tmp IFS=
+  local REPLY input var val target dep TAB=$'\t' tmp IFS=
 
   while read input
   do
@@ -94,14 +94,16 @@ _fsh_make_parse_makefile() {
       var=${input%%[ $TAB]#:(:|)=*}
       val=${input#*=}
       val=${val##[ $TAB]#}
-      val=$(_fsh_make_expand_vars "$val")
+      _fsh_make_expand_vars "$val"
+      val=$REPLY
       VARIABLES[$var]=$val
       ;;
 
       # TARGET: dependencies
       # TARGET1 TARGET2 TARGET3: dependencies
       ([[*?[:alnum:]$][^$TAB:=%]#:[^=]*)
-      target=$(_fsh_make_expand_vars "${input%%:*}")
+      _fsh_make_expand_vars "${input%%:*}"
+      target=$REPLY
       TARGETS+=( ${(z)target} )
       ;;
     esac

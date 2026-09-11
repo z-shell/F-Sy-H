@@ -234,3 +234,10 @@ reply=()
     assert "$output" is_empty
     assert "$state" same_as "0"
 }
+
+@test 'default chromas do not fork synchronously' {
+    run zsh -f ./tests/integration/test-chroma-process-boundary.zsh
+
+    assert $state equals 0
+    assert "$output" is_empty
+}
