@@ -21,21 +21,39 @@ jobs:
     name: Zsh 5.8
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    container:
-      image: ubuntu@sha256:8feb4d8ca5354def3d8fce243717141ce31e2c428701f6682bd2fafe15388214 # 20.04
     steps:
-      - name: Install compatibility toolchain
-        env:
-          DEBIAN_FRONTEND: noninteractive
-        run: |
-          apt-get update -qq
-          apt-get install -y -qq git zsh
-          zsh --version | grep -F 'zsh 5.8'
-
       - name: Check out code
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           persist-credentials: false
+
+      - name: Build Zsh 5.8
+        env:
+          ZSH_COMMIT: 77d203f3fbbd76386bf197f9776269a1de580bb5
+          ZSH_VERSION: "5.8"
+          # The release's configure probes predate modern GCC error defaults.
+          CFLAGS: >-
+            -std=gnu99 -Wno-error=implicit-function-declaration
+            -Wno-error=implicit-int -Wno-error=incompatible-pointer-types
+            -Wno-error=int-conversion
+        run: |
+          set -euo pipefail
+          source_dir="$RUNNER_TEMP/zsh-source"
+          prefix="$RUNNER_TEMP/zsh-${ZSH_VERSION}"
+          git init "$source_dir"
+          git -C "$source_dir" remote add origin https://github.com/zsh-users/zsh.git
+          git -C "$source_dir" fetch --depth 1 origin "$ZSH_COMMIT"
+          git -C "$source_dir" checkout --detach FETCH_HEAD
+          (
+            cd "$source_dir"
+            ./Util/preconfig
+            # Linux supports tcsetpgrp; the old probe requires a controlling TTY.
+            ./configure --with-tcsetpgrp --prefix="$prefix"
+            make -j2
+            make install.bin install.modules install.fns
+          )
+          "$prefix/bin/zsh" --version | grep -F "zsh ${ZSH_VERSION}"
+          echo "$prefix/bin" >>"$GITHUB_PATH"
 
       - name: Check native Zsh source
         shell: bash
