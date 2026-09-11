@@ -67,7 +67,11 @@ fsh_assert_exact_regions 'lab mr unknown' \
 
 if [[ $OSTYPE != darwin* ]]; then
   # Availability and cache outcomes are controlled; no manual database is used.
-  commands[whatis]=$fixture_root/whatis
+  command mkdir -p -- "$fixture_root/bin"
+  print -r -- $'#!/bin/sh\nexit 1' > "$fixture_root/bin/whatis"
+  command chmod 755 "$fixture_root/bin/whatis"
+  path=( "$fixture_root/bin" "${path[@]}" )
+  rehash
   man() { :; }
   fsh_assert_exact_regions 'man ls' '0 3 fg=1' '4 6 fg=3'
   key="chroma-whatis-${(q)MANPATH}-ls"
