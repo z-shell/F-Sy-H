@@ -308,7 +308,8 @@ _fsh_bind_widgets() {
   builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc_quotes no_auto_pushd no_ksh_arrays
 
   local -F2 SECONDS
-  local prefix=fsh-orig-s${SECONDS/./}-r$(( RANDOM % 1000 )) # unique for each load
+  # Autosuggestions ignores private widget names; saved copies must stay unwrapped.
+  local prefix=_fsh_orig-s${SECONDS/./}-r$(( RANDOM % 1000 )) # unique for each load
 
   # Override ZLE widgets to make them invoke _fsh_zle_highlight.
   local -U widgets_to_bind

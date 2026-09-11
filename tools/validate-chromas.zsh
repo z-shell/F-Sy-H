@@ -197,6 +197,7 @@ integer initial_error_count
 
 if (( ! $#definition_paths )); then
   for source_path in "$plugin_root"/chroma/_fsh_chroma_*(N-.); do
+    [[ $source_path == *.zwc ]] && continue
     source_text=$(<"$source_path")
     [[ $source_text == *'typeset -gA _fsh_chroma_'*'_def'* ]] && definition_paths+=( "$source_path" )
   done

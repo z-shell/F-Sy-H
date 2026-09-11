@@ -96,6 +96,115 @@ _fsh_test_widget_option_boundary() {
   }
 }
 
+_fsh_test_history_boundary() {
+  builtin emulate -L zsh
+
+  local fixture_root pty_name=fsyh-history chunk expected output=
+  integer deadline step=0 wrapped
+
+  fixture_root=$(command mktemp -d "${TMPDIR:-/tmp}/fsyh-history.XXXXXXXX") || return 1
+  {
+    command mkdir -p -- "$fixture_root/home" || return 1
+    command cat > "$fixture_root/setup.zsh" <<'ZSH'
+builtin emulate -L zsh
+PS1='FSH_HISTORY> '
+unsetopt prompt_cr prompt_sp
+HISTSIZE=100
+bindkey -e
+autoload -Uz up-line-or-beginning-search
+zle -N up-line-or-beginning-search
+bindkey '^[[A' up-line-or-beginning-search
+source -- "$1" || return
+typeset -g _fsh_test_dir=$2
+typeset -gi _fsh_test_replies=0
+
+# Model the relevant autosuggestions v0.7.1 binding and async callback contract.
+# Upstream: 85919cd1ffa7d2d5412f6d3fe437ebdbeeec4fc5, src/{bind,config,async}.zsh.
+# Private names and orig-* are ignored; an unrecognized saved history widget
+# gets a modifying wrapper whose async suggestion interrupts LASTWIDGET (#142).
+_fsh_test_suggest() { :; }
+zle -N _fsh_test_suggest
+_fsh_test_response() {
+  builtin emulate -L zsh
+  local line
+  read -r -u "$1" line
+  zle _fsh_test_suggest
+  zle -F "$1"
+  exec {1}<&-
+  (( ++_fsh_test_replies ))
+  print -r -- "$_fsh_test_replies" >| "$_fsh_test_dir/replies"
+}
+_fsh_test_external_widget() {
+  builtin emulate -L zsh
+  zle _fsh_test_original_search
+  local fd
+  exec {fd}< <(print -r -- ready)
+  zle -F "$fd" _fsh_test_response
+}
+integer wrapped=0
+local name
+for name in ${(k)widgets}; do
+  [[ $name == (.*|_*|orig-*|autosuggest-*|zle-*|up-line-or-beginning-search) ]] && continue
+  [[ ${widgets[$name]} == user:up-line-or-beginning-search ]] || continue
+  zle -A "$name" _fsh_test_original_search
+  zle -N "$name" _fsh_test_external_widget
+  wrapped=1
+done
+print -r -- "$wrapped" >| "$_fsh_test_dir/wrapped"
+_fsh_test_capture() {
+  print -r -- "$BUFFER" >| "$_fsh_test_dir/buffer"
+}
+zle -N zle-line-pre-redraw _fsh_test_capture
+zle -N zle-line-init _fsh_test_capture
+print -s 'echo FIRST'
+print -s 'print SECOND'
+print -s 'pwd'
+ZSH
+    zmodload zsh/zpty || return 1
+    zpty -b "$pty_name" \
+      "HOME=${(q)fixture_root}/home ZDOTDIR=${(q)fixture_root}/home zsh -f -i" || return 1
+    zpty -w "$pty_name" \
+      "source ${(q)fixture_root}/setup.zsh ${(q)plugin_path} ${(q)fixture_root}"
+    deadline=$(( SECONDS + 10 ))
+    while [[ ! -f $fixture_root/buffer ]] && (( SECONDS < deadline )); do
+      if zpty -r -t "$pty_name" chunk; then
+        output+=$chunk
+      else
+        command sleep 0.02
+      fi
+    done
+    [[ -f $fixture_root/buffer && -f $fixture_root/wrapped ]] || {
+      _fsh_test_fail "history probe did not become ready: ${(V)output[-1000,-1]}"
+      return
+    }
+    wrapped=$(<"$fixture_root/wrapped")
+
+    for expected in pwd 'print SECOND' 'echo FIRST'; do
+      (( ++step ))
+      zpty -w -n "$pty_name" $'\e[A'
+      deadline=$(( SECONDS + 10 ))
+      while (( SECONDS < deadline )); do
+        if [[ $(<"$fixture_root/buffer") == "$expected" ]]; then
+          (( ! wrapped )) && break
+          [[ -f $fixture_root/replies && $(<"$fixture_root/replies") == $step ]] && break
+        fi
+        zpty -r -t "$pty_name" chunk || command sleep 0.02
+      done
+      [[ $(<"$fixture_root/buffer") == "$expected" ]] || {
+        _fsh_test_fail "history navigation stopped at step $step; expected: $expected"
+        return
+      }
+      (( ! wrapped )) || [[ -f $fixture_root/replies && $(<"$fixture_root/replies") == $step ]] || {
+        _fsh_test_fail 'history probe did not receive the asynchronous suggestion'
+        return
+      }
+    done
+  } always {
+    (( ${+builtins[zpty]} )) && zpty -d "$pty_name" 2>/dev/null
+    command rm -rf -- "$fixture_root"
+  }
+}
+
 _fsh_test_noninteractive() {
   builtin emulate -L zsh
 
@@ -289,6 +398,8 @@ _fsh_test_interactive() {
 
   _fsh_test_widget_option_boundary ||
     _fsh_test_fail 'wrapped widget option boundary probe failed'
+  _fsh_test_history_boundary ||
+    _fsh_test_fail 'wrapped history widget boundary probe failed'
 
   zmodload zsh/parameter zsh/zleparameter || {
     _fsh_test_fail 'required observer modules are unavailable'
@@ -328,7 +439,7 @@ _fsh_test_interactive() {
     _fsh_test_fail 'unload overwrote a post-load widget change'
   [[ ${aliases[f-sy-h]} == after ]] ||
     _fsh_test_fail 'unload overwrote a post-load alias change'
-  (( ${#${(M)${(k)widgets}:#fsh-orig-*}} == 0 )) ||
+  (( ${#${(M)${(k)widgets}:#_fsh_orig-*}} == 0 )) ||
     _fsh_test_fail 'unload left saved widget copies'
   (( ${#${(M)${(k)functions}:#_fsh_widget_*}} == 0 )) ||
     _fsh_test_fail 'unload left generated widget wrappers'
