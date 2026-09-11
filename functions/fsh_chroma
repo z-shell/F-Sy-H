@@ -57,6 +57,7 @@ for key in ${(ok)_fsh_state}; do
   registry_targets[${target%%%*}]=1
 done
 source_files=( "$_fsh_base_dir"/chroma/_fsh_chroma_*(N-.) )
+source_files=( "${(@)source_files:#*.zwc}" )
 zstyle -s ':fsh:config' theme-manager theme_manager || theme_manager=enabled
 
 if [[ $action == list ]]; then

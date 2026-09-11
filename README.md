@@ -78,7 +78,7 @@ the required exceptions: completions for `fsh_chroma` and `fsh_theme` are
   `zsh/nearcolor`, and interactive-only `zsh/zleparameter`
 - Hook: `_fsh_preexec_hook` in `preexec_functions`
 - Widgets: `_fsh_check_path_handler_widget`, `_fsh_widget_*` wrappers, and
-  temporary `fsh-orig-*` saved-widget names
+  temporary `_fsh_orig-*` saved-widget names
 
 The unload function tracks modules loaded transitively during initialization
 and lazy plugin operations. It only claims modules that were not loaded before
@@ -432,4 +432,6 @@ package registry.
 
 Contributions follow the
 [Z-Shell organization guidance](https://github.com/z-shell/.github).
-This project is distributed under the terms in [LICENSE](LICENSE).
+F-Sy-H retains the upstream BSD-3-Clause terms in [LICENSE](LICENSE). It is
+licensing class L3 (third-party derived code) under the
+[organization licensing policy](https://github.com/z-shell/.github/blob/main/decisions/0017-licensing-standard-by-provenance.md).

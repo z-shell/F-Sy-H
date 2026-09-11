@@ -324,9 +324,9 @@ _fsh_lifecycle_restore_widgets() {
   for pass in 1 2; do
     for name in ${(k)_fsh_lifecycle_touched_widgets}; do
       if (( pass == 1 )); then
-        [[ $name == fsh-orig-* ]] && continue
+        [[ $name == _fsh_orig-* ]] && continue
       else
-        [[ $name == fsh-orig-* ]] || continue
+        [[ $name == _fsh_orig-* ]] || continue
       fi
 
       applied_set=${_fsh_lifecycle_applied_widget_set[$name]:-0}

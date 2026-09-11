@@ -12,6 +12,8 @@ typeset -gx XDG_CACHE_HOME=$fixture_root/cache-home
 command mkdir -p -- "$ZDOTDIR"
 zstyle ':fsh:config' work-dir "$fixture_root/work"
 
+# Prefer this checkout over another installation inherited through FPATH.
+fpath=( "$plugin_root"/{functions,completions,chroma} "${fpath[@]}" )
 source "$plugin_root/F-Sy-H.plugin.zsh"
 
 (( ${+functions[fsh_chroma]} ))
@@ -70,6 +72,37 @@ output=$(fsh_chroma doctor)
 [[ $output == *'ok registry loaded without duplicate keys'* ]]
 [[ $output == *'ok declarative definitions:'* ]]
 [[ $output == *'ok active theme: default'* ]]
+
+# Compiled siblings are load caches, not additional chroma sources.
+command mkdir -p -- "$fixture_root/compiled-plugin"
+command cp -R -- "$plugin_root"/{F-Sy-H.plugin.zsh,lib,functions,completions,chroma,share,themes,tools} \
+  "$fixture_root/compiled-plugin/"
+output=$(zsh -f -e -c '
+  for source_file in "$1"/chroma/_fsh_chroma_*(N-.); do
+    zcompile -U -z "$source_file.zwc" "$source_file"
+  done
+  fpath=( "$1"/{functions,completions,chroma} "${fpath[@]}" )
+  source "$1/F-Sy-H.plugin.zsh"
+  listing=$(fsh_chroma list)
+  [[ $listing != *".zwc"* ]] || {
+    print -u2 -r -- "compiled caches appeared in the chroma list"
+    exit 1
+  }
+  [[ $listing == *$'\''_fsh_chroma_ogit\tretired'\''* ]]
+  fsh_chroma doctor
+  print -r -- ":" >| "$1/chroma/_fsh_chroma_unclassified_fixture"
+  listing=$(fsh_chroma list)
+  [[ $listing == *$'\''_fsh_chroma_unclassified_fixture\tunclassified'\''* ]]
+  if diagnostic=$(fsh_chroma doctor 2>&1); then
+    exit 1
+  fi
+  [[ $diagnostic == *"error unclassified tree-only chroma: _fsh_chroma_unclassified_fixture"* ]]
+  fsh_plugin_unload
+' zsh "$fixture_root/compiled-plugin" 2>&1) || {
+  builtin print -u2 -r -- "f-sy-h: compiled chroma discovery failed: $output"
+  exit 1
+}
+[[ $output == *'ok declarative definitions:'* ]]
 
 output=$(fsh_chroma doctor --sample 'docker image rm deadbeef')
 [[ $output == *'sample end-to-end median:'* ]]
