@@ -207,6 +207,133 @@ zpty -b "$pty_name" \
     fi
   done
   [[ $output == *FSH_GIT_READY:1:1* ]]
+
+  # Exercise cache outcomes and partial output through the real widget callback.
+  command cat > "$fixture_root/query-worker" <<'SH'
+#!/bin/sh
+case "$1" in
+  valid) printf '%s\n' last-valid ;;
+  empty) exit 0 ;;
+  failure) printf '%s\n' partial-error; exit 7 ;;
+  help) printf '%s\n' help-output >&2; exit 129 ;;
+  streaming)
+    printf '%s\n' first
+    while [ ! -e "$2/stream-release" ]; do sleep 0.02; done
+    printf '%s\n' last ;;
+  slow) printf '%s\n' "$$" > "$2/slow-pid"; exec sleep 20 ;;
+esac
+SH
+  command chmod 755 "$fixture_root/query-worker"
+  command cat > "$fixture_root/query-setup.zsh" <<'ZSH'
+typeset -g _fsh_test_query_dir=$1 _fsh_test_query_key _fsh_test_query_mode
+builtin autoload +X _fsh_async_command_callback
+functions[_fsh_test_real_callback]=$functions[_fsh_async_command_callback]
+_fsh_async_command_callback() {
+  builtin emulate -L zsh
+  local key=${_fsh_state[_fsh-async-fd-$1-key]-}
+  _fsh_test_real_callback "$@"
+  if [[ -n $key && ${_fsh_state[$key-pending]:-0} == 0 ]]; then
+    print -r -- "$key:${_fsh_state[$key-cache-ready]:-0}:${_fsh_state[$key-last-status]:-unset}:${_fsh_state[$key-cache]-}" >| "$_fsh_test_query_dir/completed"
+  fi
+}
+_fsh_test_query_widget() {
+  _fsh_async_command --capture-stderr "$_fsh_test_query_key" "$_fsh_test_query_dir/query-worker" "$_fsh_test_query_mode" "$_fsh_test_query_dir"
+  print -r -- "${_fsh_state[$_fsh_test_query_key-cache]-}" >| "$_fsh_test_query_dir/returned"
+}
+zle -N _fsh_test_query_widget
+bindkey '^X^G' _fsh_test_query_widget
+ZSH
+
+  _fsh_test_query_command() {
+    local chunk output=
+    command rm -f -- "$FSH_ZLE_READY_MARKER"
+    zpty -w -n "$pty_name" $'\C-U'
+    zpty -w "$pty_name" "$1; add-zle-hook-widget line-init _fsh_test_signal_zle_ready"
+    local deadline=$(( SECONDS + 10 ))
+    while [[ ! -e $FSH_ZLE_READY_MARKER ]] && (( SECONDS < deadline )); do
+      if zpty -r -t "$pty_name" chunk; then
+        output+=$chunk
+      else
+        command sleep 0.02
+      fi
+    done
+    [[ -e $FSH_ZLE_READY_MARKER ]] || {
+      print -u2 -r -- "f-sy-h: query command did not return: $1: ${(V)output[-1000,-1]}"
+      return 1
+    }
+  }
+  _fsh_test_query_start() {
+    _fsh_test_query_command "_fsh_test_query_key=$1; _fsh_test_query_mode=$2; unset '_fsh_state[$1-checked-at]'; _fsh_state[$1-cache-born-at]=-10000"
+    command rm -f -- "$fixture_root/returned" "$fixture_root/completed" "$fixture_root/slow-pid"
+    zpty -w -n "$pty_name" $'\C-X\C-G'
+    local deadline=$(( SECONDS + 10 ))
+    while [[ ! -e $fixture_root/returned ]] && (( SECONDS < deadline )); do
+      command sleep 0.02
+    done
+    [[ -e $fixture_root/returned ]]
+  }
+  _fsh_test_query_complete() {
+    local deadline=$(( SECONDS + 10 ))
+    while [[ ! -e $fixture_root/completed ]] && (( SECONDS < deadline )); do
+      command sleep 0.02
+    done
+    [[ -e $fixture_root/completed && $(<"$fixture_root/completed") == "$1" ]]
+  }
+
+  _fsh_test_query_command "source ${(q)fixture_root}/query-setup.zsh ${(q)fixture_root}"
+  _fsh_test_query_start fixture-valid valid
+  _fsh_test_query_complete 'fixture-valid:1:0:last-valid'
+  _fsh_test_query_start fixture-valid failure
+  [[ $(<"$fixture_root/returned") == last-valid ]]
+  _fsh_test_query_complete 'fixture-valid:1:7:last-valid'
+  _fsh_test_query_start fixture-failure failure
+  _fsh_test_query_complete 'fixture-failure:0:7:'
+  _fsh_test_query_start fixture-valid empty
+  _fsh_test_query_complete 'fixture-valid:1:0:'
+  _fsh_test_query_command "_fsh_state[fixture-help-success-statuses]='0 129'"
+  _fsh_test_query_start fixture-help help
+  _fsh_test_query_complete 'fixture-help:1:129:help-output'
+  _fsh_test_query_start fixture-stream streaming
+  # The first chunk must not block the callback until the producer finishes.
+  _fsh_test_query_command "print -r -- responsive > ${(q)fixture_root}/responsive"
+  [[ ! -e $fixture_root/completed ]]
+  print -r -- release > "$fixture_root/stream-release"
+  _fsh_test_query_complete $'fixture-stream:1:0:first\nlast'
+  _fsh_test_query_start fixture-timeout slow
+  deadline=$(( SECONDS + 10 ))
+  while [[ ! -e $fixture_root/slow-pid ]] && (( SECONDS < deadline )); do
+    command sleep 0.02
+  done
+  [[ -e $fixture_root/slow-pid ]]
+  integer slow_pid=$(<"$fixture_root/slow-pid")
+  _fsh_test_query_command "_fsh_state[fixture-timeout-started-at]=-10000; _fsh_state[fixture-timeout-warned]=1"
+  zpty -w -n "$pty_name" $'\C-X\C-G'
+  _fsh_test_query_command "print -r -- \"\${_fsh_state[fixture-timeout-disabled]}:\${_fsh_state[fixture-timeout-pending]}\" > ${(q)fixture_root}/timeout"
+  [[ $(<"$fixture_root/timeout") == 1:0 ]]
+  deadline=$(( SECONDS + 10 ))
+  while builtin kill -0 "$slow_pid" 2>/dev/null && (( SECONDS < deadline )); do
+    command sleep 0.02
+  done
+  ! builtin kill -0 "$slow_pid" 2>/dev/null
+  _fsh_test_query_start fixture-unload slow
+  deadline=$(( SECONDS + 10 ))
+  while [[ ! -e $fixture_root/slow-pid ]] && (( SECONDS < deadline )); do
+    command sleep 0.02
+  done
+  [[ -e $fixture_root/slow-pid ]]
+  slow_pid=$(<"$fixture_root/slow-pid")
+  zpty -w -n "$pty_name" $'\C-U'
+  zpty -w "$pty_name" "fsh_plugin_unload; zle -F > ${(q)fixture_root}/handlers"
+  deadline=$(( SECONDS + 10 ))
+  while [[ ! -e $fixture_root/handlers ]] && (( SECONDS < deadline )); do
+    zpty -r -t "$pty_name" chunk || command sleep 0.02
+  done
+  [[ -e $fixture_root/handlers ]]
+  [[ ! -s $fixture_root/handlers ]]
+  while builtin kill -0 "$slow_pid" 2>/dev/null && (( SECONDS < deadline )); do
+    command sleep 0.02
+  done
+  ! builtin kill -0 "$slow_pid" 2>/dev/null
 } always {
   zpty -d "$pty_name" 2>/dev/null || true
 }

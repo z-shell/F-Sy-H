@@ -218,18 +218,16 @@ The settings are:
 - `chroma-cache-seconds`: non-negative lifetime for asynchronous chroma lookup
   results, default `5`.
 - `chroma-timeout-seconds`: positive time budget for an asynchronous chroma
-  worker, default `2`. A worker that exceeds it is disabled for the session
-  and reports one ZLE warning.
+  worker, default `2`. When a pending lookup is revisited after this budget,
+  its worker is cancelled, the lookup is disabled for the session, and one
+  ZLE warning is reported.
 
 For boolean-like settings, `disabled`, `false`, `no`, `off`, and `0` disable
 the feature; any other value enables it.
 
-At or below `max-length`, edits to independent simple command lists can reuse
-highlighting before a parser-confirmed top-level semicolon or newline. Quoting,
-redirections, assignments, aliases, chroma, control structures, changed theme
-or shell context, and other ambiguous input use a full parse. Bracket and
-string highlighting still scan the complete buffer. Buffers above the limit
-remain unhighlighted rather than switching to a degraded highlighting mode.
+At or below `max-length`, changed buffers receive a full parse. Cursor-only
+updates can reuse the main highlighting while updating brackets and regions.
+Buffers above the limit skip highlighting.
 
 Theme file examples and additional usage guidance are documented in the
 [wiki guide](https://wiki.zshell.dev/ecosystem/plugins/f-sy-h).
@@ -249,6 +247,12 @@ word as a subcommand, but it does not validate that word or parse
 command-specific options. A generic registry entry therefore does not represent
 the same depth of coverage as a dedicated handler. `STATUS` reports whether the
 target is `ready`, `missing`, or intentionally `disabled`.
+
+`hub` and `lab` use generic coverage; their older dedicated sources are retired.
+The unmaintained `zmanage` mapping is removed. Git repository queries and manual
+page lookups use the shared asynchronous worker. Tokens remain neutral until
+valid knowledge arrives, and failed refreshes preserve the last valid result.
+Makefile variable expansion stays in the current shell without subprocesses.
 
 Check registry reachability, declarative definitions, active theme styles, and
 session-disabled asynchronous lookups:

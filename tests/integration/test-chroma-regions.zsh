@@ -16,6 +16,8 @@ zstyle ':fsh:config' work-dir "$fixture_root/work"
 
 docker() { :; }
 npm() { :; }
+hub() { :; }
+lab() { :; }
 zi() { :; }
 ZI[cmd-list]='help|light|status'
 
@@ -57,5 +59,27 @@ fsh_assert_exact_regions 'npm install package' \
   '0 3 fg=1' \
   '4 11 fg=2' \
   '12 19 fg=3'
+
+fsh_assert_exact_regions 'hub issue unknown' \
+  '0 3 fg=1' '4 9 fg=2' '10 17 fg=3'
+fsh_assert_exact_regions 'lab mr unknown' \
+  '0 3 fg=1' '4 6 fg=2' '7 14 fg=3'
+
+if [[ $OSTYPE != darwin* ]]; then
+  # Availability and cache outcomes are controlled; no manual database is used.
+  commands[whatis]=$fixture_root/whatis
+  man() { :; }
+  fsh_assert_exact_regions 'man ls' '0 3 fg=1' '4 6 fg=3'
+  key="chroma-whatis-${(q)MANPATH}-ls"
+  _fsh_state[$key-cache-ready]=1
+  _fsh_state[$key-cache]='ls(1) - list files'
+  _fsh_state[$key-cache-status]=0
+  fsh_assert_exact_regions 'man ls' '0 3 fg=1' '4 6 fg=7'
+  _fsh_state[$key-last-status]=7
+  fsh_assert_exact_regions 'man ls' '0 3 fg=1' '4 6 fg=7'
+  _fsh_state[$key-cache]=
+  _fsh_state[$key-cache-status]=16
+  fsh_assert_exact_regions 'man ls' '0 3 fg=1' '4 6 fg=6'
+fi
 
 fsh_plugin_unload

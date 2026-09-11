@@ -70,6 +70,7 @@ jobs:
           zsh -f tests/integration/test-chroma-validator.zsh
           zsh -f tests/integration/test-chroma-regions.zsh
           zsh -f tests/integration/test-async-chroma.zsh
+          zsh -f tests/integration/test-chroma-process-boundary.zsh
           zsh -f tests/integration/test-theme-validator.zsh
 
   current:
@@ -143,6 +144,7 @@ jobs:
           zsh -f tests/integration/test-chroma-validator.zsh
           zsh -f tests/integration/test-chroma-regions.zsh
           zsh -f tests/integration/test-async-chroma.zsh
+          zsh -f tests/integration/test-chroma-process-boundary.zsh
           zsh -f tests/integration/test-theme-validator.zsh
 
       - name: Compare highlighting performance

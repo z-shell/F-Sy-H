@@ -14,6 +14,8 @@ integer failures=0 missing_styles=0 sample_requested=0 run
 tree_roles=(
   _fsh_chroma_example documentation
   _fsh_chroma_git provider
+  _fsh_chroma_hub retired
+  _fsh_chroma_lab retired
   _fsh_chroma_ogit retired
   _fsh_chroma_vim opt-in
   _fsh_chroma_which opt-in
