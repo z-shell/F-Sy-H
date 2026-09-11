@@ -71,14 +71,19 @@ zle >/dev/null 2>&1 || return 0
 # A final NUL-delimited status distinguishes an empty success from failure.
 # The child owns the command and forwards cancellation without waiting in ZLE.
 exec {fd}< <(
-  integer worker_pid=0 result
-  trap '(( worker_pid > 1 )) && builtin kill -KILL "$worker_pid" 2>/dev/null; exit 143' TERM HUP INT
+  integer worker_pid=0 cancelled=0 result
+  # Retain cancellation delivered between child launch and PID assignment.
+  trap 'cancelled=1; if (( worker_pid > 1 )); then builtin kill -KILL "$worker_pid" 2>/dev/null; exit 143; fi' TERM HUP INT
   if (( capture_stderr )); then
     command "${command_args[@]}" 2>&1 &
   else
     command "${command_args[@]}" 2>/dev/null &
   fi
   worker_pid=$!
+  if (( cancelled )); then
+    (( worker_pid > 1 )) && builtin kill -KILL "$worker_pid" 2>/dev/null
+    exit 143
+  fi
   builtin wait "$worker_pid"
   result=$?
   worker_pid=0

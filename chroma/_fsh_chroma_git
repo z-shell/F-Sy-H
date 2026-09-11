@@ -996,9 +996,10 @@ _fsh_chroma_git_verify_remote_or_group() {
 
 # A generic handler - checks whether the file exists
 _fsh_chroma_git_verify_file() {
-  integer _start="$2" _end="$3" __pos __start __end
+  integer _start="$2" _end="$3" __pos __start __end retval=0
   local _wrd="$4" bg
 
+  __style=
   [[ -f $_wrd ]] && {
     (( __start=_start, __end=_end, __start >= 0 )) && \
       reply+=("$__start $__end ${_fsh_styles[${_fsh_theme_name}correct-subtle]}")
@@ -1008,6 +1009,7 @@ _fsh_chroma_git_verify_file() {
       (( __start=_start, __end=_end, __start >= 0 )) && \
         reply+=("$__start $__end ${_fsh_styles[${_fsh_theme_name}incorrect-subtle]}")
       bg=${(M)_fsh_styles[${_fsh_theme_name}incorrect-subtle]%bg=*}
+      retval=1
   }
 
   [[ -n ${_fsh_styles[${_fsh_theme_name}path_pathseparator]} && \
@@ -1026,6 +1028,7 @@ _fsh_chroma_git_verify_file() {
       }
     }
   }
+  return $retval
 }
 
 # A generic handler - checks whether the file exists

@@ -240,6 +240,13 @@ _fsh_test_query_widget() {
   _fsh_async_command --capture-stderr "$_fsh_test_query_key" "$_fsh_test_query_dir/query-worker" "$_fsh_test_query_mode" "$_fsh_test_query_dir"
   print -r -- "${_fsh_state[$_fsh_test_query_key-cache]-}" >| "$_fsh_test_query_dir/returned"
 }
+_fsh_test_inject_cancellation() {
+  typeset -g _fsh_test_async_definition=$functions[_fsh_async_command]
+  local needle='worker_pid=$!'
+  local injected='print -r -- "$!" > "$_fsh_test_query_dir/race-pid"; builtin kill -TERM "$sysparams[pid]"; worker_pid=$!'
+  [[ $_fsh_test_async_definition == *$needle* ]] || return 1
+  functions[_fsh_async_command]=${_fsh_test_async_definition/$needle/$injected}
+}
 zle -N _fsh_test_query_widget
 bindkey '^X^G' _fsh_test_query_widget
 ZSH
@@ -299,6 +306,25 @@ ZSH
   [[ ! -e $fixture_root/completed ]]
   print -r -- release > "$fixture_root/stream-release"
   _fsh_test_query_complete $'fixture-stream:1:0:first\nlast'
+  # Deliver cancellation after launch but before recording the child PID.
+  _fsh_test_query_command '_fsh_test_inject_cancellation'
+  _fsh_test_query_start fixture-race slow
+  deadline=$(( SECONDS + 10 ))
+  while [[ ! -e $fixture_root/race-pid ]] && (( SECONDS < deadline )); do
+    command sleep 0.02
+  done
+  [[ -e $fixture_root/race-pid ]]
+  integer race_pid=$(<"$fixture_root/race-pid")
+  _fsh_test_query_command 'functions[_fsh_async_command]=$_fsh_test_async_definition'
+  deadline=$(( SECONDS + 3 ))
+  while builtin kill -0 "$race_pid" 2>/dev/null && (( SECONDS < deadline )); do
+    command sleep 0.02
+  done
+  if builtin kill -0 "$race_pid" 2>/dev/null; then
+    builtin kill -KILL "$race_pid" 2>/dev/null || true
+    print -u2 -r -- 'f-sy-h: cancellation before PID assignment left its child running'
+    exit 1
+  fi
   _fsh_test_query_start fixture-timeout slow
   deadline=$(( SECONDS + 10 ))
   while [[ ! -e $fixture_root/slow-pid ]] && (( SECONDS < deadline )); do

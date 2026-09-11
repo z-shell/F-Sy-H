@@ -40,6 +40,11 @@ fsh_assert_exact_regions 'git commit some/file.lua' \
   '4 10 fg=2' \
   '11 24 fg=7'
 
+fsh_assert_exact_regions 'git log some/file.lua' \
+  '0 3 fg=1' \
+  '4 7 fg=2' \
+  '8 21 fg=7'
+
 fsh_assert_exact_regions 'zi help' \
   '0 2 fg=1' \
   '3 7 fg=2'
