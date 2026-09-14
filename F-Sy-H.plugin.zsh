@@ -313,7 +313,26 @@ _fsh_bind_widgets() {
 
   # Override ZLE widgets to make them invoke _fsh_zle_highlight.
   local -U widgets_to_bind
-  widgets_to_bind=(${${(k)widgets}:#(.*|run-help|which-command|beep|set-local-history|yank|zle-line-pre-redraw|zle-keymap-select)})
+  widgets_to_bind=(${${(k)widgets}:#(.*|run-help|which-command|beep|set-local-history|zle-line-pre-redraw|zle-keymap-select)})
+
+  # Builtin widgets whose ZLE flags the next command reads: ZLE_KILL joins
+  # consecutive kills and ZLE_YANK* lets yank-pop replace the last yank. A shell
+  # function wrapper reports no flags, so each wrapper re-asserts them with
+  # `zle -f`. yank-pop is ZLE_NOTCOMMAND upstream and keeps the direction of the
+  # last yank, so the yank wrappers record it. Source: Src/Zle/iwidgets.list.
+  local -A widget_flags=(
+    backward-kill-line kill
+    backward-kill-word kill
+    kill-buffer kill
+    kill-line kill
+    kill-region kill
+    kill-whole-line kill
+    kill-word kill
+    bracketed-paste yankbefore
+    vi-put-after yank
+    vi-put-before yankbefore
+    yank yankbefore
+  )
 
   # Always wrap special zle-line-finish widget. This is needed to decide if the
   # current line ends and special highlighting logic needs to be applied.
@@ -324,7 +343,7 @@ _fsh_bind_widgets() {
   # This is needed because we need to disable highlighting in that case.
   widgets_to_bind+=(zle-isearch-update)
 
-  local cur_widget
+  local cur_widget flags
   for cur_widget in $widgets_to_bind; do
     case $widgets[$cur_widget] in
 
@@ -347,8 +366,19 @@ _fsh_bind_widgets() {
       eval "_fsh_widget_${(q)prefix}-${(q)cur_widget}() { _fsh_call_widget ${(q)prefix}-${(q)cur_widget} -- \"\$@\" }"
       zle -N -- $cur_widget _fsh_widget_$prefix-$cur_widget;;
 
-    # Builtin widget: override and make it call the builtin ".widget".
-    builtin) eval "_fsh_widget_${(q)prefix}-${(q)cur_widget}() { _fsh_call_widget .${(q)cur_widget} -- \"\$@\" }"
+    # Builtin widget: override and make it call the builtin ".widget". The
+    # always block keeps the widget's return status while restoring its flags.
+    builtin)
+      flags=${widget_flags[$cur_widget]-}
+      case $cur_widget in
+        (yank-pop) flags='${_fsh_state[yank-direction]:-yankbefore}';;
+        (yank|bracketed-paste|vi-put-*) flags+="; _fsh_state[yank-direction]=$flags";;
+      esac
+      if [[ -n $flags ]]; then
+        eval "_fsh_widget_${(q)prefix}-${(q)cur_widget}() { { _fsh_call_widget .${(q)cur_widget} -- \"\$@\" } always { builtin zle -f $flags } }"
+      else
+        eval "_fsh_widget_${(q)prefix}-${(q)cur_widget}() { _fsh_call_widget .${(q)cur_widget} -- \"\$@\" }"
+      fi
       zle -N -- $cur_widget _fsh_widget_$prefix-$cur_widget;;
 
     # Incomplete or nonexistent widget: Bind to z-sy-h directly.

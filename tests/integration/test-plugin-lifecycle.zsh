@@ -205,6 +205,92 @@ ZSH
   }
 }
 
+# Wrapped builtin kill and yank widgets must keep the ZLE flags the next
+# command reads: consecutive kills join and yank-pop cycles the kill ring in
+# both yank directions (#150). Each step is one key sequence and the buffer
+# expected after it, read from an unwrapped zle-line-pre-redraw hook.
+_fsh_test_kill_ring_boundary() {
+  builtin emulate -L zsh
+
+  local fixture_root pty_name=fsyh-killring chunk expected keymap keys key output=
+  integer deadline
+
+  fixture_root=$(command mktemp -d "${TMPDIR:-/tmp}/fsyh-killring.XXXXXXXX") || return 1
+  {
+    command mkdir -p -- "$fixture_root/home" || return 1
+    command cat > "$fixture_root/setup.zsh" <<'ZSH'
+builtin emulate -L zsh
+PS1='FSH_KILLRING> '
+unsetopt prompt_cr prompt_sp
+KEYTIMEOUT=1
+bindkey -$3
+bindkey -M vicmd 'Y' yank-pop
+source -- "$1" || return
+typeset -g _fsh_test_dir=$2
+_fsh_test_capture() {
+  print -r -- "$BUFFER" >| "$_fsh_test_dir/buffer"
+}
+zle -N zle-line-pre-redraw _fsh_test_capture
+zle -N zle-line-init _fsh_test_capture
+# Wrapped widgets keep the builtin's return status; the empty kill ring makes
+# yank and yank-pop fail while kill-word succeeds. Report through the buffer.
+_fsh_test_status() {
+  local -a results
+  zle yank; results+=(yank=$?)
+  zle yank-pop; results+=(yank-pop=$?)
+  zle kill-word; results+=(kill-word=$?)
+  BUFFER=$results
+}
+zle -N _fsh_test_status
+bindkey '^Xs' _fsh_test_status
+ZSH
+    zmodload zsh/zpty || return 1
+    # keymap, key sequence, expected buffer. Every entry in the sequence is one
+    # zpty write; pauses keep ESC from joining the following key in vi mode.
+    for keymap keys expected in \
+        e '^Xs' 'yank=1 yank-pop=1 kill-word=0' \
+        e 'echo alpha beta gamma|^W|^W|^W|^Y' 'echo alpha beta gamma' \
+        e 'echo alpha beta gamma|^W|^E|^W|^E|^W|^Y|\ey|\ey' 'echo gamma' \
+        e 'alpha beta gamma|^A|\ed|^E|^A|\ed|^E|^A|\ed|xy|^B|^Y|\ey|\ey' 'xalphay' \
+        v 'alpha beta gamma|\e|0|dw|dw|dw|i|xy|\e|h|p|Y|Y' 'xalpha y'; do
+      command rm -f -- "$fixture_root/buffer"
+      zpty -b "$pty_name" \
+        "HOME=${(q)fixture_root}/home ZDOTDIR=${(q)fixture_root}/home zsh -f -i" || return 1
+      zpty -w "$pty_name" \
+        "source ${(q)fixture_root}/setup.zsh ${(q)plugin_path} ${(q)fixture_root} $keymap"
+      deadline=$(( SECONDS + 10 ))
+      while [[ ! -f $fixture_root/buffer ]] && (( SECONDS < deadline )); do
+        if zpty -r -t "$pty_name" chunk; then
+          output+=$chunk
+        else
+          command sleep 0.02
+        fi
+      done
+      [[ -f $fixture_root/buffer ]] || {
+        _fsh_test_fail "kill ring probe did not become ready: ${(V)output[-1000,-1]}"
+        zpty -d "$pty_name" 2>/dev/null
+        return
+      }
+      for key in "${(@s:|:)keys}"; do
+        zpty -w -n "$pty_name" "${(g:c:)key}"
+        command sleep 0.05
+      done
+      deadline=$(( SECONDS + 10 ))
+      while [[ $(<"$fixture_root/buffer") != "$expected" ]] && (( SECONDS < deadline )); do
+        zpty -r -t "$pty_name" chunk || command sleep 0.02
+      done
+      zpty -d "$pty_name" 2>/dev/null
+      [[ $(<"$fixture_root/buffer") == "$expected" ]] || {
+        _fsh_test_fail "kill ring sequence ${(q)keys} left ${(q)$(<"$fixture_root/buffer")}; expected ${(q)expected}"
+        return
+      }
+    done
+  } always {
+    (( ${+builtins[zpty]} )) && zpty -d "$pty_name" 2>/dev/null
+    command rm -rf -- "$fixture_root"
+  }
+}
+
 _fsh_test_noninteractive() {
   builtin emulate -L zsh
 
@@ -400,6 +486,8 @@ _fsh_test_interactive() {
     _fsh_test_fail 'wrapped widget option boundary probe failed'
   _fsh_test_history_boundary ||
     _fsh_test_fail 'wrapped history widget boundary probe failed'
+  _fsh_test_kill_ring_boundary ||
+    _fsh_test_fail 'wrapped kill ring widget boundary probe failed'
 
   zmodload zsh/parameter zsh/zleparameter || {
     _fsh_test_fail 'required observer modules are unavailable'
