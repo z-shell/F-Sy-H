@@ -83,6 +83,18 @@ _fsh_async_command chroma-timeout-fixture command true
 [[ ${_fsh_state[chroma-timeout-fixture-disabled-reason]} == \
   "timeout after ${_fsh_chroma_timeout_seconds}s" ]]
 
+# A key holding `\(` (what (q) yields for a Git format argument) must read its
+# own start time rather than 0, or every check after the timeout disables the
+# lookup (#149). Pin SECONDS past the timeout so the defect cannot hide.
+typeset paren_key='chroma-paren-fixture-%\(refname:short\)'
+SECONDS=$(( _fsh_chroma_timeout_seconds + 5 ))
+_fsh_state[$paren_key-pending]=1
+_fsh_state[$paren_key-started-at]=$SECONDS
+_fsh_async_command "$paren_key" command true
+(( ${_fsh_state[$paren_key-pending]:-0} ))
+(( ! ${_fsh_state[$paren_key-disabled]:-0} ))
+builtin unset "_fsh_state[$paren_key-pending]" "_fsh_state[$paren_key-started-at]"
+
 fsh_plugin_unload
 
 # Exercise the actual zle -F callback in an isolated interactive shell.
@@ -103,7 +115,7 @@ integer deadline
 zpty -b "$pty_name" \
   "ZDOTDIR=${(q)fixture_root}/interactive-zdotdir FSH_DOCKER_MARKER=${(q)FSH_DOCKER_MARKER} PATH=${(q)fixture_root}/bin:\$PATH zsh -f -i"
 {
-  zpty -w "$pty_name" "PS1='FSH_ASYNC> '; unsetopt prompt_cr prompt_sp; zstyle ':fsh:config' work-dir ${(q)fixture_root}/interactive-work; source ${(q)plugin_root}/F-Sy-H.plugin.zsh; autoload -Uz add-zle-hook-widget; _fsh_test_signal_zle_ready() { add-zle-hook-widget -d line-init _fsh_test_signal_zle_ready; : > ${(q)FSH_ZLE_READY_MARKER}; }; print -r -- FSH_ASYNC_LOADED"
+  zpty -w "$pty_name" "PS1='FSH_ASYNC> '; unsetopt prompt_cr prompt_sp; zstyle ':fsh:config' work-dir ${(q)fixture_root}/interactive-work; source ${(q)plugin_root}/F-Sy-H.plugin.zsh; autoload -Uz add-zle-hook-widget; _fsh_test_signal_zle_ready() { add-zle-hook-widget -d line-init _fsh_test_signal_zle_ready; : > ${(q)FSH_ZLE_READY_MARKER}; }; _fsh_test_probe_last() { print -r -- \"\$LASTWIDGET:\${_fsh_state[chroma-docker-list-cache-ready]:-0}\" >> ${(q)fixture_root}/last-widget; }; zle -N _fsh_test_probe_last; bindkey '^X^L' _fsh_test_probe_last; print -r -- FSH_ASYNC_LOADED"
 
   deadline=$(( SECONDS + 10 ))
   while (( SECONDS < deadline )); do
@@ -122,7 +134,17 @@ zpty -b "$pty_name" \
     command sleep 0.02
   done
   [[ -e $FSH_DOCKER_MARKER ]]
-  command sleep 0.3
+
+  # The callback runs between two key presses and must not be a widget: the
+  # probe pressed right after it lands must see itself or self-insert as
+  # LASTWIDGET, never the callback (#148). Press until the cache is ready.
+  deadline=$(( SECONDS + 10 ))
+  while (( SECONDS < deadline )); do
+    zpty -w -n "$pty_name" $'\C-X\C-L'
+    command sleep 0.05
+    [[ -e $fixture_root/last-widget && $(<"$fixture_root/last-widget") == *:1* ]] && break
+  done
+  [[ ${${(f)"$(<"$fixture_root/last-widget")"}[(r)*:1]} == (_fsh_test_probe_last|self-insert):1 ]]
 
   zpty -w -n "$pty_name" $'\C-U'
   zpty -w "$pty_name" \
@@ -336,6 +358,9 @@ ZSH
   zpty -w -n "$pty_name" $'\C-X\C-G'
   _fsh_test_query_command "print -r -- \"\${_fsh_state[fixture-timeout-disabled]}:\${_fsh_state[fixture-timeout-pending]}\" > ${(q)fixture_root}/timeout"
   [[ $(<"$fixture_root/timeout") == 1:0 ]]
+  # The timed-out handler was registered without -w and must be gone.
+  _fsh_test_query_command "zle -F > ${(q)fixture_root}/timeout-handlers"
+  [[ ! -s $fixture_root/timeout-handlers ]]
   deadline=$(( SECONDS + 10 ))
   while builtin kill -0 "$slow_pid" 2>/dev/null && (( SECONDS < deadline )); do
     command sleep 0.02
