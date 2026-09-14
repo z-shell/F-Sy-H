@@ -88,7 +88,7 @@ output=$(fsh_chroma doctor 2>&1) || {
   builtin print -u2 -r -- "f-sy-h: chroma doctor rejected a theme without secondary: $output"
   exit 1
 }
-[[ $output == *'ok active theme: base16'* ]]
+[[ $output == *"ok active theme: base16 ($(( $#_fsh_theme_style_order - 1 )) resolved styles)"* ]]
 [[ $output != *'unresolved: secondary'* ]]
 fsh_theme --quiet default
 
