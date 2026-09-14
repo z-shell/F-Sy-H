@@ -9,7 +9,7 @@ local action=${1-} sample= key target handler source_file role style style_key
 local command_name validator_output reason row_status kind theme_manager=enabled
 local -a registry_keys source_files samples
 local -A registry_targets tree_roles
-integer failures=0 missing_styles=0 sample_requested=0 run
+integer failures=0 missing_styles=0 resolved_styles=0 sample_requested=0 run
 
 tree_roles=(
   _fsh_chroma_example documentation
@@ -128,16 +128,21 @@ else
   (( ++failures ))
 fi
 
+# secondary names an optional fallback theme, not a style; fsh_theme unsets
+# it when the theme omits it.
 for style in "${_fsh_theme_style_order[@]}"; do
+  [[ $style == secondary ]] && continue
   style_key=${_fsh_theme_name}${style}
-  (( ${+_fsh_styles[$style_key]} )) || {
+  if (( ${+_fsh_styles[$style_key]} )); then
+    (( ++resolved_styles ))
+  else
     builtin print -u2 -r -- "error active theme style is unresolved: $style"
     (( ++missing_styles ))
-  }
+  fi
 done
 (( failures += missing_styles ))
 (( missing_styles )) || builtin print -r -- \
-  "ok active theme: ${_fsh_theme_name:-default} ($#_fsh_theme_style_order resolved styles)"
+  "ok active theme: ${_fsh_theme_name:-default} ($resolved_styles resolved styles)"
 
 for key in ${(ok)_fsh_state}; do
   [[ $key == *-disabled ]] || continue
