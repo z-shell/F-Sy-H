@@ -80,6 +80,18 @@ output=$(fsh_chroma doctor)
 [[ $output == *'ok declarative definitions:'* ]]
 [[ $output == *'ok active theme: default'* ]]
 
+# A theme without a secondary fallback is complete; the doctor must not
+# report the optional key as an unresolved style.
+fsh_theme --quiet base16
+(( ! ${+_fsh_styles[base16secondary]} ))
+output=$(fsh_chroma doctor 2>&1) || {
+  builtin print -u2 -r -- "f-sy-h: chroma doctor rejected a theme without secondary: $output"
+  exit 1
+}
+[[ $output == *"ok active theme: base16 ($(( $#_fsh_theme_style_order - 1 )) resolved styles)"* ]]
+[[ $output != *'unresolved: secondary'* ]]
+fsh_theme --quiet default
+
 # Compiled siblings are load caches, not additional chroma sources.
 command mkdir -p -- "$fixture_root/compiled-plugin"
 command cp -R -- "$plugin_root"/{F-Sy-H.plugin.zsh,lib,functions,completions,chroma,share,themes,tools} \
