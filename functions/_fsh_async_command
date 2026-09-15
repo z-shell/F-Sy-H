@@ -34,7 +34,9 @@ else
 fi
 
 if (( ${_fsh_state[$key-pending]:-0} )); then
-  age=$(( SECONDS - _fsh_state[$key-started-at] ))
+  # Expand the subscript before the arithmetic: a key containing `\(` evaluates
+  # to 0 inside $(( )), which reads every pending lookup as older than the timeout.
+  age=$(( SECONDS - ${_fsh_state[$key-started-at]:-0} ))
   if (( age >= _fsh_chroma_timeout_seconds )); then
     fd=${_fsh_state[$key-fd]-}
     if [[ $fd == <-> ]]; then
@@ -96,7 +98,7 @@ _fsh_state[$key-started-at]=$SECONDS
 _fsh_state[$key-fd]=$fd
 _fsh_state[_fsh-async-fd-$fd-key]=$key
 if ! _fsh_lifecycle_register_fd "$fd" _fsh_async_command_callback "$pid" ||
-    ! zle -F -w "$fd" _fsh_async_command_callback; then
+    ! zle -F "$fd" _fsh_async_command_callback; then
   owned_fd=$fd
   { exec {owned_fd}<&- } 2>/dev/null || true
   [[ $pid == <-> ]] && builtin kill -TERM "$pid" 2>/dev/null || true

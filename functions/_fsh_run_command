@@ -25,7 +25,7 @@ builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc
 typeset -ga _fsh_command_output
 local -a __response
 
-if [[ -z "${_fsh_state[$2-cache]}" || $(( EPOCHSECONDS - _fsh_state[$2-cache-born-at] )) -gt ${4:-5} ]]; then
+if [[ -z "${_fsh_state[$2-cache]}" || $(( EPOCHSECONDS - ${_fsh_state[$2-cache-born-at]:-0} )) -gt ${4:-5} ]]; then
   _fsh_state[$2-cache-born-at]="$EPOCHSECONDS"
   __response=( ${${(f)"$(command ${(Qz)1#+} 2>/dev/null)"}#${~3}} )
   [[ "$1" = "+"* ]] && _fsh_command_output+=( "${__response[@]}" ) || _fsh_command_output=( "${__response[@]}" )

@@ -77,8 +77,8 @@ the required exceptions: completions for `fsh_chroma` and `fsh_theme` are
 - Direct module requests: `zsh/parameter`, `zsh/system`, optional
   `zsh/nearcolor`, and interactive-only `zsh/zleparameter`
 - Hook: `_fsh_preexec_hook` in `preexec_functions`
-- Widgets: `_fsh_check_path_handler_widget`, `_fsh_widget_*` wrappers, and
-  temporary `_fsh_orig-*` saved-widget names
+- Widgets: `_fsh_widget_*` wrappers and temporary `_fsh_orig-*` saved-widget
+  names; asynchronous callbacks are plain `zle -F` handlers, not widgets
 
 The unload function tracks modules loaded transitively during initialization
 and lazy plugin operations. It only claims modules that were not loaded before
@@ -251,7 +251,9 @@ target is `ready`, `missing`, or intentionally `disabled`.
 `hub` and `lab` use generic coverage; their older dedicated sources are retired.
 The unmaintained `zmanage` mapping is removed. Git repository queries and manual
 page lookups use the shared asynchronous worker. Tokens remain neutral until
-valid knowledge arrives, and failed refreshes preserve the last valid result.
+valid knowledge arrives and the next key press repaints the line; the worker
+callback never runs a widget between key presses, so `LASTWIDGET` and the kill
+and yank state stay untouched. Failed refreshes preserve the last valid result.
 Makefile variable expansion stays in the current shell without subprocesses.
 
 Check registry reachability, declarative definitions, active theme styles, and

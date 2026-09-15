@@ -1120,42 +1120,20 @@ _fsh_highlight_process() {
                    __style=${_fsh_theme_name}global-alias
                  else
                    if [[ ${_fsh_state[no_check_paths]} != 1 ]]; then
-                     if [[ ${_fsh_state[use_async]} != 1 ]]; then
-                       if _fsh_highlight_check_path noasync; then
-                         # ADD
-                         (( __start=_start_pos-__PBUFLEN, __end=_end_pos-__PBUFLEN, __start >= 0 )) && reply+=("$__start $__end ${_fsh_styles[$__style]}")
-                         already_added=1
+                     if _fsh_highlight_check_path; then
+                       # ADD
+                       (( __start=_start_pos-__PBUFLEN, __end=_end_pos-__PBUFLEN, __start >= 0 )) && reply+=("$__start $__end ${_fsh_styles[$__style]}")
+                       already_added=1
 
-                         # TODO: path separators, optimize and add to async code-path
-                         [[ -n ${_fsh_styles[${_fsh_theme_name}path_pathseparator]} && ${_fsh_styles[${_fsh_theme_name}path]} != ${_fsh_styles[${_fsh_theme_name}path_pathseparator]} ]] && {
-                           for (( __pos = _start_pos; __pos <= _end_pos; __pos++ )) ; do
-                             # ADD
-                             [[ ${__buf[__pos]} == "/" ]] && (( __start=__pos-__PBUFLEN, __start >= 0 )) && reply+=("$(( __start - 1 )) $__start ${_fsh_styles[${_fsh_theme_name}path_pathseparator]}")
-                           done
-                         }
-                       else
-                         __style=${_fsh_theme_name}default
-                       fi
+                       # TODO: path separators, optimize
+                       [[ -n ${_fsh_styles[${_fsh_theme_name}path_pathseparator]} && ${_fsh_styles[${_fsh_theme_name}path]} != ${_fsh_styles[${_fsh_theme_name}path_pathseparator]} ]] && {
+                         for (( __pos = _start_pos; __pos <= _end_pos; __pos++ )) ; do
+                           # ADD
+                           [[ ${__buf[__pos]} == "/" ]] && (( __start=__pos-__PBUFLEN, __start >= 0 )) && reply+=("$(( __start - 1 )) $__start ${_fsh_styles[${_fsh_theme_name}path_pathseparator]}")
+                         done
+                       }
                      else
-                       if [[ -z ${_fsh_state[cache-path-${(q)__arg}-${_start_pos}]} || $(( EPOCHSECONDS - _fsh_state[cache-path-${(q)__arg}-${_start_pos}-born-at] )) -gt 8 ]]; then
-                         if [[ $LASTWIDGET != *-or-beginning-search ]]; then
-                           exec {PCFD}< <(_fsh_highlight_check_path; sleep 5)
-                           command sleep 0
-                           _fsh_state[path-queue]+=";$_start_pos $_end_pos;"
-                           is-at-least 5.0.6 && __pos=1 || __pos=0
-                           zle -F ${${__pos:#0}:+-w} $PCFD _fsh_check_path_handler_widget
-                           _fsh_lifecycle_register_fd "$PCFD" \
-                             _fsh_check_path_handler_widget "${sysparams[procsubstpid]-}"
-                           already_added=1
-                         else
-                           __style=${_fsh_theme_name}default
-                         fi
-                       elif [[ ${_fsh_state[cache-path-${(q)__arg}-${_start_pos}]%D} -eq 1 ]]; then
-                         (( __start=_start_pos-__PBUFLEN, __end=_end_pos-__PBUFLEN, __start >= 0 )) && reply+=("$__start $__end ${_fsh_styles[${_fsh_theme_name}path${${(M)_fsh_state[cache-path-${(q)__arg}-${_start_pos}]%D}:+-to-dir}]}")
-                         already_added=1
-                       else
-                         __style=${_fsh_theme_name}default
-                       fi
+                       __style=${_fsh_theme_name}default
                      fi
                    else
                      __style=${_fsh_theme_name}default
@@ -1319,70 +1297,24 @@ _fsh_highlight_process() {
 }
 
 _fsh_highlight_check_path() {
-  (( _start_pos-__PBUFLEN >= 0 )) || \
-    { [[ $1 != "noasync" ]] && print -r -- "- $_start_pos $_end_pos"; return 1; }
-  [[ $1 != "noasync" ]] && {
-    print -r -- ${sysparams[pid]}
-    # This is to fill cache
-    print -r -- $__arg
-  }
+  (( _start_pos-__PBUFLEN >= 0 )) || return 1
 
   : ${expanded_path:=${(Q)~__arg}}
-  [[ -n ${_fsh_blocklist_patterns[(k)${${(M)expanded_path:#/*}:-$PWD/$expanded_path}]} ]] && { [[ $1 != "noasync" ]] && print -r -- "- $_start_pos $_end_pos"; return 1; }
+  [[ -n ${_fsh_blocklist_patterns[(k)${${(M)expanded_path:#/*}:-$PWD/$expanded_path}]} ]] && return 1
 
-  [[ -z $expanded_path ]] && { [[ $1 != "noasync" ]] && print -r -- "- $_start_pos $_end_pos"; return 1; }
-  [[ -d $expanded_path ]] && { [[ $1 != "noasync" ]] && print -r -- "$_start_pos ${_end_pos}D" || __style=${_fsh_theme_name}path-to-dir; return 0; }
-  [[ -e $expanded_path ]] && { [[ $1 != "noasync" ]] && print -r -- "$_start_pos $_end_pos" || __style=${_fsh_theme_name}path; return 0; }
+  [[ -z $expanded_path ]] && return 1
+  [[ -d $expanded_path ]] && { __style=${_fsh_theme_name}path-to-dir; return 0; }
+  [[ -e $expanded_path ]] && { __style=${_fsh_theme_name}path; return 0; }
 
   # Search the path in CDPATH, only for CD command
   [[ $active_command = "cd" ]] && for cdpath_dir in $cdpath; do
-    [[ -d $cdpath_dir/$expanded_path ]] && { [[ $1 != "noasync" ]] && print -r -- "$_start_pos ${_end_pos}D" || __style=${_fsh_theme_name}path-to-dir; return 0; }
-    [[ -e $cdpath_dir/$expanded_path ]] && { [[ $1 != "noasync" ]] && print -r -- "$_start_pos $_end_pos" || __style=${_fsh_theme_name}path; return 0; }
+    [[ -d $cdpath_dir/$expanded_path ]] && { __style=${_fsh_theme_name}path-to-dir; return 0; }
+    [[ -e $cdpath_dir/$expanded_path ]] && { __style=${_fsh_theme_name}path; return 0; }
   done
 
   # It's not a path.
-  [[ $1 != "noasync" ]] && print -r -- "- $_start_pos $_end_pos"
   return 1
 }
-
-_fsh_highlight_check_path_handler() {
-  builtin emulate -L zsh ${=${options[xtrace]:#off}:+-o xtrace}
-  builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc_quotes no_auto_pushd
-
-  local IFS=$'\n' pid PCFD=$1 line stripped val
-  integer idx
-
-  if read -r -u $PCFD pid; then
-    if read -r -u $PCFD val; then
-      if read -r -u $PCFD line; then
-        stripped=${${line#- }%D}
-        _fsh_state[cache-path-${(q)val}-${stripped%% *}-born-at]=$EPOCHSECONDS
-        idx=${${_fsh_state[path-queue]}[(I)$stripped]}
-        (( idx > 0 )) && {
-          if [[ $line != -* ]]; then
-            _fsh_state[cache-path-${(q)val}-${stripped%% *}]="1${(M)line%D}"
-            region_highlight+=("${line%% *} ${${line##* }%D} ${_fsh_styles[${_fsh_theme_name}path${${(M)line%D}:+-to-dir}]}")
-          else
-            _fsh_state[cache-path-${(q)val}-${stripped%% *}]=0
-          fi
-          val=${_fsh_state[path-queue]}
-          val[idx-1,idx+${#stripped}]=""
-          _fsh_state[path-queue]=$val
-          [[ ${_fsh_state[cache-path-${(q)val}-${stripped%% *}]%D} = 1 && ${#val} -le 27 ]] && zle -R
-        }
-      fi
-    fi
-    kill -9 $pid 2>/dev/null
-  fi
-
-  zle -F -w ${PCFD}
-  exec {PCFD}<&-
-  _fsh_lifecycle_release_fd "$PCFD"
-}
-
-if [[ -o interactive ]] && (( ${+builtins[zle]} )); then
-  zle -N -- _fsh_check_path_handler_widget _fsh_highlight_check_path_handler
-fi
 
 # Highlight special blocks inside double-quoted strings
 #

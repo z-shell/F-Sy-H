@@ -1,7 +1,12 @@
 # -*- mode: zsh; sh-indentation: 2; indent-tabs-mode: nil; sh-basic-offset: 2; -*-
 # vim: ft=zsh sw=2 ts=2 et
 #
-# zle -F widget for workers started by _fsh_async_command.
+# zle -F handler for workers started by _fsh_async_command.
+#
+# This runs between two key presses and must not be a widget: a widget here
+# becomes $LASTWIDGET and resets the kill and yank flags, which breaks
+# consecutive up-line-or-beginning-search presses, kill joining, and yank-pop.
+# Store the result and mark the highlight stale; the next widget repaints.
 
 builtin emulate -L zsh
 builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc_quotes no_auto_pushd
@@ -48,8 +53,5 @@ builtin unset \
   "_fsh_state[_fsh-async-fd-$fd-key]"
 
 typeset -g _fsh_prior_buffer=
-builtin true
-_fsh_zle_highlight
-zle -R
 
 return 0

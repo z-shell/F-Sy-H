@@ -420,7 +420,6 @@ if [[ -o interactive ]]; then
     _fsh_lifecycle_abort 1
     return $?
   }
-  zle -N _fsh_async_command_callback
   _fsh_bind_widgets || {
     builtin print -u2 -r -- 'f-sy-h: failed binding ZLE widgets'
     _fsh_lifecycle_abort 1
