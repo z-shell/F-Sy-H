@@ -221,6 +221,28 @@ _fsh_zle_highlight() {
   }
 }
 
+# Compatibility entry point for the rest of the ecosystem.
+#
+# Until the highlighting rework this plugin's highlighter was literally named
+# _zsh_highlight -- the name zsh-syntax-highlighting uses -- and other plugins
+# key off that name. zsh-history-substring-search is the one that bites: if
+# _zsh_highlight is undefined when it loads, it installs its own stub
+#
+#   _zsh_highlight() { [[ $KEYS == [[:print:]] ]] && region_highlight=() }
+#
+# and calls it from a zle-line-pre-redraw hook. That hook runs after our widget
+# has filled region_highlight, so every printable keystroke wipes the styles
+# again and the line paints with none at all. Renaming the function turned that
+# on silently for everyone running both plugins.
+#
+# Keep the old name resolving to the new function. The guard is on
+# ZSH_HIGHLIGHT_VERSION rather than on whether _zsh_highlight already exists,
+# because when zsh-history-substring-search is loaded first its stub is already
+# installed under that name and we do have to replace it -- only a real
+# zsh-syntax-highlighting, which sets ZSH_HIGHLIGHT_VERSION and which nobody
+# should be running alongside this plugin anyway, is left alone.
+(( ${+ZSH_HIGHLIGHT_VERSION} )) || _zsh_highlight() { _fsh_zle_highlight "$@" }
+
 # Apply highlighting based on entries in the zle_highlight array.
 # This function takes four arguments:
 # 1. The exact entry (no patterns) in the zle_highlight array:
