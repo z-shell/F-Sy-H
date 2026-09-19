@@ -99,6 +99,15 @@ zstyle -s ':fsh:config' max-length configured_value || configured_value=1000
 }
 typeset -gi _fsh_max_length=$configured_value
 
+configured_value=72
+zstyle -s ':fsh:config' git-message-length configured_value || configured_value=72
+[[ $configured_value == <-> ]] || {
+  builtin print -u2 -r -- 'f-sy-h: :fsh:config git-message-length must be a non-negative integer'
+  _fsh_lifecycle_abort 2
+  return $?
+}
+typeset -gi _fsh_git_message_length=$configured_value
+
 configured_value=5
 zstyle -s ':fsh:config' chroma-cache-seconds configured_value || configured_value=5
 [[ $configured_value == <-> ]] || {
