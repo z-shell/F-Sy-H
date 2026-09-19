@@ -9,7 +9,10 @@ _fsh_lifecycle_function_owned() {
 
   case $1 in
     (_fsh_lifecycle_*) return 1 ;;
-    (_fsh_*|fsh_chroma|fsh_theme|add-zsh-hook|is-at-least|colors) return 0 ;;
+    # _zsh_highlight is the compatibility name this plugin takes over so
+    # that zsh-history-substring-search does not bind its own stub to it;
+    # owning it here is what restores whatever held the name before us.
+    (_fsh_*|fsh_chroma|fsh_theme|_zsh_highlight|add-zsh-hook|is-at-least|colors) return 0 ;;
     (*) return 1 ;;
   esac
 }
