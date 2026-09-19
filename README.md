@@ -52,10 +52,11 @@
 - Public configuration context: `:fsh:config`
 - Autoload paths: `functions/`, `completions/`, and the private `chroma/`
 
-The plugin has no public aliases or public parameters. Persistent implementation
-state and callbacks use the private `_fsh_` prefix. Native completion naming is
-the required exceptions: completions for `fsh_chroma` and `fsh_theme` are
-`_fsh_chroma` and `_fsh_theme`.
+The plugin has no public aliases or public parameters. Persistent implementation state and callbacks use the private `_fsh_` prefix, except for the compatibility callback below. Native completions for `fsh_chroma` and `fsh_theme` are `_fsh_chroma` and `_fsh_theme`.
+
+The compatibility callback `_zsh_highlight` is a maintainer-approved namespace exception for [issue #141](https://github.com/z-shell/F-Sy-H/issues/141). It prevents `zsh-history-substring-search` from erasing syntax highlights in either load order. It is not a public configuration interface and does not restore other legacy names. F-Sy-H leaves this callback untouched when `ZSH_HIGHLIGHT_VERSION` is declared.
+
+On unload, F-Sy-H restores the prior callback or removes its own, preserving newer replacements. If history-substring-search loaded afterward and still needs the callback, unload leaves a standalone fallback that clears highlights on printable input, with no dependency on F-Sy-H. Widgets added or replaced by other plugins after loading remain theirs.
 
 ### Repository layout
 
@@ -74,6 +75,7 @@ the required exceptions: completions for `fsh_chroma` and `fsh_theme` are
 
 - Public functions: `fsh_chroma`, `fsh_theme`, and `fsh_plugin_unload`
 - Private persistent functions and parameters: names beginning with `_fsh_`
+- Compatibility callback: `_zsh_highlight`, subject to the exception above
 - Direct module requests: `zsh/parameter`, `zsh/system`, optional
   `zsh/nearcolor`, and interactive-only `zsh/zleparameter`
 - Hook: `_fsh_preexec_hook` in `preexec_functions`
@@ -122,8 +124,7 @@ clean interface. Existing configurations need these changes:
 - Reapply a theme with `fsh_theme`; executable legacy theme cache files are not
   loaded.
 
-Legacy functions, aliases, parameters, and executable cache formats are not
-retained as a second compatibility interface.
+Apart from the documented `_zsh_highlight` callback for history-substring-search, legacy functions, aliases, parameters, and executable cache formats are not retained as a second compatibility interface.
 
 ### Migrating from zsh-syntax-highlighting
 
@@ -361,6 +362,7 @@ zsh -f tests/integration/test-git-chroma-regions.zsh
 zsh -f tests/integration/test-passive-safety.zsh
 zsh -f tests/integration/test-hostile-autoloads.zsh
 zsh -f tests/integration/test-highlight-performance.zsh
+zsh -f tests/integration/test-zsh-highlight-compat.zsh
 zsh -f tests/integration/test-theme-persistence.zsh
 zsh -f tests/integration/test-chroma-registry.zsh
 zsh -f tests/integration/test-chroma-regions.zsh

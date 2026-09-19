@@ -181,6 +181,8 @@ _fsh_lifecycle_finalize() {
   done
   typeset -U names
   for name in "${names[@]}"; do
+    # The compatibility callback is installed once, never by a lazy operation.
+    [[ $name == _zsh_highlight ]] && (( _fsh_lifecycle_loaded )) && continue
     if (( ${+functions[$name]} )); then
       [[ ${functions[$name]} == "${_fsh_lifecycle_original_functions[$name]-}" &&
         ${+_fsh_lifecycle_original_function_set[$name]} -eq 1 ]] && continue
@@ -234,7 +236,9 @@ _fsh_lifecycle_finalize() {
       _fsh_lifecycle_owned_modules+=( "$module" )
   done
 
-  if (( _fsh_lifecycle_widgets_captured )); then
+  # Widgets are installed only during initial load. Lazy function/theme refreshes
+  # must not claim widgets subsequently installed or replaced by other plugins.
+  if (( _fsh_lifecycle_widgets_captured && ! _fsh_lifecycle_loaded )); then
     names=( ${(k)_fsh_lifecycle_original_widget_set} ${(k)widgets} )
     typeset -U names
     for name in "${names[@]}"; do
@@ -366,6 +370,18 @@ _fsh_lifecycle_restore_functions() {
     original=${_fsh_lifecycle_original_functions[$name]-}
     if (( original_set )); then
       functions[$name]=$original
+    elif [[ $name == _zsh_highlight ]] &&
+        (( ${+functions[_history-substring-search-end]} )); then
+      # A later-loaded history-substring-search skipped installing its fallback
+      # because our callback existed. Hand it a standalone fallback on unload.
+      # Earlier owners and newer replacements are handled above, unchanged.
+      _zsh_highlight() {
+        builtin emulate -L zsh
+        if [[ $KEYS == [[:print:]] ]]; then
+          region_highlight=()
+        fi
+        return 0
+      }
     else
       builtin unfunction "$name" 2>/dev/null || true
     fi
