@@ -295,6 +295,8 @@ _fsh_lifecycle_account_materialized() {
 
   for name in ${(k)functions}; do
     _fsh_lifecycle_function_owned "$name" || continue
+    # The compatibility callback is installed once, never by a lazy operation.
+    [[ $name == _zsh_highlight ]] && continue
     (( ${+_fsh_lifecycle_applied_function_set[$name]} ||
       ${+_fsh_lifecycle_original_function_set[$name]} )) && continue
     _fsh_lifecycle_applied_function_set[$name]=1
