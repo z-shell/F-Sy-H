@@ -396,12 +396,6 @@ _fsh_highlight_fill_option_variables() {
   else
     _fsh_state[multi_func_def]=0
   fi
-
-  if [[ -o interactive_comments ]]; then
-    _fsh_state[ointeractive_comments]=1
-  else
-    _fsh_state[ointeractive_comments]=0
-  fi
 }
 
 
@@ -415,7 +409,8 @@ _fsh_highlight_process() {
   [[ $CONTEXT == "select" ]] && return 0
 
   (( _fsh_state[path_dirs_was_set] )) && setopt PATH_DIRS
-  (( _fsh_state[ointeractive_comments] )) && local interactive_comments= # _set_ to empty
+  # Presence selects comment-aware word splitting below.
+  [[ -o interactive_comments ]] && local interactive_comments=
 
   # Variable declarations and initializations
   # in_array_assignment true between 'a=(' and the matching ')'
