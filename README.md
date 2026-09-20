@@ -261,7 +261,13 @@ page lookups use the shared asynchronous worker. Tokens remain neutral until
 valid knowledge arrives and the next key press repaints the line; the worker
 callback never runs a widget between key presses, so `LASTWIDGET` and the kill
 and yank state stay untouched. Failed refreshes preserve the last valid result.
-Makefile variable expansion stays in the current shell without subprocesses. Target discovery parses at most 16,384 characters per cache refresh; larger Makefiles skip target validation so highlighting remains responsive.
+Makefile variable expansion and static local `include`, `-include`, and
+`sinclude` discovery stay in the current shell without subprocesses. A refresh
+parses at most 16,384 characters across 32 files and eight include levels.
+Dynamic, unsupported, cyclic, missing mandatory, or over-budget input skips
+target validation so highlighting remains responsive and does not report false
+errors. Cache entries are scoped to the selected Makefile and invalidated when
+an included input changes.
 
 Check registry reachability, declarative definitions, active theme styles, and
 session-disabled asynchronous lookups:

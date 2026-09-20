@@ -8,17 +8,64 @@
 builtin emulate -L zsh
 builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc_quotes no_auto_pushd
 
-local -r max_makefile_chars=16384
-local makefile_content
-local -a TARGETS
+local -ri max_makefile_chars=16384 max_makefile_files=32 max_makefile_depth=8
+local makefile_content makefile_root makefile_path
+local -a TARGETS MAKEFILE_INPUTS MAKEFILE_STAMPS MAKEFILE_ACTIVE
 local -A VARIABLES
+integer makefile_chars=0 makefile_files=0
+
+_fsh_make_file_stamp() {
+  builtin emulate -L zsh
+
+  local file_path=$1
+  local -A file_stat
+
+  if [[ ! -e $file_path ]]; then
+    REPLY=missing
+  elif [[ ! -f $file_path ]]; then
+    REPLY=not-regular
+  elif ! zmodload -e zsh/stat || ! builtin zstat -H file_stat -- "$file_path" 2>/dev/null; then
+    REPLY=unavailable
+  else
+    REPLY="${file_stat[device]}:${file_stat[inode]}:${file_stat[size]}:${file_stat[mtime]}:${file_stat[ctime]}"
+  fi
+}
+
+_fsh_make_track_input() {
+  builtin emulate -L zsh
+
+  local file_path=$1 REPLY
+  (( MAKEFILE_INPUTS[(Ie)$file_path] )) && return 0
+
+  MAKEFILE_INPUTS+=( "$file_path" )
+  _fsh_make_file_stamp "$file_path"
+  MAKEFILE_STAMPS+=( "$REPLY" )
+}
+
+_fsh_make_cache_inputs_current() {
+  builtin emulate -L zsh
+
+  local files_blob=$1 stamps_blob=$2 file_path REPLY
+  local -a input_files=( "${(@f)files_blob}" )
+  local -a input_stamps=( "${(@f)stamps_blob}" )
+  integer index
+
+  (( $#input_files == $#input_stamps )) || return 1
+  zmodload -e zsh/stat || return 0
+
+  for (( index = 1; index <= $#input_files; ++index )); do
+    _fsh_make_file_stamp "${input_files[index]}"
+    [[ $REPLY == "${input_stamps[index]}" ]] || return 1
+  done
+}
 
 _fsh_make_expand_vars() {
   builtin emulate -L zsh
   builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc_quotes no_auto_pushd
 
-  local open close var val front='' rest=$1
-  local -a seen
+  local open close var val front='' rest=$1 MATCH
+  local -a seen match mbegin mend
+  integer MBEGIN MEND
 
   while [[ $rest == (#b)[^$]#($)* ]]; do
     (( ${seen[(Ie)$rest]} )) && { REPLY=; return 1; }
@@ -77,10 +124,64 @@ _fsh_make_parse_makefile() {
   builtin emulate -L zsh
   builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc_quotes no_auto_pushd
 
-  local REPLY input var val target dep TAB=$'\t' tmp IFS=
+  local file_content=$1
+  integer depth=$2
+  local REPLY input var val target dep include_kind include_spec include_path TAB=$'\t' tmp
+  local IFS=$' \t\n'
+  local -a include_paths
 
-  while read input
+  while IFS= read -r input
   do
+    if [[ $input != "$TAB"* ]]; then
+      tmp=${input##[ $TAB]#}
+      case $tmp in
+        (include[ $TAB]*)
+          include_kind=include
+          include_spec=${tmp#include}
+          ;;
+        (-include[ $TAB]*)
+          include_kind=-include
+          include_spec=${tmp#-include}
+          ;;
+        (sinclude[ $TAB]*)
+          include_kind=sinclude
+          include_spec=${tmp#sinclude}
+          ;;
+        (*)
+          include_kind=
+          ;;
+      esac
+
+      if [[ -n $include_kind ]]; then
+        # Escaped names, continuations, glob patterns, and make functions are
+        # deliberately unsupported. Incomplete discovery must stay neutral.
+        [[ $include_spec != *\\* ]] || return 1
+        include_spec=${include_spec%%\#*}
+        include_spec=${include_spec##[ $TAB]#}
+        include_spec=${include_spec%%[ $TAB]#}
+        [[ -z $include_spec ]] && continue
+
+        _fsh_make_expand_vars "$include_spec" || return 1
+        include_spec=$REPLY
+        include_paths=( ${=include_spec} )
+        for include_path in "${include_paths[@]}"; do
+          [[ -n $include_path && $include_path != *[^[:alnum:]_./+,:@%=-]* ]] || return 1
+          if [[ $include_path == /* ]]; then
+            include_path=${include_path:A}
+          else
+            include_path=${makefile_root}/${include_path}
+            include_path=${include_path:A}
+          fi
+          if [[ $include_kind == include ]]; then
+            _fsh_make_parse_file "$include_path" $(( depth + 1 )) 0 || return 1
+          else
+            _fsh_make_parse_file "$include_path" $(( depth + 1 )) 1 || return 1
+          fi
+        done
+        continue
+      fi
+    fi
+
     case "$input " in
       # VARIABLE = value OR VARIABLE ?= value
       ([[:alnum:]][[:alnum:]_]#[" "$TAB]#(\?|)=*)
@@ -109,19 +210,80 @@ _fsh_make_parse_makefile() {
       TARGETS+=( ${(z)target} )
       ;;
     esac
-  done
+  done <<< "$file_content"
 }
 
-if [[ -z "${_fsh_state[chroma-make-cache]}" || $(( EPOCHSECONDS - _fsh_state[chroma-make-cache-born-at] )) -gt 7 ]]; then
-  builtin read -r -k $(( max_makefile_chars + 1 )) -u 0 makefile_content || true
-  if (( ${#makefile_content} > max_makefile_chars )); then
-    reply2=()
+_fsh_make_parse_file() {
+  builtin emulate -L zsh
+  builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc_quotes no_auto_pushd
+
+  local file_path=${1:A}
+  integer depth=$2 optional=$3 parse_status remaining input_fd
+  local file_content
+
+  (( depth <= max_makefile_depth )) || return 1
+  (( MAKEFILE_ACTIVE[(Ie)$file_path] )) && return 1
+  (( ++makefile_files <= max_makefile_files )) || return 1
+
+  _fsh_make_track_input "$file_path"
+  if [[ ! -e $file_path ]]; then
+    (( optional )) && return 0
     return 1
   fi
+  [[ -f $file_path && -r $file_path ]] || return 1
 
-  _fsh_make_parse_makefile <<< "$makefile_content"
-  _fsh_state[chroma-make-cache-born-at]="$EPOCHSECONDS"
-  _fsh_state[chroma-make-cache]="${(j:;:)TARGETS}"
+  remaining=$(( max_makefile_chars - makefile_chars ))
+  (( remaining >= 0 )) || return 1
+  builtin exec {input_fd}< "$file_path" 2>/dev/null || return 1
+  builtin read -r -k $(( remaining + 1 )) -u "$input_fd" file_content || true
+  builtin exec {input_fd}<&-
+  (( ${#file_content} <= remaining )) || return 1
+  (( makefile_chars += ${#file_content} )) || true
+
+  MAKEFILE_ACTIVE+=( "$file_path" )
+  _fsh_make_parse_makefile "$file_content" "$depth"
+  parse_status=$?
+  MAKEFILE_ACTIVE[-1]=()
+  return "$parse_status"
+}
+
+makefile_path=${1:A}
+makefile_root=${${2:-$PWD}:A}
+[[ -n $makefile_path && $makefile_path != *$'\n'* && $makefile_root != *$'\n'* ]] || {
+  reply2=()
+  return 1
+}
+
+local cache_source="${#makefile_path}:$makefile_path:${#makefile_root}:$makefile_root"
+local cache_key=chroma-make-cache
+local cache_set_key=chroma-make-cache-set
+local cache_born_key=chroma-make-cache-born-at
+local cache_files_key=chroma-make-cache-files
+local cache_stamps_key=chroma-make-cache-stamps
+local cache_source_key=chroma-make-cache-source
+
+if [[ ${_fsh_state[$cache_source_key]-} == "$cache_source" ]] &&
+    (( ${_fsh_state[$cache_set_key]:-0} )) &&
+    (( EPOCHSECONDS - ${_fsh_state[$cache_born_key]:-0} <= 7 )) &&
+    _fsh_make_cache_inputs_current "${_fsh_state[$cache_files_key]-}" \
+      "${_fsh_state[$cache_stamps_key]-}"; then
+  if [[ -n ${_fsh_state[$cache_key]-} ]]; then
+    reply2=( "${(s:;:)_fsh_state[$cache_key]}" )
+  else
+    reply2=()
+  fi
+  return 0
 fi
 
-reply2=( "${(s:;:)_fsh_state[chroma-make-cache]}" )
+if ! _fsh_make_parse_file "$makefile_path" 0 0; then
+  reply2=()
+  return 1
+fi
+
+_fsh_state[$cache_born_key]=$EPOCHSECONDS
+_fsh_state[$cache_key]="${(j:;:)TARGETS}"
+_fsh_state[$cache_files_key]="${(F)MAKEFILE_INPUTS}"
+_fsh_state[$cache_stamps_key]="${(F)MAKEFILE_STAMPS}"
+_fsh_state[$cache_source_key]=$cache_source
+_fsh_state[$cache_set_key]=1
+reply2=( "${TARGETS[@]}" )

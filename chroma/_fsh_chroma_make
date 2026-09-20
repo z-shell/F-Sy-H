@@ -17,7 +17,7 @@ builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc
 (( next_word = 2 | 8192 ))
 
 local __first_call="$1" __wrd="$2" __start_pos="$3" __end_pos="$4"
-local __style
+local __style make_dir makefile_path
 integer __idx1 __idx2
 local -a _fsh_command_output reply2
 
@@ -74,8 +74,10 @@ local -a _fsh_command_output reply2
                 __wrd="${__wrd//\`/x}"
                 __wrd="${(Q)__wrd}"
 
-                if [[ -f "${_fsh_state[chroma-make-custom-dir]%/}/${_fsh_state[chroma-make-custom-file]}" ]] && \
-                        _fsh_make_targets < "${_fsh_state[chroma-make-custom-dir]%/}/${_fsh_state[chroma-make-custom-file]}"
+                make_dir=${_fsh_state[chroma-make-custom-dir]%/}
+                makefile_path=$make_dir/${_fsh_state[chroma-make-custom-file]}
+                if [[ -f $makefile_path ]] && \
+                        _fsh_make_targets "$makefile_path" "$make_dir"
                 then
                     if [[ "${reply2[(r)$__wrd]}" ]]; then
                         (( __start=__start_pos-${#PREBUFFER}, __end=__end_pos-${#PREBUFFER}, __start >= 0 )) && reply+=("$__start $__end ${_fsh_styles[${_fsh_theme_name}correct-subtle]}")

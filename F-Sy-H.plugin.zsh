@@ -448,8 +448,9 @@ if [[ -o interactive ]]; then
   }
 fi
 
-# Load zsh/parameter module if available
+# Load optional standard modules used by highlighting.
 zmodload zsh/parameter 2>/dev/null
+zmodload zsh/stat 2>/dev/null
 zmodload zsh/system 2>/dev/null
 
 builtin autoload -Uz -- is-at-least \
