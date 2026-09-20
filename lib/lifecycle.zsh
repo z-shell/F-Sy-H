@@ -266,6 +266,56 @@ _fsh_lifecycle_finalize() {
   _fsh_lifecycle_loaded=1
 }
 
+# Accounts for the autoloads that materialized since the last accounting
+# without re-enumerating everything _fsh_lifecycle_finalize does. It records
+# the new bodies of the pending autoloads and every owned function and
+# parameter that did not exist before, and nothing else: re-snapshotting a
+# recorded parameter, the search path, or the loaded modules would claim
+# whatever the caller changed since loading. This is complete only under the
+# invariant that a materializing autoload adds owned functions and parameters
+# and writes runtime parameters, and never redefines a recorded function,
+# rewrites a recorded non-runtime parameter, changes fpath, or loads a module;
+# the lifecycle profile checks the shipped chromas against the full accounting.
+_fsh_lifecycle_account_materialized() {
+  builtin emulate -L zsh
+
+  local name REPLY
+
+  (( _fsh_lifecycle_started && _fsh_lifecycle_loaded )) || return 1
+
+  for name in ${(k)_fsh_lifecycle_pending_autoloads}; do
+    (( ${+functions[$name]} )) || continue
+    [[ ${functions[$name]} == "${_fsh_lifecycle_applied_functions[$name]-}" ]] && continue
+    _fsh_lifecycle_applied_function_set[$name]=1
+    _fsh_lifecycle_applied_functions[$name]=${functions[$name]}
+    _fsh_lifecycle_touched_functions[$name]=1
+    [[ ${functions[$name]} == *'builtin autoload -X'* ]] ||
+      builtin unset "_fsh_lifecycle_pending_autoloads[$name]"
+  done
+
+  for name in ${(k)functions}; do
+    _fsh_lifecycle_function_owned "$name" || continue
+    (( ${+_fsh_lifecycle_applied_function_set[$name]} ||
+      ${+_fsh_lifecycle_original_function_set[$name]} )) && continue
+    _fsh_lifecycle_applied_function_set[$name]=1
+    _fsh_lifecycle_applied_functions[$name]=${functions[$name]}
+    _fsh_lifecycle_touched_functions[$name]=1
+    [[ ${functions[$name]} == *'builtin autoload -X'* ]] &&
+      _fsh_lifecycle_pending_autoloads[$name]=1
+  done
+
+  # Most parameters are the caller's; test ownership only for the namespace.
+  for name in ${(M)${(k)parameters}:#_fsh_*}; do
+    _fsh_lifecycle_parameter_owned "$name" || continue
+    (( ${+_fsh_lifecycle_applied_parameter_set[$name]} ||
+      ${+_fsh_lifecycle_original_parameter_set[$name]} )) && continue
+    _fsh_lifecycle_parameter_declaration "$name"
+    _fsh_lifecycle_applied_parameter_set[$name]=1
+    _fsh_lifecycle_applied_parameters[$name]=$REPLY
+    _fsh_lifecycle_touched_parameters[$name]=1
+  done
+}
+
 _fsh_lifecycle_refresh() {
   builtin emulate -L zsh
 
@@ -281,7 +331,7 @@ _fsh_lifecycle_refresh() {
   # A materialized autoload may add more plugin-owned shell resources, and
   # highlighting owns the final values of the parameters it introduces.
   touched_parameters=( "${(@kv)_fsh_lifecycle_touched_parameters}" )
-  _fsh_lifecycle_finalize || return
+  _fsh_lifecycle_account_materialized || return
   for name in ${(k)_fsh_lifecycle_touched_parameters}; do
     (( ${+touched_parameters[$name]} )) ||
       _fsh_lifecycle_runtime_parameters[$name]=1
@@ -603,6 +653,7 @@ fsh_plugin_unload() {
     _fsh_lifecycle_begin
     _fsh_lifecycle_capture_widgets
     _fsh_lifecycle_finalize
+    _fsh_lifecycle_account_materialized
     _fsh_lifecycle_refresh
     _fsh_lifecycle_checkpoint
     _fsh_lifecycle_restore_widget

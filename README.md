@@ -399,9 +399,11 @@ does not gate the build. Three outcomes remain test failures: empty
 highlighting, a lifecycle refresh on the widget path (in steady state or in
 the first parse that materializes a chroma), and failure to skip a buffer
 above the default limit. While `_fsh_preexec_hook` is installed, the
-lifecycle refresh for a materialized chroma waits for that hook, so it runs
-between command lines; without the hook it runs at once, so a caller's later
-changes are never mistaken for the plugin's own.
+lifecycle accounting for a materialized chroma waits for that hook, so it runs
+between command lines; without the hook it runs at once. Either way it records
+only the functions and parameters the chroma added, so changes the caller made
+since loading are never mistaken for the plugin's own. The lifecycle profile
+checks every shipped chroma against the full accounting.
 
 `tools/validate-themes.zsh` validates all shipped themes by default and accepts
 explicit INI paths as arguments. It emits one JSON Lines record per result or

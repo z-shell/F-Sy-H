@@ -34,9 +34,16 @@
 #
 # _fsh_state is a friendly hash array which allows to store strings without
 # creating global parameters (variables). If you need hash, just use it first
-# declaring, under some distinct name like: typeset -gA CHROMA_EXPLE_DICT.
+# declaring, under some distinct name like: typeset -gA _fsh_chroma_exple_dict.
 # Remember to reset the hash and others at __first_call == 1, so that you have
 # a fresh state for new command.
+#
+# A chroma may define new _fsh_* functions and parameters and write to the
+# runtime state above. It must not redefine an existing plugin function,
+# assign to another existing _fsh_* parameter, change fpath, or load a module:
+# the lifecycle accounting that runs after a chroma first loads records only
+# what the chroma added, and tests/integration/test-plugin-lifecycle.zsh
+# compares that against the full accounting for every registered chroma.
 
 # Keep chroma-takeover state meaning: until ;, handle highlighting via chroma.
 # So the below 8192 assignment takes care that next token will be routed to chroma.
