@@ -450,6 +450,17 @@ _fsh_test_noninteractive() {
     (( ${+functions[fsh_plugin_unload]} )) ||
       _fsh_test_fail 'the unload function is missing'
 
+    # Lifecycle accounting must not empty the caller's command hash: a local
+    # named `path` would run the path setter on return and drop every entry.
+    integer hashed_commands
+    : ${+commands[zsh]}
+    hashed_commands=${#${(f)"$(builtin hash)"}}
+    (( hashed_commands > 0 )) ||
+      _fsh_test_fail 'cannot observe the command hash table'
+    _fsh_lifecycle_refresh || _fsh_test_fail 'lifecycle refresh failed'
+    (( ${#${(f)"$(builtin hash)"}} == hashed_commands )) ||
+      _fsh_test_fail 'a lifecycle refresh emptied the command hash table'
+
     # Changes made after loading belong to the caller and must survive unload.
     typeset -g _fsh_version=user-version
     _fsh_buffer_modified() { return 7 }

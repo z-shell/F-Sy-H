@@ -176,7 +176,7 @@ _fsh_lifecycle_capture_widgets() {
 _fsh_lifecycle_finalize() {
   builtin emulate -L zsh
 
-  local name module path declaration REPLY
+  local name module entry declaration REPLY
   local -a names loaded_modules
 
   (( _fsh_lifecycle_started )) || return 1
@@ -230,9 +230,9 @@ _fsh_lifecycle_finalize() {
   done
 
   _fsh_lifecycle_applied_fpath=( "${fpath[@]}" )
-  for path in "${_fsh_lifecycle_applied_fpath[@]}"; do
-    (( ${_fsh_lifecycle_original_fpath[(Ie)$path]} )) ||
-      _fsh_lifecycle_added_fpath+=( "$path" )
+  for entry in "${_fsh_lifecycle_applied_fpath[@]}"; do
+    (( ${_fsh_lifecycle_original_fpath[(Ie)$entry]} )) ||
+      _fsh_lifecycle_added_fpath+=( "$entry" )
   done
   typeset -U _fsh_lifecycle_added_fpath
 
@@ -517,7 +517,7 @@ _fsh_lifecycle_restore_parameters() {
 _fsh_lifecycle_restore_fpath() {
   builtin emulate -L zsh
 
-  local path
+  local entry
   integer count index candidate
 
   if _fsh_lifecycle_arrays_equal fpath _fsh_lifecycle_applied_fpath; then
@@ -525,11 +525,11 @@ _fsh_lifecycle_restore_fpath() {
     return 0
   fi
 
-  for path in "${_fsh_lifecycle_added_fpath[@]}"; do
+  for entry in "${_fsh_lifecycle_added_fpath[@]}"; do
     count=0
     index=0
     for (( candidate = 1; candidate <= $#fpath; ++candidate )); do
-      [[ ${fpath[candidate]} == "$path" ]] || continue
+      [[ ${fpath[candidate]} == "$entry" ]] || continue
       (( ++count ))
       index=$candidate
     done
