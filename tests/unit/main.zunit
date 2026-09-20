@@ -444,6 +444,13 @@ reply=()
     assert "$state" same_as "0"
 }
 
+@test 'color literals preview only their own span' {
+    run zsh -f ./tests/integration/test-color-preview-regions.zsh
+
+    assert "$output" is_empty
+    assert "$state" same_as "0"
+}
+
 @test 'docker chroma never forks synchronously' {
     run zsh -f ./tests/integration/test-async-chroma.zsh
 
