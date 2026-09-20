@@ -519,6 +519,11 @@ zstyle -s ':fsh:config' bracket-highlighting configured_value || configured_valu
 [[ $configured_value == (disabled|false|no|off|0) ]] &&
   _fsh_state[use_brackets]=0 || _fsh_state[use_brackets]=1
 
+configured_value=enabled
+zstyle -s ':fsh:config' color-preview configured_value || configured_value=enabled
+[[ $configured_value == (disabled|false|no|off|0) ]] &&
+  _fsh_state[use_color_preview]=0 || _fsh_state[use_color_preview]=1
+
 if zstyle -a ':fsh:config' path-blocklist configured_patterns; then
   _fsh_blocklist_patterns=()
   for configured_pattern in "${configured_patterns[@]}"; do

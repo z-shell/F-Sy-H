@@ -194,6 +194,9 @@ typeset -gA _fsh_state
 
 # Brackets highlighter active by default
 : ${_fsh_state[use_brackets]:=1}
+
+# Color-literal previews (#rrggbb, #rgb, rgb(..)) active by default
+: ${_fsh_state[use_color_preview]:=1}
 () {
 local -a registry=(
   chroma-fsh_theme    _fsh_chroma_theme
@@ -416,13 +419,13 @@ _fsh_highlight_process() {
   # in_array_assignment true between 'a=(' and the matching ')'
   # braces_stack: "R" for round, "Q" for square, "Y" for curly
   # _mybuf, cdpath_dir are used in sub-functions
-  local _start_pos=$3 _end_pos __start __end highlight_glob=1 __arg __style in_array_assignment=0 MATCH REPLY expanded_path braces_stack __buf=$1$2 _mybuf __workbuf cdpath_dir active_command alias_target _was_double_hyphen=0 __nul=$'\0' __tmp
+  local _start_pos=$3 _end_pos __start __end highlight_glob=1 __arg __style in_array_assignment=0 MATCH REPLY expanded_path braces_stack __buf=$1$2 _mybuf __workbuf cdpath_dir active_command alias_target _was_double_hyphen=0 __nul=$'\0' __tmp __color_buf __color_hex __color_fg
   # __arg_type can be 0, 1, 2 or 3, i.e. precommand, control flow, command separator
   # __idx and _end_idx are used in sub-functions
   # for this_word and next_word look below at commented integers and at state machine description
   integer __arg_type=0 MBEGIN MEND in_redirection __len=${#__buf} __PBUFLEN=${#1} already_added offset __idx _end_idx this_word=1 next_word=0 __pos  __asize __delimited=0 itmp iitmp
-  integer chroma_global_alias chroma_reply_count chroma_start_pos chroma_already_added chroma_status
-  local -a match mbegin mend __inputs __list
+  integer chroma_global_alias chroma_reply_count chroma_start_pos chroma_already_added chroma_status __color_lum
+  local -a match mbegin mend __inputs __list __color_regions
 
   # This comment explains the numbers:
   # BIT_for - word after reserved-word-recognized `for'
@@ -505,6 +508,8 @@ _fsh_highlight_process() {
     [[ $__arg = '{' && $__delimited = 2 ]] && { (( this_word = (this_word & ~2) | 1 )); __delimited=0; }
 
     __asize=${#__arg}
+    # The token as split; quote handling below may narrow $__arg to quoted content.
+    __color_buf=$__arg
 
     # Reset state of working variables
     already_added=0
@@ -1175,21 +1180,36 @@ _fsh_highlight_process() {
         fi
       fi
     fi
-    if [[ $__arg = (#b)*'#'(([0-9a-fA-F][0-9a-fA-F])([0-9a-fA-F][0-9a-fA-F])([0-9a-fA-F][0-9a-fA-F])|([0-9a-fA-F])([0-9a-fA-F])([0-9a-fA-F]))(|[^[:alnum:]]*) || $__arg = (#b)*'rgb('(([0-9a-fA-F][0-9a-fA-F](#c0,1)),([0-9a-fA-F][0-9a-fA-F](#c0,1)),([0-9a-fA-F][0-9a-fA-F](#c0,1)))* ]]; then
-      if [[ -n $match[2] ]]; then
-        if [[ $match[2] = ?? || $match[3] = ?? || $match[4] = ?? ]]; then
-          (( __start=_start_pos-__PBUFLEN, __end=_end_pos-__PBUFLEN, __start >= 0 )) && reply+=("$__start $__end bg=#${(l:2::0:)match[2]}${(l:2::0:)match[3]}${(l:2::0:)match[4]}")
-        else
-          (( __start=_start_pos-__PBUFLEN, __end=_end_pos-__PBUFLEN, __start >= 0 )) && reply+=("$__start $__end bg=#$match[2]$match[3]$match[4]")
-        fi
-      else
-        (( __start=_start_pos-__PBUFLEN, __end=_end_pos-__PBUFLEN, __start >= 0 )) && reply+=("$__start $__end bg=#$match[5]$match[6]$match[7]")
-      fi
-      already_added=1
-    fi
-
     # ADD
     (( already_added == 0 )) && [[ ${_fsh_styles[$__style]} != "none" ]] && (( __start=_start_pos-__PBUFLEN, __end=_end_pos-__PBUFLEN, __start >= 0 )) && reply+=("$__start $__end ${_fsh_styles[$__style]}")
+
+    # Color-literal preview (#157). It overlays only the literal itself and is
+    # appended after the token style, so a quoted or option token keeps its
+    # theme style around the literal. The foreground is chosen for contrast
+    # against the previewed background.
+    if (( _fsh_state[use_color_preview] )) && [[ $__color_buf = *(\#[0-9a-fA-F]|rgb\()* ]]; then
+      __workbuf=$__color_buf __color_regions=()
+      # The greedy leading (*) binds to the last literal; shrinking the buffer
+      # to that prefix walks the token from right to left. A literal needs the
+      # token boundary or a non-alphanumeric character on both sides; the right
+      # side is read from the full token because the buffer may already end
+      # where a skipped literal began.
+      while [[ $__workbuf = (#b)(*)(\#([0-9a-fA-F](#c6)|[0-9a-fA-F](#c3))|rgb\([0-9a-fA-F](#c1,2),[0-9a-fA-F](#c1,2),[0-9a-fA-F](#c1,2)\))* ]]; do
+        __workbuf=$match[1]
+        [[ $__workbuf = *[[:alnum:]] || ${__color_buf[mend[2]+1]} = [[:alnum:]] ]] && continue
+        case $match[2] in
+          (\#??????) __color_hex=${match[2]#\#} ;;
+          (\#???) __color_hex=${match[2][2]}${match[2][2]}${match[2][3]}${match[2][3]}${match[2][4]}${match[2][4]} ;;
+          (*) __color_hex=${(j::)${(l:2::0:)^${(s:,:)${${match[2]#rgb\(}%\)}}}} ;;
+        esac
+        # Perceived luminance (ITU-R BT.601 weights) over the 0x-prefixed channels.
+        (( __color_lum = ( 0x${__color_hex[1,2]} * 299 + 0x${__color_hex[3,4]} * 587 + 0x${__color_hex[5,6]} * 114 ) / 1000 ))
+        (( __color_lum > 128 )) && __color_fg=black || __color_fg=white
+        (( __start = _start_pos - __PBUFLEN + mbegin[2] - 1, __end = _start_pos - __PBUFLEN + mend[2], __start >= 0 )) && \
+          __color_regions=( "$__start $__end fg=$__color_fg,bg=#$__color_hex" "${__color_regions[@]}" )
+      done
+      reply+=( "${__color_regions[@]}" )
+    fi
 
     if (( (__arg_type == 3) && ((this_word & (BIT_case_preamble|BIT_case_item)) == 0) )); then
       if [[ $__arg == ';' ]] && (( in_array_assignment )); then

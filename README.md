@@ -198,6 +198,7 @@ zstyle ':fsh:config' max-length 1000
 zstyle ':fsh:config' git-message-length 72
 zstyle ':fsh:config' theme-manager enabled
 zstyle ':fsh:config' bracket-highlighting enabled
+zstyle ':fsh:config' color-preview enabled
 zstyle ':fsh:config' path-blocklist '/private/*' '/mnt/slow/**'
 zstyle ':fsh:config' chroma-opt-in vim
 zstyle ':fsh:config' chroma-cache-seconds 5
@@ -217,6 +218,11 @@ The settings are:
   body paragraphs. `0` disables the check.
 - `theme-manager`: boolean-like scalar, default `enabled`.
 - `bracket-highlighting`: boolean-like scalar, default `enabled`.
+- `color-preview`: boolean-like scalar, default `enabled`. A `#rrggbb`, `#rgb`,
+  or `rgb(rr,gg,bb)` literal delimited by the token boundary or non-alphanumeric
+  characters is shown on its own color, with a black or white foreground chosen
+  for contrast. The preview covers only the literal and is applied after the
+  token's ordinary style, so quoted arguments keep their configured style.
 - `path-blocklist`: array of Zsh patterns excluded from path probing, empty by
   default.
 - `chroma-opt-in`: array containing `vim`, `which`, or both, empty by default.
@@ -378,6 +384,7 @@ zsh -f tests/integration/test-zsh-highlight-compat.zsh
 zsh -f tests/integration/test-theme-persistence.zsh
 zsh -f tests/integration/test-chroma-registry.zsh
 zsh -f tests/integration/test-chroma-regions.zsh
+zsh -f tests/integration/test-color-preview-regions.zsh
 zsh -f tests/integration/test-async-chroma.zsh
 zsh -f tests/integration/test-theme-validator.zsh
 zsh -f tools/validate-themes.zsh

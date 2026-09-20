@@ -18,6 +18,7 @@ zstyle ':fsh:config' git-message-length 60
 zstyle ':fsh:config' chroma-cache-seconds 7
 zstyle ':fsh:config' chroma-timeout-seconds 3
 zstyle ':fsh:config' bracket-highlighting disabled
+zstyle ':fsh:config' color-preview off
 zstyle ':fsh:config' path-blocklist '/private/*' '/mnt/slow/**'
 
 count_fpath_entry() {
@@ -124,6 +125,7 @@ source "$plugin_root/F-Sy-H.plugin.zsh"
 (( _fsh_chroma_cache_seconds == 7 ))
 (( _fsh_chroma_timeout_seconds == 3 ))
 (( _fsh_state[use_brackets] == 0 ))
+(( _fsh_state[use_color_preview] == 0 ))
 typeset blocklist_key='/private/*'
 (( ${+_fsh_blocklist_patterns[$blocklist_key]} ))
 blocklist_key='/mnt/slow/**'
