@@ -136,6 +136,60 @@ assert_trailing_token_style 'git commit --dry-run NOOUT' fg=cyan || exit $?
 assert_trailing_token_style 'git commit --dry-run NOOUT missing/path/' fg=red || exit $?
 assert_trailing_token_style 'git commit -m MESSAGE missing/path/' fg=red || exit $?
 
+# The first -m/--message argument is the subject line. Only the part beyond
+# `git-message-length` (default 72) is marked, the closing quote and later
+# body paragraphs keep the string style, and 0 disables the check.
+typeset subject72='feat(engine): implement Hex connection engine with DSU graph and MCTS AI'
+typeset subject73="${subject72}!"
+(( ${#subject72} == 72 && ${#subject73} == 73 )) || {
+  builtin print -u2 -r -- 'git chroma fixture subjects have unexpected lengths'
+  exit 1
+}
+fsh_assert_exact_regions "git commit -m '$subject72'" \
+  "0 3 ${_fsh_styles[command]}" \
+  "4 10 ${_fsh_styles[subcommand]}" \
+  "11 13 ${_fsh_styles[single-hyphen-option]}" \
+  "14 88 ${_fsh_styles[double-quoted-argument]}" || exit $?
+fsh_assert_exact_regions "git commit -m '$subject73'" \
+  "0 3 ${_fsh_styles[command]}" \
+  "4 10 ${_fsh_styles[subcommand]}" \
+  "11 13 ${_fsh_styles[single-hyphen-option]}" \
+  "14 89 ${_fsh_styles[double-quoted-argument]}" \
+  "87 88 ${_fsh_styles[incorrect-subtle]}" || exit $?
+fsh_assert_exact_regions "git commit --message='$subject73'" \
+  "0 3 ${_fsh_styles[command]}" \
+  "4 10 ${_fsh_styles[subcommand]}" \
+  "11 21 ${_fsh_styles[double-hyphen-option]}" \
+  "21 96 ${_fsh_styles[double-quoted-argument]}" \
+  "94 95 ${_fsh_styles[incorrect-subtle]}" || exit $?
+fsh_assert_exact_regions "git commit -m \"feat: it's \\\"quoted\\\" and long enough to go past the seventy-two character limit\"" \
+  "0 3 ${_fsh_styles[command]}" \
+  "4 10 ${_fsh_styles[subcommand]}" \
+  "11 13 ${_fsh_styles[single-hyphen-option]}" \
+  "14 96 ${_fsh_styles[double-quoted-argument]}" \
+  "89 95 ${_fsh_styles[incorrect-subtle]}" || exit $?
+fsh_assert_exact_regions "git commit -m 'subject' -m '$subject73'" \
+  "0 3 ${_fsh_styles[command]}" \
+  "4 10 ${_fsh_styles[subcommand]}" \
+  "11 13 ${_fsh_styles[single-hyphen-option]}" \
+  "14 23 ${_fsh_styles[double-quoted-argument]}" \
+  "24 26 ${_fsh_styles[single-hyphen-option]}" \
+  "27 102 ${_fsh_styles[double-quoted-argument]}" || exit $?
+fsh_assert_exact_regions "git merge -m '$subject73' topic" \
+  "0 3 ${_fsh_styles[command]}" \
+  "4 9 ${_fsh_styles[subcommand]}" \
+  "10 12 ${_fsh_styles[single-hyphen-option]}" \
+  "13 88 ${_fsh_styles[double-quoted-argument]}" \
+  "86 87 ${_fsh_styles[incorrect-subtle]}" \
+  "89 94 ${_fsh_styles[default]}" || exit $?
+_fsh_git_message_length=0
+fsh_assert_exact_regions "git commit -m '$subject73'" \
+  "0 3 ${_fsh_styles[command]}" \
+  "4 10 ${_fsh_styles[subcommand]}" \
+  "11 13 ${_fsh_styles[single-hyphen-option]}" \
+  "14 89 ${_fsh_styles[double-quoted-argument]}" || exit $?
+_fsh_git_message_length=72
+
 # Cold knowledge must not turn an existing branch red. Warm the fixture's
 # query caches explicitly outside highlighting, then retain exact warm-region
 # assertions below. Real worker/callback transitions have their own PTY test.

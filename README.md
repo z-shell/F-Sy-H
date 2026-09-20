@@ -195,6 +195,7 @@ All ordinary settings use `:fsh:config`. Set them before loading the plugin:
 ```zsh
 zstyle ':fsh:config' work-dir "${XDG_CACHE_HOME:-$HOME/.cache}/f-sy-h"
 zstyle ':fsh:config' max-length 1000
+zstyle ':fsh:config' git-message-length 72
 zstyle ':fsh:config' theme-manager enabled
 zstyle ':fsh:config' bracket-highlighting enabled
 zstyle ':fsh:config' path-blocklist '/private/*' '/mnt/slow/**'
@@ -209,6 +210,11 @@ The settings are:
 - `work-dir`: scalar path, default
   `${XDG_CACHE_HOME:-$HOME/.cache}/f-sy-h`.
 - `max-length`: non-negative integer, default `1000`.
+- `git-message-length`: non-negative integer, default `72`. The `git` chroma
+  marks the part of a commit, merge, or tag subject line beyond this many
+  characters with the `incorrect-subtle` style. Only the first `-m` or
+  `--message=` argument is checked; later ones are body paragraphs. `0`
+  disables the check.
 - `theme-manager`: boolean-like scalar, default `enabled`.
 - `bracket-highlighting`: boolean-like scalar, default `enabled`.
 - `path-blocklist`: array of Zsh patterns excluded from path probing, empty by

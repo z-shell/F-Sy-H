@@ -14,6 +14,7 @@ typeset -gx PMSPEC=0fuUpiPs
 command mkdir -p -- "$HOME" "$ZDOTDIR"
 zstyle ':fsh:config' work-dir "$fixture_root/work"
 zstyle ':fsh:config' max-length 321
+zstyle ':fsh:config' git-message-length 60
 zstyle ':fsh:config' chroma-cache-seconds 7
 zstyle ':fsh:config' chroma-timeout-seconds 3
 zstyle ':fsh:config' bracket-highlighting disabled
@@ -78,6 +79,7 @@ source "$plugin_root/F-Sy-H.plugin.zsh"
 
 [[ $_fsh_base_dir == $plugin_root ]]
 (( _fsh_max_length == 321 ))
+(( _fsh_git_message_length == 60 ))
 (( _fsh_chroma_cache_seconds == 7 ))
 (( _fsh_chroma_timeout_seconds == 3 ))
 (( _fsh_state[use_brackets] == 0 ))

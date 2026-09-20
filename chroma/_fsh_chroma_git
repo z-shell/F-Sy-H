@@ -717,6 +717,7 @@ _fsh_chroma_git_first_call() {
   _fsh_state[chroma-git-option-with-argument-active]=0
   _fsh_state[chroma-git-reset-etc-saw-commit]=0
   _fsh_state[chroma-git-reset-etc-saw-file]=0
+  _fsh_state[chroma-git-message-count]=0
   return 1
 }
 
@@ -1195,42 +1196,55 @@ _fsh_chroma_git_commit_message_action() {
   _fsh_chroma_option_action "$@"
 }
 
-# A handler for the commit's -m/--message options' argument
+# A handler for the -m/--message argument of commit, merge, and tag. The
+# first message is the subject line: characters beyond the configured
+# `git-message-length` are marked incorrect-subtle. Later -m arguments are
+# body paragraphs and only receive the string style.
 _fsh_chroma_git_commit_message_argument_action() {
-  integer _start="$2" _end="$3"
-  local _scmd="$1" _wrd="$4"
+  local _wrd="$4" _body _subject
+  integer _offset=0 _limit=${_fsh_git_message_length:-72} _end=$__end _idx _pos
 
   (( __start >= 0 )) || return
 
-  # Match the message body in case of an --message= option
-  if [[ "$_wrd" = (#b)(--message=)(*) && -n "${match[2]}" ]]; then
-    _wrd="${(Q)${match[2]//\`/x}}"
-    # highlight --message=>>something<<
-    reply+=("$(( __start+10 )) $__end ${_fsh_styles[${_fsh_theme_name}double-quoted-argument]}")
-  elif [[ "$_wrd" != --message ]]; then
-    # highlight the message's body
-    reply+=("$__start $__end ${_fsh_styles[${_fsh_theme_name}double-quoted-argument]}")
+  if [[ "$_wrd" = --message=* ]]; then
+    _offset=10
+  elif [[ "$_wrd" = --message ]]; then
+    # The message follows as the next word
+    return
   fi
+  _body="${_wrd[_offset+1,-1]}"
+  [[ -n "$_body" ]] || return
 
-  integer length=${_fsh_state[git-cmsg-len]:-70}
+  # highlight the message's body, i.e. >>something<< in --message=something
+  reply+=("$(( __start+_offset )) $__end ${_fsh_styles[${_fsh_theme_name}double-quoted-argument]}")
 
-  if (( ${#_wrd} > length )); then
-    for (( __idx1 = 1, __idx2 = 1; __idx1 <= length; ++ __idx1, ++ __idx2 )); do
-      # Use __arg from the fast-highlight-process's scope
-      while [[ "${__arg[__idx2]}" != "${_wrd[__idx1]}" ]]; do
-        (( ++ __idx2 ))
-        (( __idx2 > __asize )) && { __idx2=-1; break; }
-      done
-      (( __idx2 == -1 )) && break
-    done
-    if (( __idx2 != -1 )); then
-      if [[ -n "${match[1]}" ]]; then
-        reply+=("$(( __start+__idx2 )) $__end ${_fsh_styles[${_fsh_theme_name}incorrect-subtle]}")
-      else
-        reply+=("$(( __start+__idx2-1 )) $__end ${_fsh_styles[${_fsh_theme_name}incorrect-subtle]}")
-      fi
+  (( ++ _fsh_state[chroma-git-message-count] == 1 && _limit > 0 )) || return 0
+
+  _subject="${(Q)_body}"
+  _subject="${_subject%%$'\n'*}"
+  if [[ "${_body[1]}" = [\'\"] ]]; then
+    if [[ ${#_body} -gt 1 && "${_body[-1]}" = "${_body[1]}" ]]; then
+      # Keep the closing quote in the string style
+      (( -- _end ))
+    elif [[ "${_subject[1]}" = "${_body[1]}" ]]; then
+      # An unterminated quote survives (Q) and is not part of the subject
+      _subject="${_subject[2,-1]}"
     fi
   fi
+  (( ${#_subject} > _limit )) || return 0
+
+  # Map the first subject character past the limit back onto the raw word,
+  # skipping the quotes and escapes that do not count toward its length
+  for (( _idx = 1, _pos = _offset + 1; _idx <= _limit; ++ _idx, ++ _pos )); do
+    while [[ "${_wrd[_pos]}" != "${_subject[_idx]}" ]]; do
+      (( ++ _pos > ${#_wrd} )) && return 0
+    done
+  done
+  (( _pos > ${#_wrd} )) && return 0
+
+  (( __start+_pos-1 < _end )) && \
+    reply+=("$(( __start+_pos-1 )) $_end ${_fsh_styles[${_fsh_theme_name}incorrect-subtle]}")
+  return 0
 }
 
 # A RESET handler
