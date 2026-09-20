@@ -132,6 +132,7 @@ _fsh_lifecycle_begin() {
   typeset -ga _fsh_lifecycle_original_zle_hook_types=()
   typeset -gi _fsh_lifecycle_original_zle_hook_types_set=0
   typeset -gi _fsh_lifecycle_widgets_captured=0
+  typeset -gi _fsh_lifecycle_refresh_pending=0
   typeset -gi _fsh_lifecycle_started=1
   typeset -gi _fsh_lifecycle_loaded=0
 
@@ -268,28 +269,46 @@ _fsh_lifecycle_finalize() {
 _fsh_lifecycle_refresh() {
   builtin emulate -L zsh
 
+  local name
+  local -A touched_parameters
+
   (( ${+parameters[_fsh_lifecycle_started]} && _fsh_lifecycle_started )) || return 0
-  _fsh_lifecycle_finalize
+  (( _fsh_lifecycle_refresh_pending )) || {
+    _fsh_lifecycle_finalize
+    return
+  }
+
+  # A materialized autoload may add more plugin-owned shell resources, and
+  # highlighting owns the final values of the parameters it introduces.
+  touched_parameters=( "${(@kv)_fsh_lifecycle_touched_parameters}" )
+  _fsh_lifecycle_finalize || return
+  for name in ${(k)_fsh_lifecycle_touched_parameters}; do
+    (( ${+touched_parameters[$name]} )) ||
+      _fsh_lifecycle_runtime_parameters[$name]=1
+  done
+  _fsh_lifecycle_refresh_pending=0
 }
 
 _fsh_lifecycle_checkpoint() {
   builtin emulate -L zsh
 
   local name
-  local -A touched_parameters
 
   (( ${+parameters[_fsh_lifecycle_started]} && _fsh_lifecycle_started )) || return 0
+  (( _fsh_lifecycle_refresh_pending )) && return 0
 
   for name in ${(k)_fsh_lifecycle_pending_autoloads}; do
     [[ ${functions[$name]-} == "${_fsh_lifecycle_applied_functions[$name]-}" ]] || {
-      # A materialized autoload may add more plugin-owned shell resources.
-      touched_parameters=( "${(@kv)_fsh_lifecycle_touched_parameters}" )
-      _fsh_lifecycle_refresh
-      for name in ${(k)_fsh_lifecycle_touched_parameters}; do
-        (( ${+touched_parameters[$name]} )) ||
-          _fsh_lifecycle_runtime_parameters[$name]=1
-      done
-      return
+      _fsh_lifecycle_refresh_pending=1
+      # The refresh forks once per owned parameter and regenerates every owned
+      # function, which is too slow for a keystroke. When the preexec hook is
+      # installed it runs there, before the caller's next command can change
+      # plugin state. Without the hook, only unload would run it, and any
+      # caller change made before then would be mistaken for the plugin's own,
+      # so account for the materialized autoload now.
+      (( ${preexec_functions[(Ie)_fsh_preexec_hook]:-0} )) ||
+        _fsh_lifecycle_refresh
+      return 0
     }
   done
 }
@@ -554,6 +573,8 @@ fsh_plugin_unload() {
   local -a helpers
 
   if (( ${+parameters[_fsh_lifecycle_started]} && _fsh_lifecycle_started )); then
+    # Account for autoloads that materialized since the last command line.
+    (( _fsh_lifecycle_refresh_pending )) && _fsh_lifecycle_refresh
     _fsh_lifecycle_cleanup_fds
     if (( ${+functions[add-zsh-hook]} )); then
       add-zsh-hook -d preexec _fsh_preexec_hook 2>/dev/null || true
@@ -621,6 +642,7 @@ fsh_plugin_unload() {
   builtin unset _fsh_lifecycle_original_zle_hook_types
   builtin unset _fsh_lifecycle_original_zle_hook_types_set
   builtin unset _fsh_lifecycle_widgets_captured
+  builtin unset _fsh_lifecycle_refresh_pending
   builtin unset _fsh_lifecycle_started
   builtin unset _fsh_lifecycle_loaded
 

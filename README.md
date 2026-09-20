@@ -395,8 +395,13 @@ The highlight-performance profile measures nine parses of representative,
 delimiter-free single commands at 173 and 1,000 characters after one warm-up
 run. Pull-request CI compares the medians with the base revision on the same
 runner and updates a PR comment with the relative difference. Hardware timing
-does not gate the build; empty highlighting, steady-state lifecycle refreshes,
-and failure to skip a buffer above the default limit remain test failures.
+does not gate the build. Three outcomes remain test failures: empty
+highlighting, a lifecycle refresh on the widget path (in steady state or in
+the first parse that materializes a chroma), and failure to skip a buffer
+above the default limit. While `_fsh_preexec_hook` is installed, the
+lifecycle refresh for a materialized chroma waits for that hook, so it runs
+between command lines; without the hook it runs at once, so a caller's later
+changes are never mistaken for the plugin's own.
 
 `tools/validate-themes.zsh` validates all shipped themes by default and accepts
 explicit INI paths as arguments. It emits one JSON Lines record per result or
