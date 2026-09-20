@@ -162,6 +162,17 @@ fsh_assert_exact_regions "git commit --message='$subject73'" \
   "11 21 ${_fsh_styles[double-hyphen-option]}" \
   "21 96 ${_fsh_styles[double-quoted-argument]}" \
   "94 95 ${_fsh_styles[incorrect-subtle]}" || exit $?
+fsh_assert_exact_regions 'git commit --message "commit message"' \
+  "0 3 ${_fsh_styles[command]}" \
+  "4 10 ${_fsh_styles[subcommand]}" \
+  "11 20 ${_fsh_styles[double-hyphen-option]}" \
+  "21 37 ${_fsh_styles[double-quoted-argument]}" || exit $?
+fsh_assert_exact_regions "git commit --message '$subject73'" \
+  "0 3 ${_fsh_styles[command]}" \
+  "4 10 ${_fsh_styles[subcommand]}" \
+  "11 20 ${_fsh_styles[double-hyphen-option]}" \
+  "21 96 ${_fsh_styles[double-quoted-argument]}" \
+  "94 95 ${_fsh_styles[incorrect-subtle]}" || exit $?
 fsh_assert_exact_regions "git commit -m \"feat: it's \\\"quoted\\\" and long enough to go past the seventy-two character limit\"" \
   "0 3 ${_fsh_styles[command]}" \
   "4 10 ${_fsh_styles[subcommand]}" \
@@ -175,6 +186,13 @@ fsh_assert_exact_regions "git commit -m 'subject' -m '$subject73'" \
   "14 23 ${_fsh_styles[double-quoted-argument]}" \
   "24 26 ${_fsh_styles[single-hyphen-option]}" \
   "27 102 ${_fsh_styles[double-quoted-argument]}" || exit $?
+fsh_assert_exact_regions "git commit --message 'subject' --message '$subject73'" \
+  "0 3 ${_fsh_styles[command]}" \
+  "4 10 ${_fsh_styles[subcommand]}" \
+  "11 20 ${_fsh_styles[double-hyphen-option]}" \
+  "21 30 ${_fsh_styles[double-quoted-argument]}" \
+  "31 40 ${_fsh_styles[double-hyphen-option]}" \
+  "41 116 ${_fsh_styles[double-quoted-argument]}" || exit $?
 fsh_assert_exact_regions "git merge -m '$subject73' topic" \
   "0 3 ${_fsh_styles[command]}" \
   "4 9 ${_fsh_styles[subcommand]}" \

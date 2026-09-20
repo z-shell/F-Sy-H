@@ -151,7 +151,7 @@ _fsh_chroma_git_def=(
     subcmd:commit "COMMIT_#_opt // COMMIT_FILE_OR_DIR_#_arg // NO_MATCH_#_opt"
 
     "COMMIT_#_opt" "
-              (-m|--message=|-am)
+              (-m|--message|--message=|-am)
                        <<>> NO-OP // ::_fsh_chroma_git_commit_message_action
                        <<>> NO-OP // ::_fsh_chroma_git_commit_message_argument_action
            || (-h|--help|-a|--all|-p|--patch|--reset-author|--short|--branch|

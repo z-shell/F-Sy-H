@@ -212,9 +212,9 @@ The settings are:
 - `max-length`: non-negative integer, default `1000`.
 - `git-message-length`: non-negative integer, default `72`. The `git` chroma
   marks the part of a commit, merge, or tag subject line beyond this many
-  characters with the `incorrect-subtle` style. Only the first `-m` or
-  `--message=` argument is checked; later ones are body paragraphs. `0`
-  disables the check.
+  characters with the `incorrect-subtle` style. Only the first `-m`,
+  `--message VALUE`, or `--message=VALUE` argument is checked; later ones are
+  body paragraphs. `0` disables the check.
 - `theme-manager`: boolean-like scalar, default `enabled`.
 - `bracket-highlighting`: boolean-like scalar, default `enabled`.
 - `path-blocklist`: array of Zsh patterns excluded from path probing, empty by
