@@ -44,6 +44,9 @@
 # the lifecycle accounting that runs after a chroma first loads records only
 # what the chroma added, and tests/integration/test-plugin-lifecycle.zsh
 # compares that against the full accounting for every registered chroma.
+# A global created on a later call, after that accounting, must be handed
+# over with _fsh_lifecycle_adopt_parameter NAME right after its typeset, or
+# it survives fsh_plugin_unload.
 
 # Keep chroma-takeover state meaning: until ;, handle highlighting via chroma.
 # So the below 8192 assignment takes care that next token will be routed to chroma.

@@ -141,6 +141,10 @@ _fsh_chroma_create_option_hash() {
   local -a __split __sp __s
 
   typeset -gA "$__the_hash_name"
+  # Option hashes appear on whichever parse first needs them, long after this
+  # chroma was accounted for; hand the new one to the lifecycle.
+  (( ${+functions[_fsh_lifecycle_adopt_parameter]} )) &&
+    _fsh_lifecycle_adopt_parameter "$__the_hash_name"
 
   # Split on ||
   __ch_def_name="_fsh_chroma_${__chroma_name}_def[${__option_set_id}]"
@@ -371,6 +375,8 @@ if (( __first_call )); then
   __the_hash_name="_fsh_chroma_main_${${_fsh_state[chroma-current]//[^a-zA-Z0-9_]/_}//(#b)([\#\^])/${map[${match[1]}]}}"
   (( 0 == ${(P)+__the_hash_name} )) && {
     typeset -gA "$__the_hash_name"
+    (( ${+functions[_fsh_lifecycle_adopt_parameter]} )) &&
+      _fsh_lifecycle_adopt_parameter "$__the_hash_name"
     _fsh_chroma_preprocess_definition "$__the_hash_name"
   } || {
     _fsh_chroma_refresh_subcommands "$__the_hash_name"
