@@ -1,6 +1,8 @@
 # -*- mode: zsh; sh-indentation: 2; indent-tabs-mode: nil; sh-basic-offset: 2; -*-
 #
-# Tracks scp command and emits message when one tries to pass port to hostspec.
+# Highlights scp options while leaving source and target operands to the main
+# highlighter. In host:path syntax, everything after the colon is a path; scp
+# accepts a port through -P or URI syntax instead.
 #
 # $1 - 0 or 1, denoting if it's first call to the chroma, or following one
 #
@@ -20,20 +22,13 @@ builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc
 (( next_word = 2 | 8192 ))
 
 local __first_call="$1" __wrd="$2" __start_pos="$3" __end_pos="$4"
-local __style __chars
-integer __idx1 __idx2
-local -a __results
+local __style
 
 # First call, i.e. command starts, i.e. "grep" token etc.
 (( __first_call )) && {
-    _fsh_state[chroma-scp-counter]=0
-    _fsh_state[chroma-scp-counter-all]=1
-    _fsh_state[chroma-scp-message]=""
     _fsh_state[chroma-scp-skip-two]=0
     return 1
 } || {
-    (( _fsh_state[chroma-scp-counter-all] += 1, __idx2 = _fsh_state[chroma-scp-counter-all] ))
-
     # Following call, i.e. not the first one.
 
     # Check if chroma should end – test if token is of type
@@ -52,25 +47,13 @@ local -a __results
             _fsh_state[chroma-scp-skip-two]=1
         fi
     else
-        # Count non-option tokens.
+        # Let the main highlighter handle operands. Preserve the existing
+        # option-argument tracking for options such as -P and -i.
         if (( _fsh_state[chroma-scp-skip-two] )); then
             _fsh_state[chroma-scp-skip-two]=0
         else
-            (( _fsh_state[chroma-scp-counter] += 1, __idx1 = _fsh_state[chroma-scp-counter] ))
-            if [[ "${_fsh_state[chroma-scp-counter]}" -eq 1 ]]; then
-                if [[ "$__arg" = [^:]##:[0-9]## ]]; then
-                    _fsh_state[chroma-scp-message]+="Format of hostname incorrect, use -P to pass port number"
-                else
-                    return 1
-                fi
-            else
-                return 1
-            fi
+            return 1
         fi
-    fi
-
-    if (( ${#${(z)BUFFER}} <= _fsh_state[chroma-scp-counter-all] )); then
-        [[ -n "${_fsh_state[chroma-scp-message]}" ]] && zle -M "${_fsh_state[chroma-scp-message]}"
     fi
 }
 
