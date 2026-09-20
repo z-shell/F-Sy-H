@@ -206,7 +206,7 @@ SETUP
       command sleep 0.02
     done
     [[ $(<"$fixture_root/ready") == unloaded ]] || {
-      _fsh_test_fail "$order: unload did not finish"
+      _fsh_test_fail "$order: unload did not finish: ${(V)output[-1500,-1]}"
       return
     }
     # Type a query then invoke HSS after unloading only F-Sy-H. Its widget,

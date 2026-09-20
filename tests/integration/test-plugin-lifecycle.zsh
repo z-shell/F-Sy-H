@@ -521,7 +521,9 @@ _fsh_test_interactive() {
 
   local name
   local -a before_fpath=( "${fpath[@]}" ) before_hooks before_modules
-  local -A before_widgets
+  local -a before_zle_hook_types after_zle_hook_types
+  local -A before_widgets before_zle_hook_functions
+  integer before_zle_hook_types_set=0 after_zle_hook_types_set=0
 
   [[ -o interactive ]] || {
     _fsh_test_fail 'interactive lifecycle case requires zsh -i'
@@ -551,6 +553,13 @@ _fsh_test_interactive() {
   before_widgets=( "${(@kv)widgets}" )
   before_hooks=( "${preexec_functions[@]}" )
   before_modules=( ${(f)"$(zmodload)"} )
+  for name in ${(k)functions}; do
+    [[ $name == add-zle-hook-widget || $name == azhw:* ]] || continue
+    before_zle_hook_functions[$name]=${functions[$name]}
+  done
+  if (( ${before_modules[(Ie)zsh/zutil]} )); then
+    zstyle -a zle-hook types before_zle_hook_types && before_zle_hook_types_set=1
+  fi
   alias f-sy-h=before
 
   builtin source "$plugin_path" || {
@@ -578,6 +587,20 @@ _fsh_test_interactive() {
   (( ${#${(M)${(k)functions}:#_fsh_widget_*}} == 0 )) ||
     _fsh_test_fail 'unload left generated widget wrappers'
 
+  for name in ${(k)functions}; do
+    [[ $name == add-zle-hook-widget || $name == azhw:* ]] || continue
+    [[ ${functions[$name]} == "${before_zle_hook_functions[$name]-}" &&
+      ${+before_zle_hook_functions[$name]} -eq 1 ]] || {
+      _fsh_test_fail "unload left shared ZLE hook function: $name"
+      break
+    }
+  done
+  for name in ${(k)before_zle_hook_functions}; do
+    [[ ${functions[$name]-} == "${before_zle_hook_functions[$name]}" ]] || {
+      _fsh_test_fail "unload did not restore shared ZLE hook function: $name"
+      break
+    }
+  done
   for name in ${(k)before_widgets}; do
     [[ $name == self-insert ]] && continue
     [[ ${widgets[$name]-} == "${before_widgets[$name]}" ]] || {
@@ -601,6 +624,12 @@ _fsh_test_interactive() {
   local -a after_modules=( ${(f)"$(zmodload)"} )
   [[ ${(j:$'\n':)after_modules} == "${(j:$'\n':)before_modules}" ]] ||
     _fsh_test_fail "interactive unload did not restore modules: before=${(j:,:)before_modules}; after=${(j:,:)after_modules}"
+  if (( ${after_modules[(Ie)zsh/zutil]} )); then
+    zstyle -a zle-hook types after_zle_hook_types && after_zle_hook_types_set=1
+  fi
+  (( after_zle_hook_types_set == before_zle_hook_types_set )) &&
+      _fsh_test_arrays_equal after_zle_hook_types before_zle_hook_types ||
+    _fsh_test_fail 'unload did not restore the shared ZLE hook registry'
 }
 
 _fsh_test_partial_failure() {
