@@ -81,16 +81,16 @@ done
 functions[_fsh_lifecycle_refresh]=$lifecycle_refresh_definition
 
 # With the preexec hook installed, the first parse that materializes a chroma
-# must not refresh the lifecycle accounting on the widget path. Zsh runs the
-# preexec hooks before every top-level command, so the parse and its
-# assertions share one command; the hook then drains the deferred refresh
-# before the next top-level command.
-typeset -ga preexec_functions=( _fsh_preexec_hook )
+# must not refresh the lifecycle accounting on the widget path; the hook does
+# it afterwards. Zsh also runs the preexec hooks before every top-level
+# command of a script, so the whole case runs inside one function and calls
+# the hook itself, keeping the counts independent of surrounding lines.
 typeset steady_state_buffer=$BUFFER
-_fsh_lifecycle_refresh() { (( ++lifecycle_refresh_calls )); }
 () {
+  typeset -ga preexec_functions=( _fsh_preexec_hook )
   (( ! ${+functions[_fsh_chroma_git]} )) || [[ ${functions[_fsh_chroma_git]} == *'builtin autoload -X'* ]]
   (( ${_fsh_lifecycle_refresh_pending:-0} == 0 ))
+  _fsh_lifecycle_refresh() { (( ++lifecycle_refresh_calls )); }
   BUFFER='git status'
   CURSOR=$#BUFFER
   typeset -g _fsh_prior_buffer=
@@ -104,15 +104,19 @@ _fsh_lifecycle_refresh() { (( ++lifecycle_refresh_calls )); }
     exit 1
   }
   (( _fsh_lifecycle_refresh_pending == 1 ))
+  _fsh_preexec_hook
+  (( lifecycle_refresh_calls == 1 )) || {
+    builtin printf >&2 'f-sy-h: the preexec hook performed %d lifecycle refreshes instead of 1\n' \
+      $lifecycle_refresh_calls
+    exit 1
+  }
+  # The stub leaves the flag set; the real refresh clears it from the hook.
+  functions[_fsh_lifecycle_refresh]=$lifecycle_refresh_definition
+  (( _fsh_lifecycle_refresh_pending == 1 ))
+  _fsh_preexec_hook
+  (( _fsh_lifecycle_refresh_pending == 0 ))
+  preexec_functions=()
 }
-(( lifecycle_refresh_calls == 1 )) || {
-  builtin printf >&2 'f-sy-h: the preexec hook performed %d lifecycle refreshes instead of 1\n' \
-    $lifecycle_refresh_calls
-  exit 1
-}
-functions[_fsh_lifecycle_refresh]=$lifecycle_refresh_definition
-(( _fsh_lifecycle_refresh_pending == 0 ))
-preexec_functions=()
 BUFFER=$steady_state_buffer
 
 BUFFER+=$extension
