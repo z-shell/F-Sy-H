@@ -208,7 +208,7 @@ ZSH
 # Wrapped builtin kill and yank widgets must keep the ZLE flags the next
 # command reads: consecutive kills join and yank-pop cycles the kill ring in
 # both yank directions (#150). Each step is one key sequence and the buffer
-# expected after it, read from an unwrapped zle-line-pre-redraw hook.
+# expected after it, read after the plugin's zle-line-pre-redraw widget runs.
 _fsh_test_kill_ring_boundary() {
   builtin emulate -L zsh
 
@@ -225,9 +225,24 @@ unsetopt prompt_cr prompt_sp
 KEYTIMEOUT=1
 bindkey -$3
 bindkey -M vicmd 'Y' yank-pop
+zle -A .backward-kill-word fsh-test-alias-kill
+zle -A .yank fsh-test-alias-yank
+zle -A .yank-pop fsh-test-alias-yank-pop
+bindkey '^Xk' fsh-test-alias-kill
+bindkey '^Xy' fsh-test-alias-yank
+bindkey '^Xp' fsh-test-alias-yank-pop
 source -- "$1" || return
 typeset -g _fsh_test_dir=$2
+typeset -gi _fsh_test_skip_plugin_redraw=0
+zle -A zle-line-pre-redraw fsh-test-plugin-redraw
 _fsh_test_capture() {
+  if (( ! _fsh_test_skip_plugin_redraw )); then
+    zle fsh-test-plugin-redraw || return
+    [[ $_fsh_prior_buffer == "$BUFFER" ]] || {
+      print -r -- 'stale plugin highlight' >| "$_fsh_test_dir/buffer"
+      return
+    }
+  fi
   print -r -- "$BUFFER" >| "$_fsh_test_dir/buffer"
 }
 zle -N zle-line-pre-redraw _fsh_test_capture
@@ -239,19 +254,38 @@ _fsh_test_status() {
   zle yank; results+=(yank=$?)
   zle yank-pop; results+=(yank-pop=$?)
   zle kill-word; results+=(kill-word=$?)
+  zle fsh-test-alias-yank; results+=(alias-yank=$?)
+  zle fsh-test-alias-yank-pop; results+=(alias-yank-pop=$?)
+  zle fsh-test-alias-kill; results+=(alias-kill=$?)
+  results+=(alias-type=${widgets[fsh-test-alias-kill]})
   BUFFER=$results
 }
 zle -N _fsh_test_status
 bindkey '^Xs' _fsh_test_status
+_fsh_test_unload_alias() {
+  _fsh_test_skip_plugin_redraw=1
+  zle -D fsh-test-plugin-redraw
+  fsh_plugin_unload || return
+  BUFFER='echo alpha beta'
+  CURSOR=$#BUFFER
+  zle fsh-test-alias-kill
+  BUFFER+="|type=${widgets[fsh-test-alias-kill]}|status=$?"
+}
+zle -N _fsh_test_unload_alias
+bindkey '^Xu' _fsh_test_unload_alias
 ZSH
     zmodload zsh/zpty || return 1
     # keymap, key sequence, expected buffer. Every entry in the sequence is one
     # zpty write; pauses keep ESC from joining the following key in vi mode.
     for keymap keys expected in \
-        e '^Xs' 'yank=1 yank-pop=1 kill-word=0' \
+        e '^Xs' 'yank=1 yank-pop=1 kill-word=0 alias-yank=1 alias-yank-pop=1 alias-kill=0 alias-type=builtin' \
         e 'echo alpha beta gamma|^W|^W|^W|^Y' 'echo alpha beta gamma' \
         e 'echo alpha beta gamma|^W|^E|^W|^E|^W|^Y|\ey|\ey' 'echo gamma' \
         e 'alpha beta gamma|^A|\ed|^E|^A|\ed|^E|^A|\ed|xy|^B|^Y|\ey|\ey' 'xalphay' \
+        e 'echo alpha beta gamma|^Xk|^Xk|^Xk|^Xy' 'echo alpha beta gamma' \
+        e 'echo alpha beta gamma|^Xk|^E|^Xk|^E|^Xk|^Xy|^Xp|^Xp' 'echo gamma' \
+        e 'alpha beta gamma|^A|\ed|^E|^A|\ed|^E|^A|\ed|xy|^B|^Xy|^Xp|^Xp' 'xalphay' \
+        e '^Xu' 'echo alpha |type=builtin|status=0' \
         v 'alpha beta gamma|\e|0|dw|dw|dw|i|xy|\e|h|p|Y|Y' 'xalpha y'; do
       command rm -f -- "$fixture_root/buffer"
       zpty -b "$pty_name" \

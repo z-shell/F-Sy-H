@@ -348,6 +348,20 @@ _fsh_bind_widgets() {
     yank yankbefore
   )
 
+  # ZLE exposes builtin aliases as `builtin` without revealing their canonical
+  # target. They cannot be wrapped without either calling a nonexistent
+  # dot-prefixed name or losing target-specific flags, so leave them native and
+  # refresh highlighting from the redraw boundary instead.
+  local cur_widget flags
+  integer has_builtin_alias=0
+  for cur_widget in $widgets_to_bind; do
+    [[ $widgets[$cur_widget] == builtin &&
+      ${widgets[.$cur_widget]-} != builtin ]] || continue
+    has_builtin_alias=1
+    break
+  done
+  (( has_builtin_alias )) && widgets_to_bind+=(zle-line-pre-redraw)
+
   # Always wrap special zle-line-finish widget. This is needed to decide if the
   # current line ends and special highlighting logic needs to be applied.
   # E.g. remove cursor imprint, don't highlight partial paths, ...
@@ -357,7 +371,6 @@ _fsh_bind_widgets() {
   # This is needed because we need to disable highlighting in that case.
   widgets_to_bind+=(zle-isearch-update)
 
-  local cur_widget flags
   for cur_widget in $widgets_to_bind; do
     case $widgets[$cur_widget] in
 
@@ -383,6 +396,10 @@ _fsh_bind_widgets() {
     # Builtin widget: override and make it call the builtin ".widget". The
     # always block keeps the widget's return status while restoring its flags.
     builtin)
+      # `zle -A` aliases also report `builtin`, but only canonical builtins
+      # have the protected dot-prefixed name needed by the wrapper. Leave
+      # aliases native so their target and its internal ZLE flags survive.
+      [[ ${widgets[.$cur_widget]-} == builtin ]] || continue
       flags=${widget_flags[$cur_widget]-}
       case $cur_widget in
         (yank-pop) flags='${_fsh_state[yank-direction]:-yankbefore}';;
