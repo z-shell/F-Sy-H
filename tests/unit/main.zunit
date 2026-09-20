@@ -28,6 +28,22 @@ MAKE
     assert "${#reply2}" same_as "2"
 }
 
+@test 'make target scan rejects input above the synchronous budget' {
+    local oversized=${(l:16385::x:)}
+    local -a reply2=( stale )
+    integer command_status
+
+    unset '_fsh_state[chroma-make-cache]' '_fsh_state[chroma-make-cache-born-at]'
+    if _fsh_make_targets <<< "$oversized"; then
+        command_status=0
+    else
+        command_status=$?
+    fi
+
+    assert "$command_status" same_as "1"
+    assert "${#reply2}" same_as "0"
+}
+
 @test 'ls /usr/bin' {
 reply=()
     PREBUFFER=""

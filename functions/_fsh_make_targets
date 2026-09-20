@@ -8,6 +8,8 @@
 builtin emulate -L zsh
 builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc_quotes no_auto_pushd
 
+local -r max_makefile_chars=16384
+local makefile_content
 local -a TARGETS
 local -A VARIABLES
 
@@ -111,7 +113,13 @@ _fsh_make_parse_makefile() {
 }
 
 if [[ -z "${_fsh_state[chroma-make-cache]}" || $(( EPOCHSECONDS - _fsh_state[chroma-make-cache-born-at] )) -gt 7 ]]; then
-  _fsh_make_parse_makefile
+  builtin read -r -k $(( max_makefile_chars + 1 )) -u 0 makefile_content || true
+  if (( ${#makefile_content} > max_makefile_chars )); then
+    reply2=()
+    return 1
+  fi
+
+  _fsh_make_parse_makefile <<< "$makefile_content"
   _fsh_state[chroma-make-cache-born-at]="$EPOCHSECONDS"
   _fsh_state[chroma-make-cache]="${(j:;:)TARGETS}"
 fi
