@@ -6,26 +6,227 @@
     fpath=( "$_fsh_base_dir"/{functions,completions,chroma} "${(@)fpath:#$_fsh_base_dir/(functions|completions|chroma)}" )
     setopt interactive_comments
     _fsh_highlight_fill_option_variables
+    unset '_fsh_state[chroma-make-cache]' \
+        '_fsh_state[chroma-make-cache-set]' \
+        '_fsh_state[chroma-make-cache-born-at]' \
+        '_fsh_state[chroma-make-cache-files]' \
+        '_fsh_state[chroma-make-cache-stamps]' \
+        '_fsh_state[chroma-make-cache-source]'
 }
 
 @test 'make target scan resolves Makefile variable assignments' {
-    local MATCH
-    local -a match mbegin mend reply2
-    integer MBEGIN MEND
+    local fixture_root
+    local -a reply2
+    fixture_root=$(mktemp -d "${TMPDIR:-/tmp}/fsh-make-vars.XXXXXX") || return 1
 
-    unset '_fsh_state[chroma-make-cache]' '_fsh_state[chroma-make-cache-born-at]'
-    _fsh_make_targets <<'MAKE'
-ROOT = /usr
-PREFIX = $(ROOT)/local
-$(PREFIX)/install:
-LOOP = $(LOOP)
-$(LOOP)/never:
-plain:
-MAKE
+    {
+        print -r -- $'ROOT = /usr\nPREFIX = $(ROOT)/local\n$(PREFIX)/install:\nLOOP = $(LOOP)\n$(LOOP)/never:\nplain:' > "$fixture_root/Makefile"
+        _fsh_make_targets "$fixture_root/Makefile" "$fixture_root"
 
-    assert "${reply2[1]}" same_as "/usr/local/install"
-    assert "${reply2[2]}" same_as "plain"
-    assert "${#reply2}" same_as "2"
+        assert "${reply2[1]}" same_as "/usr/local/install"
+        assert "${reply2[2]}" same_as "plain"
+        assert "${#reply2}" same_as "2"
+    } always {
+        command rm -rf -- "$fixture_root"
+    }
+}
+
+@test 'make target scan follows static include directives' {
+    local fixture_root
+    local -a reply2
+    fixture_root=$(mktemp -d "${TMPDIR:-/tmp}/fsh-make-includes.XXXXXX") || return 1
+
+    {
+        print -r -- $'FRAGMENT = variable.mk\ninclude included.mk\n-include optional.mk missing.mk\nsinclude silent.mk absent.mk\ninclude $(FRAGMENT)\nroot:' > "$fixture_root/Makefile"
+        print -r -- $'include nested.mk\nincluded:' > "$fixture_root/included.mk"
+        print -r -- 'nested:' > "$fixture_root/nested.mk"
+        print -r -- 'optional:' > "$fixture_root/optional.mk"
+        print -r -- 'silent:' > "$fixture_root/silent.mk"
+        print -r -- 'variable:' > "$fixture_root/variable.mk"
+
+        _fsh_make_targets "$fixture_root/Makefile" "$fixture_root"
+
+        assert "${(j:,:)reply2}" same_as "nested,included,optional,silent,variable,root"
+    } always {
+        command rm -rf -- "$fixture_root"
+    }
+}
+
+@test 'make chroma recognizes a target from an included Makefile' {
+    local fixture_root original_pwd=$PWD
+    fixture_root=$(mktemp -d "${TMPDIR:-/tmp}/fsh-make-chroma.XXXXXX") || return 1
+
+    {
+        print -r -- 'include included.mk' > "$fixture_root/Makefile"
+        print -r -- 'include-test:' > "$fixture_root/included.mk"
+        builtin cd -- "$fixture_root" || return 1
+        reply=()
+        PREBUFFER=''
+        BUFFER='make include-test'
+        evl _fsh_highlight_process "$PREBUFFER" "$BUFFER" 0
+
+        assert "${reply[(r)5 17 *]}" same_as \
+            "5 17 ${_fsh_styles[${_fsh_theme_name}correct-subtle]}"
+    } always {
+        builtin cd -- "$original_pwd"
+        command rm -rf -- "$fixture_root"
+    }
+}
+
+@test 'make target scan invalidates cache when an included file changes' {
+    local fixture_root
+    local -a reply2
+    fixture_root=$(mktemp -d "${TMPDIR:-/tmp}/fsh-make-cache.XXXXXX") || return 1
+
+    {
+        print -r -- 'include included.mk' > "$fixture_root/Makefile"
+        print -r -- 'old:' > "$fixture_root/included.mk"
+        _fsh_make_targets "$fixture_root/Makefile" "$fixture_root"
+        assert "${(j:,:)reply2}" same_as "old"
+
+        print -r -- 'new-target:' > "$fixture_root/included.mk"
+        _fsh_make_targets "$fixture_root/Makefile" "$fixture_root"
+        assert "${(j:,:)reply2}" same_as "new-target"
+    } always {
+        command rm -rf -- "$fixture_root"
+    }
+}
+
+@test 'make target scan keeps caches scoped to the selected Makefile' {
+    local fixture_root
+    local -a reply2
+    fixture_root=$(mktemp -d "${TMPDIR:-/tmp}/fsh-make-scope.XXXXXX") || return 1
+
+    {
+        command mkdir -- "$fixture_root/one" "$fixture_root/two"
+        print -r -- 'one:' > "$fixture_root/one/Makefile"
+        print -r -- 'two:' > "$fixture_root/two/Makefile"
+
+        _fsh_make_targets "$fixture_root/one/Makefile" "$fixture_root/one"
+        assert "${(j:,:)reply2}" same_as "one"
+        _fsh_make_targets "$fixture_root/two/Makefile" "$fixture_root/two"
+        assert "${(j:,:)reply2}" same_as "two"
+    } always {
+        command rm -rf -- "$fixture_root"
+    }
+}
+
+@test 'make target scan rejects include cycles' {
+    local fixture_root
+    local -a reply2=( stale )
+    integer command_status
+    fixture_root=$(mktemp -d "${TMPDIR:-/tmp}/fsh-make-cycle.XXXXXX") || return 1
+
+    {
+        print -r -- $'include included.mk\nroot:' > "$fixture_root/Makefile"
+        print -r -- $'include Makefile\nincluded:' > "$fixture_root/included.mk"
+        if _fsh_make_targets "$fixture_root/Makefile" "$fixture_root"; then
+            command_status=0
+        else
+            command_status=$?
+        fi
+
+        assert "$command_status" same_as "1"
+        assert "${#reply2}" same_as "0"
+    } always {
+        command rm -rf -- "$fixture_root"
+    }
+}
+
+@test 'make target scan rejects dynamic includes' {
+    local fixture_root
+    local -a reply2=( stale )
+    integer command_status
+    fixture_root=$(mktemp -d "${TMPDIR:-/tmp}/fsh-make-fallback.XXXXXX") || return 1
+
+    {
+        print -r -- $'include $(wildcard *.mk)\nroot:' > "$fixture_root/Makefile"
+        if _fsh_make_targets "$fixture_root/Makefile" "$fixture_root"; then
+            command_status=0
+        else
+            command_status=$?
+        fi
+        assert "$command_status" same_as "1"
+        assert "${#reply2}" same_as "0"
+
+    } always {
+        command rm -rf -- "$fixture_root"
+    }
+}
+
+@test 'make target scan rejects missing mandatory includes' {
+    local fixture_root
+    local -a reply2=( stale )
+    integer command_status
+    fixture_root=$(mktemp -d "${TMPDIR:-/tmp}/fsh-make-missing.XXXXXX") || return 1
+
+    {
+        print -r -- $'include missing.mk\nroot:' > "$fixture_root/Makefile"
+        if _fsh_make_targets "$fixture_root/Makefile" "$fixture_root"; then
+            command_status=0
+        else
+            command_status=$?
+        fi
+
+        assert "$command_status" same_as "1"
+        assert "${#reply2}" same_as "0"
+    } always {
+        command rm -rf -- "$fixture_root"
+    }
+}
+
+@test 'make target scan rejects include recursion above its depth limit' {
+    local fixture_root
+    local -a reply2=( stale )
+    integer command_status index
+    fixture_root=$(mktemp -d "${TMPDIR:-/tmp}/fsh-make-depth.XXXXXX") || return 1
+
+    {
+        print -r -- 'include level-1.mk' > "$fixture_root/Makefile"
+        for (( index = 1; index <= 9; ++index )); do
+            if (( index < 9 )); then
+                print -r -- "include level-$(( index + 1 )).mk" > "$fixture_root/level-$index.mk"
+            else
+                print -r -- 'too-deep:' > "$fixture_root/level-$index.mk"
+            fi
+        done
+        if _fsh_make_targets "$fixture_root/Makefile" "$fixture_root"; then
+            command_status=0
+        else
+            command_status=$?
+        fi
+
+        assert "$command_status" same_as "1"
+        assert "${#reply2}" same_as "0"
+    } always {
+        command rm -rf -- "$fixture_root"
+    }
+}
+
+@test 'make target scan rejects include graphs above its file limit' {
+    local fixture_root
+    local -a reply2=( stale )
+    integer command_status index
+    fixture_root=$(mktemp -d "${TMPDIR:-/tmp}/fsh-make-files.XXXXXX") || return 1
+
+    {
+        {
+            for (( index = 1; index <= 32; ++index )); do
+                print -r -- "include file-$index.mk"
+                print -r -- "target-$index:" > "$fixture_root/file-$index.mk"
+            done
+        } > "$fixture_root/Makefile"
+        if _fsh_make_targets "$fixture_root/Makefile" "$fixture_root"; then
+            command_status=0
+        else
+            command_status=$?
+        fi
+
+        assert "$command_status" same_as "1"
+        assert "${#reply2}" same_as "0"
+    } always {
+        command rm -rf -- "$fixture_root"
+    }
 }
 
 @test 'make target scan rejects input above the synchronous budget' {
@@ -33,15 +234,21 @@ MAKE
     local -a reply2=( stale )
     integer command_status
 
-    unset '_fsh_state[chroma-make-cache]' '_fsh_state[chroma-make-cache-born-at]'
-    if _fsh_make_targets <<< "$oversized"; then
-        command_status=0
-    else
-        command_status=$?
-    fi
+    local fixture_root
+    fixture_root=$(mktemp -d "${TMPDIR:-/tmp}/fsh-make-budget.XXXXXX") || return 1
+    {
+        print -rn -- "$oversized" > "$fixture_root/Makefile"
+        if _fsh_make_targets "$fixture_root/Makefile" "$fixture_root"; then
+            command_status=0
+        else
+            command_status=$?
+        fi
 
-    assert "$command_status" same_as "1"
-    assert "${#reply2}" same_as "0"
+        assert "$command_status" same_as "1"
+        assert "${#reply2}" same_as "0"
+    } always {
+        command rm -rf -- "$fixture_root"
+    }
 }
 
 @test 'ls /usr/bin' {
