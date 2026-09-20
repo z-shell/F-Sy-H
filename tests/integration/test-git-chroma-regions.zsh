@@ -43,6 +43,28 @@ _fsh_styles[global-alias]=fg=cyan
 alias -g NOOUT='>/dev/null'
 alias -g MESSAGE=subject
 
+# Chroma parsing must not create parameters outside the plugin's _fsh_ namespace.
+# Declare this file's own top-level names first so the snapshot covers them;
+# the helpers below declare the ZLE parameters. Anything else that appears
+# after the parses is a leak from a chroma working variable.
+typeset subject72 subject73 query_ref REPLY __style
+typeset -a parameters_before_parsing
+parameters_before_parsing=( ${(k)parameters} )
+
+assert_no_leaked_parameters() {
+  emulate -L zsh
+  setopt extended_glob
+
+  local -a leaked
+  leaked=( ${(k)parameters[(R)^*local*]} )
+  leaked=( ${${leaked:#(${(~j:|:)parameters_before_parsing})}:#_fsh_*} )
+  leaked=( ${leaked:#(BUFFER|PREBUFFER|WIDGET|CURSOR|PENDING|REGION_ACTIVE|YANK_ACTIVE|ISEARCHMATCH_ACTIVE|SUFFIX_ACTIVE|region_highlight|reply)} )
+  (( ${#leaked} == 0 )) || {
+    builtin print -u2 -r -- "git chroma leaked global parameters: ${(j:, :)${(o)leaked}}"
+    return 1
+  }
+}
+
 assert_region_contract() {
   emulate -L zsh
   setopt extended_glob
@@ -229,7 +251,7 @@ for query_ref in main topic missing 'stash@{0}'; do
   prime_git_query rev-parse --verify --quiet --end-of-options "refs/remotes/origin/$query_ref"
 done
 prime_git_query rev-parse --verify --quiet --end-of-options refs/remotes/origin/remote-only
-typeset REPLY __style
+REPLY= __style=
 _fsh_chroma_git_verify_unfetched_ref checkout 0 11 remote-only
 [[ $__style == ${_fsh_theme_name}correct-subtle ]] || {
   print -u2 -r -- "remote-only ref was not validated: $__style, ${(qqq)_fsh_command_output}"
@@ -315,3 +337,5 @@ fsh_assert_exact_regions 'git switch topic' \
   "0 3 ${_fsh_styles[command]}" \
   "4 10 ${_fsh_styles[subcommand]}" \
   "11 16 ${_fsh_styles[default]}" || exit $?
+
+assert_no_leaked_parameters || exit $?

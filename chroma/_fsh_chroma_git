@@ -732,7 +732,6 @@ _fsh_chroma_git_check_alias() {
 
   typeset -ga _fsh_chroma_git_aliases
   _result=( ${(M)_fsh_chroma_git_aliases[@]:#${_wrd}[[:space:]]##*} )
-  _fsh_chroma_debug "Got is-alias-_result: $_result"
   if [[ -n "$_result" ]]; then
     resolved="${${${_result[1]#* }## ##}%% *}"
     _fsh_state[chroma-${_fsh_state[chroma-current]}-subcommand]=$resolved
