@@ -7,12 +7,16 @@ setopt err_exit no_unset no_function_argzero posix_argzero
 # failure to an exit status. Report the failing line so platform-specific
 # failures are actionable from the log alone. Only failures raised directly by
 # this file are reported; handled non-zero statuses inside the plugin are not
-# test failures and must not reach standard error.
-typeset -g _fsh_test_file=${${(%):-%N}:A}
+# test failures and must not reach standard error. A check whose evidence is
+# not on the failing line sets _fsh_test_context first, and the report carries
+# it: the line number alone left a macOS-only failure undiagnosable (#180).
+typeset -g _fsh_test_file=${${(%):-%N}:A} _fsh_test_context=
 TRAPZERR() {
   [[ ${${funcfiletrace[1]%:*}:A} == $_fsh_test_file ]] || return 0
   builtin print -u2 -r -- \
     "f-sy-h: async chroma check failed at line ${funcfiletrace[1]##*:}"
+  [[ -n $_fsh_test_context ]] &&
+    builtin print -u2 -r -- "f-sy-h: $_fsh_test_context"
 }
 
 zmodload zsh/datetime
@@ -144,7 +148,16 @@ zpty -b "$pty_name" \
     command sleep 0.05
     [[ -e $fixture_root/last-widget && $(<"$fixture_root/last-widget") == *:1* ]] && break
   done
-  [[ ${${(f)"$(<"$fixture_root/last-widget")"}[(r)*:1]} == (_fsh_test_probe_last|self-insert):1 ]]
+  # A cache that never became ready and a callback that ran as a widget are
+  # different defects: fail them on separate lines, with the probe log.
+  typeset -a probe_log=() probe_seen=()
+  [[ -e $fixture_root/last-widget ]] &&
+    probe_log=( ${(f)"$(<"$fixture_root/last-widget")"} )
+  probe_seen=( ${(u)probe_log} )
+  _fsh_test_context="probe log after ${#probe_log} presses, LASTWIDGET:cache-ready in first-seen order: ${(j:, :)probe_seen:-empty}"
+  (( ${probe_log[(I)*:1]} ))
+  [[ ${probe_log[(r)*:1]} == (_fsh_test_probe_last|self-insert):1 ]]
+  _fsh_test_context=
 
   zpty -w -n "$pty_name" $'\C-U'
   zpty -w "$pty_name" \
