@@ -318,6 +318,54 @@ _fsh_lifecycle_restore_widget() {
   esac
 }
 
+_fsh_lifecycle_detach_redraw_hooks() {
+  builtin emulate -L zsh
+  builtin setopt extended_glob
+
+  local entry descriptor original
+  local -a hooks retained
+  integer original_set
+
+  (( ${+parameters[widgets]} )) || return 0
+  [[ ${widgets[zle-line-pre-redraw]-} == user:azhw:zle-line-pre-redraw ]] || return 0
+  zstyle -a zle-line-pre-redraw widgets hooks || return 0
+
+  for entry in "${hooks[@]}"; do
+    descriptor=${entry#*:}
+    if [[ $descriptor != _fsh_widget_redraw ]]; then
+      retained+=( "$entry" )
+    fi
+  done
+  (( $#retained != $#hooks )) || return 0
+
+  original_set=${+_fsh_lifecycle_original_widget_set[zle-line-pre-redraw]}
+  original=${_fsh_lifecycle_original_widgets[zle-line-pre-redraw]-}
+  if (( ! $#retained )); then
+    zstyle -d zle-line-pre-redraw widgets
+    _fsh_lifecycle_restore_widget zle-line-pre-redraw "$original" "$original_set"
+  elif (( $#retained == 1 && original_set )) &&
+      [[ ${retained[1]#*:} == "$original" && $original != builtin ]]; then
+    # add-zle-hook-widget saved the original widget under its descriptor. If no
+    # other hook remains, collapse the dispatcher back to the captured widget.
+    zstyle -d zle-line-pre-redraw widgets
+    zle -D "$original" 2>/dev/null || true
+    _fsh_lifecycle_restore_widget zle-line-pre-redraw "$original" 1
+  else
+    # Hooks added by another plugin must keep the shared dispatcher. Preserve
+    # only the helper alias add-zle-hook-widget created for the original hook;
+    # ordinary callbacks captured before load still need their F-Sy-H wrappers
+    # restored below.
+    zstyle zle-line-pre-redraw widgets "${retained[@]}"
+    builtin unset '_fsh_lifecycle_touched_widgets[zle-line-pre-redraw]'
+    for entry in "${retained[@]}"; do
+      descriptor=${entry#*:}
+      if (( original_set )) && [[ $descriptor == "$original" ]]; then
+        builtin unset "_fsh_lifecycle_touched_widgets[$descriptor]"
+      fi
+    done
+  fi
+}
+
 _fsh_lifecycle_restore_widgets() {
   builtin emulate -L zsh
 
@@ -465,6 +513,7 @@ fsh_plugin_unload() {
       add-zsh-hook -d preexec _fsh_preexec_hook 2>/dev/null || true
     fi
 
+    _fsh_lifecycle_detach_redraw_hooks
     _fsh_lifecycle_restore_widgets
     _fsh_lifecycle_restore_fpath
     _fsh_lifecycle_restore_functions
@@ -489,6 +538,7 @@ fsh_plugin_unload() {
     _fsh_lifecycle_refresh
     _fsh_lifecycle_checkpoint
     _fsh_lifecycle_restore_widget
+    _fsh_lifecycle_detach_redraw_hooks
     _fsh_lifecycle_restore_widgets
     _fsh_lifecycle_restore_functions
     _fsh_lifecycle_restore_parameters

@@ -329,38 +329,11 @@ _fsh_bind_widgets() {
   local -U widgets_to_bind
   widgets_to_bind=(${${(k)widgets}:#(.*|run-help|which-command|beep|set-local-history|zle-line-pre-redraw|zle-keymap-select)})
 
-  # Builtin widgets whose ZLE flags the next command reads: ZLE_KILL joins
-  # consecutive kills and ZLE_YANK* lets yank-pop replace the last yank. A shell
-  # function wrapper reports no flags, so each wrapper re-asserts them with
-  # `zle -f`. yank-pop is ZLE_NOTCOMMAND upstream and keeps the direction of the
-  # last yank, so the yank wrappers record it. Source: Src/Zle/iwidgets.list.
-  local -A widget_flags=(
-    backward-kill-line kill
-    backward-kill-word kill
-    kill-buffer kill
-    kill-line kill
-    kill-region kill
-    kill-whole-line kill
-    kill-word kill
-    bracketed-paste yankbefore
-    vi-put-after yank
-    vi-put-before yankbefore
-    yank yankbefore
-  )
-
-  # ZLE exposes builtin aliases as `builtin` without revealing their canonical
-  # target. They cannot be wrapped without either calling a nonexistent
-  # dot-prefixed name or losing target-specific flags, so leave them native and
-  # refresh highlighting from the redraw boundary instead.
-  local cur_widget flags
-  integer has_builtin_alias=0
-  for cur_widget in $widgets_to_bind; do
-    [[ $widgets[$cur_widget] == builtin &&
-      ${widgets[.$cur_widget]-} != builtin ]] || continue
-    has_builtin_alias=1
-    break
-  done
-  (( has_builtin_alias )) && widgets_to_bind+=(zle-line-pre-redraw)
+  # ZLE exposes canonical builtins and their aliases identically, including
+  # aliases that replace a canonical name. Wrapping either loses the target's
+  # internal kill, yank, and change flags. Keep all builtins native and refresh
+  # highlighting from the shared redraw hook instead.
+  local cur_widget
 
   # Always wrap special zle-line-finish widget. This is needed to decide if the
   # current line ends and special highlighting logic needs to be applied.
@@ -393,24 +366,9 @@ _fsh_bind_widgets() {
       eval "_fsh_widget_${(q)prefix}-${(q)cur_widget}() { _fsh_call_widget ${(q)prefix}-${(q)cur_widget} -- \"\$@\" }"
       zle -N -- $cur_widget _fsh_widget_$prefix-$cur_widget;;
 
-    # Builtin widget: override and make it call the builtin ".widget". The
-    # always block keeps the widget's return status while restoring its flags.
-    builtin)
-      # `zle -A` aliases also report `builtin`, but only canonical builtins
-      # have the protected dot-prefixed name needed by the wrapper. Leave
-      # aliases native so their target and its internal ZLE flags survive.
-      [[ ${widgets[.$cur_widget]-} == builtin ]] || continue
-      flags=${widget_flags[$cur_widget]-}
-      case $cur_widget in
-        (yank-pop) flags='${_fsh_state[yank-direction]:-yankbefore}';;
-        (yank|bracketed-paste|vi-put-*) flags+="; _fsh_state[yank-direction]=$flags";;
-      esac
-      if [[ -n $flags ]]; then
-        eval "_fsh_widget_${(q)prefix}-${(q)cur_widget}() { { _fsh_call_widget .${(q)cur_widget} -- \"\$@\" } always { builtin zle -f $flags } }"
-      else
-        eval "_fsh_widget_${(q)prefix}-${(q)cur_widget}() { _fsh_call_widget .${(q)cur_widget} -- \"\$@\" }"
-      fi
-      zle -N -- $cur_widget _fsh_widget_$prefix-$cur_widget;;
+    # Builtins keep their native target and flags. zle-line-pre-redraw invokes
+    # the highlighter after they run.
+    builtin);;
 
     # Incomplete or nonexistent widget: Bind to z-sy-h directly.
     *)
@@ -423,6 +381,11 @@ _fsh_bind_widgets() {
       fi
     esac
   done
+
+  _fsh_widget_redraw() { _fsh_zle_highlight; return 0 }
+  zle -N -- _fsh_widget_redraw
+  autoload -Uz add-zle-hook-widget
+  add-zle-hook-widget line-pre-redraw _fsh_widget_redraw
 }
 
 # -------------------------------------------------------------------------------------------------
