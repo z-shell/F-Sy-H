@@ -12,7 +12,7 @@ _fsh_lifecycle_function_owned() {
     # _zsh_highlight is the compatibility name this plugin takes over so
     # that zsh-history-substring-search does not bind its own stub to it;
     # owning it here is what restores whatever held the name before us.
-    (_fsh_*|fsh_chroma|fsh_theme|_zsh_highlight|add-zsh-hook|is-at-least|colors) return 0 ;;
+    (_fsh_*|fsh_chroma|fsh_theme|_zsh_highlight|add-zsh-hook|add-zle-hook-widget|azhw:*|is-at-least|colors) return 0 ;;
     (*) return 1 ;;
   esac
 }
@@ -129,11 +129,17 @@ _fsh_lifecycle_begin() {
   typeset -gA _fsh_lifecycle_touched_widgets=()
   typeset -gA _fsh_lifecycle_owned_fd_handlers=()
   typeset -gA _fsh_lifecycle_owned_fd_pids=()
+  typeset -ga _fsh_lifecycle_original_zle_hook_types=()
+  typeset -gi _fsh_lifecycle_original_zle_hook_types_set=0
   typeset -gi _fsh_lifecycle_widgets_captured=0
   typeset -gi _fsh_lifecycle_started=1
   typeset -gi _fsh_lifecycle_loaded=0
 
   loaded_modules=( "$@" )
+  if (( ${loaded_modules[(Ie)zsh/zutil]} )) &&
+      zstyle -a zle-hook types _fsh_lifecycle_original_zle_hook_types; then
+    _fsh_lifecycle_original_zle_hook_types_set=1
+  fi
   for module in "${loaded_modules[@]}"; do
     _fsh_lifecycle_original_module_set[$module]=1
   done
@@ -318,6 +324,54 @@ _fsh_lifecycle_restore_widget() {
   esac
 }
 
+_fsh_lifecycle_detach_redraw_hooks() {
+  builtin emulate -L zsh
+  builtin setopt extended_glob
+
+  local entry descriptor original
+  local -a hooks retained
+  integer original_set
+
+  (( ${+parameters[widgets]} )) || return 0
+  [[ ${widgets[zle-line-pre-redraw]-} == user:azhw:zle-line-pre-redraw ]] || return 0
+  zstyle -a zle-line-pre-redraw widgets hooks || return 0
+
+  for entry in "${hooks[@]}"; do
+    descriptor=${entry#*:}
+    if [[ $descriptor != _fsh_widget_redraw ]]; then
+      retained+=( "$entry" )
+    fi
+  done
+  (( $#retained != $#hooks )) || return 0
+
+  original_set=${+_fsh_lifecycle_original_widget_set[zle-line-pre-redraw]}
+  original=${_fsh_lifecycle_original_widgets[zle-line-pre-redraw]-}
+  if (( ! $#retained )); then
+    zstyle -d zle-line-pre-redraw widgets
+    _fsh_lifecycle_restore_widget zle-line-pre-redraw "$original" "$original_set"
+  elif (( $#retained == 1 && original_set )) &&
+      [[ ${retained[1]#*:} == "$original" && $original != builtin ]]; then
+    # add-zle-hook-widget saved the original widget under its descriptor. If no
+    # other hook remains, collapse the dispatcher back to the captured widget.
+    zstyle -d zle-line-pre-redraw widgets
+    zle -D "$original" 2>/dev/null || true
+    _fsh_lifecycle_restore_widget zle-line-pre-redraw "$original" 1
+  else
+    # Hooks added by another plugin must keep the shared dispatcher. Preserve
+    # only the helper alias add-zle-hook-widget created for the original hook;
+    # ordinary callbacks captured before load still need their F-Sy-H wrappers
+    # restored below.
+    zstyle zle-line-pre-redraw widgets "${retained[@]}"
+    builtin unset '_fsh_lifecycle_touched_widgets[zle-line-pre-redraw]'
+    for entry in "${retained[@]}"; do
+      descriptor=${entry#*:}
+      if (( original_set )) && [[ $descriptor == "$original" ]]; then
+        builtin unset "_fsh_lifecycle_touched_widgets[$descriptor]"
+      fi
+    done
+  fi
+}
+
 _fsh_lifecycle_restore_widgets() {
   builtin emulate -L zsh
 
@@ -349,6 +403,46 @@ _fsh_lifecycle_restore_widgets() {
       _fsh_lifecycle_restore_widget "$name" "$original" "$original_set" || return
     done
   done
+}
+
+_fsh_lifecycle_restore_zle_hook_state() {
+  builtin emulate -L zsh
+
+  local name
+  local -a hook_widgets=(
+    zle-isearch-exit
+    zle-isearch-update
+    zle-line-pre-redraw
+    zle-line-init
+    zle-line-finish
+    zle-history-line-set
+    zle-keymap-select
+  )
+  integer dispatcher_active=0
+
+  if (( ${+parameters[widgets]} )); then
+    for name in "${hook_widgets[@]}"; do
+      [[ ${widgets[$name]-} == user:azhw:$name ]] || continue
+      dispatcher_active=1
+      break
+    done
+  fi
+
+  if (( dispatcher_active )); then
+    # Another plugin still uses the shared dispatcher. Its implementation and
+    # registry must outlive F-Sy-H even if this load materialized them first.
+    for name in ${(k)_fsh_lifecycle_touched_functions}; do
+      [[ $name == add-zle-hook-widget || $name == azhw:* ]] || continue
+      builtin unset "_fsh_lifecycle_touched_functions[$name]"
+    done
+    _fsh_lifecycle_owned_modules=(
+      ${_fsh_lifecycle_owned_modules:#(zsh/complete|zsh/parameter|zsh/zle|zsh/zleparameter|zsh/zutil)}
+    )
+  elif (( _fsh_lifecycle_original_zle_hook_types_set )); then
+    zstyle zle-hook types "${_fsh_lifecycle_original_zle_hook_types[@]}"
+  else
+    zstyle -d zle-hook types
+  fi
 }
 
 _fsh_lifecycle_restore_functions() {
@@ -465,7 +559,9 @@ fsh_plugin_unload() {
       add-zsh-hook -d preexec _fsh_preexec_hook 2>/dev/null || true
     fi
 
+    _fsh_lifecycle_detach_redraw_hooks
     _fsh_lifecycle_restore_widgets
+    _fsh_lifecycle_restore_zle_hook_state
     _fsh_lifecycle_restore_fpath
     _fsh_lifecycle_restore_functions
     _fsh_lifecycle_restore_parameters
@@ -489,7 +585,9 @@ fsh_plugin_unload() {
     _fsh_lifecycle_refresh
     _fsh_lifecycle_checkpoint
     _fsh_lifecycle_restore_widget
+    _fsh_lifecycle_detach_redraw_hooks
     _fsh_lifecycle_restore_widgets
+    _fsh_lifecycle_restore_zle_hook_state
     _fsh_lifecycle_restore_functions
     _fsh_lifecycle_restore_parameters
     _fsh_lifecycle_restore_fpath
@@ -520,6 +618,8 @@ fsh_plugin_unload() {
   builtin unset _fsh_lifecycle_touched_widgets
   builtin unset _fsh_lifecycle_owned_fd_handlers
   builtin unset _fsh_lifecycle_owned_fd_pids
+  builtin unset _fsh_lifecycle_original_zle_hook_types
+  builtin unset _fsh_lifecycle_original_zle_hook_types_set
   builtin unset _fsh_lifecycle_widgets_captured
   builtin unset _fsh_lifecycle_started
   builtin unset _fsh_lifecycle_loaded
