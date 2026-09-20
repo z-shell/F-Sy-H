@@ -33,6 +33,41 @@ _fsh_lifecycle_parameter_declaration() {
   REPLY=$(builtin typeset -p "$1" 2>/dev/null) || REPLY=
 }
 
+# A fork-free stand-in for the typeset -p text where only equality matters:
+# the type and attribute words, the element count, and every element quoted.
+# Association pairs are sorted under the C locale so the signature depends
+# neither on insertion history nor on the caller's collation, and every
+# element is quoted before the fixed join so boundaries survive and IFS does
+# not matter. Justification and integer bases show through the expanded
+# values (padding, N#prefix), so a change to those is a change too.
+_fsh_lifecycle_parameter_signature() {
+  builtin emulate -L zsh
+
+  local name=$1
+  local -a keys values pairs elements
+  integer index
+
+  REPLY=${(tP)name}
+  case $REPLY in
+    (association*)
+      local LC_ALL=C
+      keys=( "${(@kP)name}" )
+      values=( "${(@vP)name}" )
+      for (( index = 1; index <= $#keys; ++index )); do
+        pairs+=( "${(qq)keys[index]}=${(qq)values[index]}" )
+      done
+      REPLY+=" $#keys ${(j: :)${(@o)pairs}}"
+      ;;
+    (array*)
+      elements=( "${(@P)name}" )
+      REPLY+=" $#elements ${(j: :)${(@qq)elements}}"
+      ;;
+    (*)
+      REPLY+=" ${(qq)${(P)name}}"
+      ;;
+  esac
+}
+
 _fsh_lifecycle_arrays_equal() {
   builtin emulate -L zsh
 
@@ -97,6 +132,7 @@ _fsh_lifecycle_begin() {
   typeset -gA _fsh_lifecycle_touched_functions=()
   typeset -gA _fsh_lifecycle_original_parameter_set=()
   typeset -gA _fsh_lifecycle_original_parameters=()
+  typeset -gA _fsh_lifecycle_original_signatures=()
   typeset -gA _fsh_lifecycle_applied_parameter_set=()
   typeset -gA _fsh_lifecycle_applied_parameters=()
   typeset -gA _fsh_lifecycle_touched_parameters=()
@@ -151,11 +187,15 @@ _fsh_lifecycle_begin() {
     _fsh_lifecycle_original_functions[$name]=${functions[$name]}
   done
 
+  # The declaration restores a prior parameter on unload; the signature is
+  # what later accountings compare against.
   for name in ${(k)parameters}; do
     _fsh_lifecycle_parameter_owned "$name" || continue
     _fsh_lifecycle_parameter_declaration "$name"
     _fsh_lifecycle_original_parameter_set[$name]=1
     _fsh_lifecycle_original_parameters[$name]=$REPLY
+    _fsh_lifecycle_parameter_signature "$name"
+    _fsh_lifecycle_original_signatures[$name]=$REPLY
   done
 
 }
@@ -177,7 +217,7 @@ _fsh_lifecycle_capture_widgets() {
 _fsh_lifecycle_finalize() {
   builtin emulate -L zsh
 
-  local name module entry declaration REPLY
+  local name module entry signature REPLY
   local -a names loaded_modules
 
   (( _fsh_lifecycle_started )) || return 1
@@ -216,12 +256,12 @@ _fsh_lifecycle_finalize() {
   typeset -U names
   for name in "${names[@]}"; do
     if (( ${+parameters[$name]} )); then
-      _fsh_lifecycle_parameter_declaration "$name"
-      declaration=$REPLY
-      [[ $declaration == "${_fsh_lifecycle_original_parameters[$name]-}" &&
+      _fsh_lifecycle_parameter_signature "$name"
+      signature=$REPLY
+      [[ $signature == "${_fsh_lifecycle_original_signatures[$name]-}" &&
         ${+_fsh_lifecycle_original_parameter_set[$name]} -eq 1 ]] && continue
       _fsh_lifecycle_applied_parameter_set[$name]=1
-      _fsh_lifecycle_applied_parameters[$name]=$declaration
+      _fsh_lifecycle_applied_parameters[$name]=$signature
     else
       (( ${+_fsh_lifecycle_original_parameter_set[$name]} )) || continue
       _fsh_lifecycle_applied_parameter_set[$name]=0
@@ -311,7 +351,7 @@ _fsh_lifecycle_account_materialized() {
     _fsh_lifecycle_parameter_owned "$name" || continue
     (( ${+_fsh_lifecycle_applied_parameter_set[$name]} ||
       ${+_fsh_lifecycle_original_parameter_set[$name]} )) && continue
-    _fsh_lifecycle_parameter_declaration "$name"
+    _fsh_lifecycle_parameter_signature "$name"
     _fsh_lifecycle_applied_parameter_set[$name]=1
     _fsh_lifecycle_applied_parameters[$name]=$REPLY
     _fsh_lifecycle_touched_parameters[$name]=1
@@ -565,7 +605,7 @@ _fsh_lifecycle_restore_parameters() {
     if (( ! ${+_fsh_lifecycle_runtime_parameters[$name]} )); then
       if (( applied_set )); then
         (( ${+parameters[$name]} )) || continue
-        _fsh_lifecycle_parameter_declaration "$name"
+        _fsh_lifecycle_parameter_signature "$name"
         current=$REPLY
         [[ $current == "$applied" ]] || continue
       else
@@ -648,6 +688,7 @@ fsh_plugin_unload() {
     _fsh_lifecycle_function_owned
     _fsh_lifecycle_parameter_owned
     _fsh_lifecycle_parameter_declaration
+    _fsh_lifecycle_parameter_signature
     _fsh_lifecycle_arrays_equal
     _fsh_lifecycle_register_fd
     _fsh_lifecycle_release_fd
@@ -676,6 +717,7 @@ fsh_plugin_unload() {
   builtin unset _fsh_lifecycle_touched_functions
   builtin unset _fsh_lifecycle_original_parameter_set
   builtin unset _fsh_lifecycle_original_parameters
+  builtin unset _fsh_lifecycle_original_signatures
   builtin unset _fsh_lifecycle_applied_parameter_set
   builtin unset _fsh_lifecycle_applied_parameters
   builtin unset _fsh_lifecycle_touched_parameters

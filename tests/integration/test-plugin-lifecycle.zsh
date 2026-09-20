@@ -675,6 +675,110 @@ _fsh_test_materialized_accounting() {
   }
 }
 
+# The accounting compares parameters by a fork-free signature. It must tell
+# every content or attribute change apart and nothing else.
+_fsh_test_parameter_signature() {
+  builtin emulate -L zsh
+
+  local fixture_root key left right REPLY
+  local -a keys
+
+  fixture_root=$(command mktemp -d "${TMPDIR:-/tmp}/fsyh-signature.XXXXXXXX") || return 1
+  {
+    zstyle ':fsh:config' work-dir "$fixture_root/work"
+    builtin source "$plugin_path" || {
+      _fsh_test_fail 'signature fixture load failed'
+      return
+    }
+
+    typeset -gA _fsh_test_sig_hash=(
+      'a]b' 1 '[x' 2 '*' 3 'k y' 'v w' $'n\nl' $'v\n' '(' p ')' q '$x' d
+      'a\\b' e '' z '`id`' cs '${(P)x}' nest '@' at 'a,b' comma '(e)*' flag
+    )
+    _fsh_lifecycle_parameter_signature _fsh_test_sig_hash
+    left=$REPLY
+    [[ $left == association\ ${#_fsh_test_sig_hash}\ * ]] ||
+      _fsh_test_fail "signature does not start with the type and count: $left"
+    for key in "${(@k)_fsh_test_sig_hash}"; do
+      [[ $left == *" ${(qq)key}=${(qq)${_fsh_test_sig_hash[$key]}}"* ]] || {
+        _fsh_test_fail "signature lost the pair for key ${(qq)key}"
+        break
+      }
+    done
+
+    # Same content built in the opposite order, with a churned table.
+    typeset -gA _fsh_test_sig_other=()
+    for key in "${(@Ok)_fsh_test_sig_hash}"; do
+      _fsh_test_sig_other[$key]=${_fsh_test_sig_hash[$key]}
+    done
+    _fsh_test_sig_other[churn]=1
+    builtin unset '_fsh_test_sig_other[churn]'
+    _fsh_lifecycle_parameter_signature _fsh_test_sig_other
+    [[ $REPLY == "$left" ]] ||
+      _fsh_test_fail 'signature depends on insertion history'
+    IFS=: LC_ALL=C _fsh_lifecycle_parameter_signature _fsh_test_sig_other
+    [[ $REPLY == "$left" ]] ||
+      _fsh_test_fail 'signature depends on IFS or the locale'
+
+    _fsh_test_sig_other[a,b]=changed
+    _fsh_lifecycle_parameter_signature _fsh_test_sig_other
+    [[ $REPLY != "$left" ]] ||
+      _fsh_test_fail 'signature missed a changed value'
+
+    typeset -ga _fsh_test_sig_empty=() _fsh_test_sig_blank=( '' )
+    _fsh_lifecycle_parameter_signature _fsh_test_sig_empty; left=$REPLY
+    _fsh_lifecycle_parameter_signature _fsh_test_sig_blank; right=$REPLY
+    [[ $left != "$right" ]] ||
+      _fsh_test_fail 'signature confuses an empty array with one empty element'
+
+    typeset -ga _fsh_test_sig_one=( 'a b' c ) _fsh_test_sig_two=( a 'b c' )
+    _fsh_lifecycle_parameter_signature _fsh_test_sig_one; left=$REPLY
+    _fsh_lifecycle_parameter_signature _fsh_test_sig_two; right=$REPLY
+    [[ $left != "$right" ]] ||
+      _fsh_test_fail 'signature confuses element boundaries'
+    [[ $left == "array 2 'a b' 'c'" ]] ||
+      _fsh_test_fail "unexpected array signature: $left"
+    IFS=: _fsh_lifecycle_parameter_signature _fsh_test_sig_one
+    [[ $REPLY == "$left" ]] ||
+      _fsh_test_fail 'array signature depends on IFS'
+    typeset -g _fsh_test_sig_padded=abc
+    _fsh_lifecycle_parameter_signature _fsh_test_sig_padded; left=$REPLY
+    typeset -gL 5 _fsh_test_sig_padded
+    _fsh_lifecycle_parameter_signature _fsh_test_sig_padded
+    [[ $REPLY != "$left" ]] ||
+      _fsh_test_fail 'signature missed a justification width'
+
+    typeset -g _fsh_test_sig_scalar=x
+    typeset -ga _fsh_test_sig_array=( x )
+    _fsh_lifecycle_parameter_signature _fsh_test_sig_scalar; left=$REPLY
+    _fsh_lifecycle_parameter_signature _fsh_test_sig_array; right=$REPLY
+    [[ $left != "$right" ]] ||
+      _fsh_test_fail 'signature confuses a scalar with a one-element array'
+
+    _fsh_lifecycle_parameter_signature _fsh_test_sig_array; left=$REPLY
+    typeset -gU _fsh_test_sig_array
+    _fsh_lifecycle_parameter_signature _fsh_test_sig_array
+    [[ $REPLY != "$left" ]] ||
+      _fsh_test_fail 'signature missed the unique attribute'
+    typeset -gx _fsh_test_sig_scalar
+    _fsh_lifecycle_parameter_signature _fsh_test_sig_scalar
+    [[ $REPLY != "$left" && $REPLY == *export* ]] ||
+      _fsh_test_fail 'signature missed the export attribute'
+    typeset -gi _fsh_test_sig_int=5
+    _fsh_lifecycle_parameter_signature _fsh_test_sig_int
+    [[ $REPLY == "integer '5'" ]] ||
+      _fsh_test_fail "unexpected integer signature: $REPLY"
+
+    builtin unset _fsh_test_sig_hash _fsh_test_sig_other _fsh_test_sig_empty \
+      _fsh_test_sig_blank _fsh_test_sig_one _fsh_test_sig_two \
+      _fsh_test_sig_scalar _fsh_test_sig_array _fsh_test_sig_int \
+      _fsh_test_sig_padded
+    fsh_plugin_unload || _fsh_test_fail 'signature fixture unload failed'
+  } always {
+    command rm -rf -- "$fixture_root"
+  }
+}
+
 _fsh_test_interactive() {
   builtin emulate -L zsh
 
@@ -821,6 +925,7 @@ case $test_case in
     {
       _fsh_test_noninteractive
       _fsh_test_materialized_accounting
+      _fsh_test_parameter_signature
       _fsh_test_partial_failure "$partial_root"
     } always {
       command rm -rf -- "$partial_root"
