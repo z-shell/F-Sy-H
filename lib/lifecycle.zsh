@@ -316,6 +316,8 @@ _fsh_lifecycle_finalize() {
 # and writes runtime parameters, and never redefines a recorded function,
 # rewrites a recorded non-runtime parameter, changes fpath, or loads a module;
 # the lifecycle profile checks the shipped chromas against the full accounting.
+# A parameter created on a later parse is handed over explicitly through
+# _fsh_lifecycle_adopt_parameter.
 _fsh_lifecycle_account_materialized() {
   builtin emulate -L zsh
 
@@ -356,6 +358,29 @@ _fsh_lifecycle_account_materialized() {
     _fsh_lifecycle_applied_parameters[$name]=$REPLY
     _fsh_lifecycle_touched_parameters[$name]=1
   done
+}
+
+# Records a parameter that plugin code creates on a later parse, after its
+# own materialization was accounted for: nothing else notices it, because the
+# checkpoint only watches pending autoloads. Highlighting owns the value, so
+# unload removes it whatever it holds by then. Already recorded names and
+# names the caller owned before load are left alone.
+_fsh_lifecycle_adopt_parameter() {
+  builtin emulate -L zsh
+
+  local name=$1 REPLY
+
+  (( ${+parameters[_fsh_lifecycle_started]} && _fsh_lifecycle_started )) || return 0
+  (( ${+parameters[$name]} )) || return 1
+  _fsh_lifecycle_parameter_owned "$name" || return 1
+  (( ${+_fsh_lifecycle_applied_parameter_set[$name]} ||
+    ${+_fsh_lifecycle_original_parameter_set[$name]} )) && return 0
+
+  _fsh_lifecycle_parameter_signature "$name"
+  _fsh_lifecycle_applied_parameter_set[$name]=1
+  _fsh_lifecycle_applied_parameters[$name]=$REPLY
+  _fsh_lifecycle_touched_parameters[$name]=1
+  _fsh_lifecycle_runtime_parameters[$name]=1
 }
 
 _fsh_lifecycle_refresh() {
@@ -697,6 +722,7 @@ fsh_plugin_unload() {
     _fsh_lifecycle_capture_widgets
     _fsh_lifecycle_finalize
     _fsh_lifecycle_account_materialized
+    _fsh_lifecycle_adopt_parameter
     _fsh_lifecycle_refresh
     _fsh_lifecycle_checkpoint
     _fsh_lifecycle_restore_widget

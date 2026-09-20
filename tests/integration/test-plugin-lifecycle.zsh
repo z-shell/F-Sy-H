@@ -361,13 +361,15 @@ _fsh_test_noninteractive() {
     done
 
     # Model a plugin manager that has already installed both autoload paths.
+    # This checkout goes first so an installed F-Sy-H elsewhere in fpath cannot
+    # shadow the functions and chromas under test.
     for value in "${fpath[@]}"; do
       [[ $value == "$plugin_root/functions" || $value == "$plugin_root/completions" ||
         $value == "$plugin_root/chroma" ]] ||
         manager_fpath+=( "$value" )
     done
-    fpath=( "${manager_fpath[@]}" "$plugin_root/functions" \
-      "$plugin_root/completions" "$plugin_root/chroma" )
+    fpath=( "$plugin_root/functions" "$plugin_root/completions" \
+      "$plugin_root/chroma" "${manager_fpath[@]}" )
     before_fpath=( "${fpath[@]}" )
 
     typeset -g _fsh_work_dir=$fixture_root/work
@@ -491,6 +493,18 @@ _fsh_test_noninteractive() {
     [[ ${_fsh_lifecycle_applied_functions[_fsh_chroma_grep]-} != *'builtin autoload -X'* ]] ||
       _fsh_test_fail 'the preexec hook did not account for the grep chroma'
     preexec_functions=()
+
+    # A parse that needs a new option table creates it long after the git
+    # chroma was accounted for, with nothing left to materialize; it must be
+    # handed to the lifecycle or it survives unload.
+    local -a pending_before=( ${(ok)_fsh_lifecycle_pending_autoloads} )
+    _fsh_highlight_process '' 'git commit --amend' 0 ||
+      _fsh_test_fail 'cannot exercise a late chroma parameter'
+    local -a pending_after=( ${(ok)_fsh_lifecycle_pending_autoloads} )
+    _fsh_test_arrays_equal pending_before pending_after ||
+      _fsh_test_fail 'the late chroma parameter probe materialized an autoload'
+    (( ${#${(@M)${(@k)_fsh_lifecycle_applied_parameter_set}:#_fsh_chroma_git__commit__*}} )) ||
+      _fsh_test_fail 'the git chroma did not hand over its late option table'
 
     integer owned_fd owned_pid
     exec {owned_fd}< <(command sleep 30)
@@ -845,9 +859,9 @@ _fsh_test_interactive() {
     _fsh_test_fail 'unload overwrote a post-load widget change'
   [[ ${aliases[f-sy-h]} == after ]] ||
     _fsh_test_fail 'unload overwrote a post-load alias change'
-  (( ${#${(M)${(k)widgets}:#_fsh_orig-*}} == 0 )) ||
+  (( ${#${(@M)${(@k)widgets}:#_fsh_orig-*}} == 0 )) ||
     _fsh_test_fail 'unload left saved widget copies'
-  (( ${#${(M)${(k)functions}:#_fsh_widget_*}} == 0 )) ||
+  (( ${#${(@M)${(@k)functions}:#_fsh_widget_*}} == 0 )) ||
     _fsh_test_fail 'unload left generated widget wrappers'
 
   for name in ${(k)functions}; do
