@@ -75,6 +75,47 @@ for legacy_case in styles highlighters both; do
   [[ $legacy_output == "$migration_warning" ]]
 done
 
+typeset comments_transition
+for comments_transition in off-to-on on-to-off; do
+  command zsh -f -c '
+    builtin emulate -R zsh
+    builtin setopt err_exit no_unset
+
+    typeset expected_end expected_style option_state PREBUFFER BUFFER
+    typeset -a reply
+
+    case $2 in
+      (off-to-on)
+        builtin unsetopt interactive_comments
+        expected_end=9
+        expected_style=comment
+        ;;
+      (on-to-off)
+        builtin setopt interactive_comments
+        expected_end=1
+        expected_style=unknown-token
+        ;;
+    esac
+
+    builtin source "$1"
+
+    case $2 in
+      (off-to-on) builtin setopt interactive_comments;;
+      (on-to-off) builtin unsetopt interactive_comments;;
+    esac
+
+    option_state=$options[interactivecomments]
+    reply=()
+    PREBUFFER=
+    BUFFER="# comment"
+    _fsh_highlight_process "$PREBUFFER" "$BUFFER" 0
+
+    (( ${#reply} == 1 ))
+    [[ $reply[1] == "0 $expected_end ${_fsh_styles[${_fsh_theme_name}$expected_style]}" ]]
+    [[ $options[interactivecomments] == $option_state ]]
+  ' zsh "$plugin_root/F-Sy-H.plugin.zsh" "$comments_transition"
+done
+
 source "$plugin_root/F-Sy-H.plugin.zsh"
 
 [[ $_fsh_base_dir == $plugin_root ]]
