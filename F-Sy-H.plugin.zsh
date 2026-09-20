@@ -392,7 +392,9 @@ _fsh_bind_widgets() {
 # Setup
 # -------------------------------------------------------------------------------------------------
 
-# Reset scratch variables when command line is done.
+# Reset scratch variables when command line is done, and account for any
+# chroma that materialized while it was typed: the lifecycle refresh forks
+# and regenerates function text, so it runs here rather than on a keystroke.
 _fsh_preexec_hook() {
   builtin emulate -L zsh ${=${options[xtrace]:#off}:+-o xtrace}
   builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc_quotes no_auto_pushd
@@ -401,6 +403,11 @@ _fsh_preexec_hook() {
   typeset -gi _fsh_prior_cursor=0
   typeset -ga _fsh_main_cache
   _fsh_main_cache=()
+
+  if (( ${+parameters[_fsh_lifecycle_refresh_pending]} && _fsh_lifecycle_refresh_pending &&
+      ${+functions[_fsh_lifecycle_refresh]} )); then
+    _fsh_lifecycle_refresh
+  fi
 }
 
 if [[ -o interactive ]]; then

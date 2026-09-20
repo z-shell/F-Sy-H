@@ -461,6 +461,27 @@ _fsh_test_noninteractive() {
     (( ${#${(f)"$(builtin hash)"}} == hashed_commands )) ||
       _fsh_test_fail 'a lifecycle refresh emptied the command hash table'
 
+    # Without the preexec hook, a materialized chroma is accounted for at once,
+    # so a caller change made afterwards is never mistaken for the plugin's.
+    [[ ${_fsh_lifecycle_applied_functions[_fsh_chroma_git]-} != *'builtin autoload -X'* ]] ||
+      _fsh_test_fail 'the git chroma was not accounted for after its first parse'
+    (( ! _fsh_lifecycle_refresh_pending )) ||
+      _fsh_test_fail 'a lifecycle refresh was deferred without the preexec hook'
+    # With the hook installed, the accounting waits for the hook.
+    typeset -ga preexec_functions=( _fsh_preexec_hook )
+    _fsh_highlight_process '' 'grep -r pattern .' 0 ||
+      _fsh_test_fail 'cannot exercise a deferred chroma accounting'
+    (( _fsh_lifecycle_refresh_pending )) ||
+      _fsh_test_fail 'the preexec hook did not defer the lifecycle refresh'
+    [[ ${_fsh_lifecycle_applied_functions[_fsh_chroma_grep]-} == *'builtin autoload -X'* ]] ||
+      _fsh_test_fail 'the grep chroma was accounted for on the widget path'
+    _fsh_preexec_hook
+    (( ! _fsh_lifecycle_refresh_pending )) ||
+      _fsh_test_fail 'the preexec hook did not run the deferred refresh'
+    [[ ${_fsh_lifecycle_applied_functions[_fsh_chroma_grep]-} != *'builtin autoload -X'* ]] ||
+      _fsh_test_fail 'the preexec hook did not account for the grep chroma'
+    preexec_functions=()
+
     # Changes made after loading belong to the caller and must survive unload.
     typeset -g _fsh_version=user-version
     _fsh_buffer_modified() { return 7 }
