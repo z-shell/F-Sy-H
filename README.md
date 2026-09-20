@@ -261,7 +261,7 @@ page lookups use the shared asynchronous worker. Tokens remain neutral until
 valid knowledge arrives and the next key press repaints the line; the worker
 callback never runs a widget between key presses, so `LASTWIDGET` and the kill
 and yank state stay untouched. Failed refreshes preserve the last valid result.
-Makefile variable expansion stays in the current shell without subprocesses.
+Makefile variable expansion stays in the current shell without subprocesses. Target discovery parses at most 16,384 characters per cache refresh; larger Makefiles skip target validation so highlighting remains responsive.
 
 Check registry reachability, declarative definitions, active theme styles, and
 session-disabled asynchronous lookups:
