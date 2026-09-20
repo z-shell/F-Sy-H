@@ -467,6 +467,16 @@ _fsh_test_noninteractive() {
       _fsh_test_fail 'the git chroma was not accounted for after its first parse'
     (( ! _fsh_lifecycle_refresh_pending )) ||
       _fsh_test_fail 'a lifecycle refresh was deferred without the preexec hook'
+    # Changes made after loading belong to the caller and must survive unload,
+    # including when a chroma materializes and is accounted for afterwards.
+    typeset -g _fsh_version=user-version
+    _fsh_buffer_modified() { return 7 }
+    fpath+=( "$fixture_root/user-fpath" )
+    integer caller_module_loaded=0
+    if ! zmodload -e zsh/mathfunc; then
+      zmodload zsh/mathfunc && caller_module_loaded=1
+    fi
+
     # With the hook installed, the accounting waits for the hook.
     typeset -ga preexec_functions=( _fsh_preexec_hook )
     _fsh_highlight_process '' 'grep -r pattern .' 0 ||
@@ -481,11 +491,6 @@ _fsh_test_noninteractive() {
     [[ ${_fsh_lifecycle_applied_functions[_fsh_chroma_grep]-} != *'builtin autoload -X'* ]] ||
       _fsh_test_fail 'the preexec hook did not account for the grep chroma'
     preexec_functions=()
-
-    # Changes made after loading belong to the caller and must survive unload.
-    typeset -g _fsh_version=user-version
-    _fsh_buffer_modified() { return 7 }
-    fpath+=( "$fixture_root/user-fpath" )
 
     integer owned_fd owned_pid
     exec {owned_fd}< <(command sleep 30)
@@ -539,11 +544,133 @@ _fsh_test_noninteractive() {
     expected_fpath=( "${before_fpath[@]}" "$fixture_root/user-fpath" )
     _fsh_test_arrays_equal fpath expected_fpath ||
       _fsh_test_fail 'unload did not restore fpath while preserving a post-load change'
+    if (( caller_module_loaded )); then
+      zmodload -e zsh/mathfunc ||
+        _fsh_test_fail 'unload removed a module the caller loaded'
+      zmodload -u zsh/mathfunc 2>/dev/null || true
+    fi
 
     local -a after_modules=( ${(f)"$(zmodload)"} )
     [[ ${(j:$'\n':)after_modules} == "${(j:$'\n':)before_modules}" ]] ||
       _fsh_test_fail "unload did not restore modules: before=${(j:,:)before_modules}; after=${(j:,:)after_modules}"
   } always {
+    command rm -rf -- "$fixture_root"
+  }
+}
+
+# The narrow accounting that follows a materialized chroma records only new
+# functions and parameters. Prove, for every registered chroma, that this is
+# everything the full accounting would have recorded.
+_fsh_test_materialized_accounting() {
+  builtin emulate -L zsh
+
+  local fixture_root caller_pwd=$PWD key command_name name
+  local -a narrow_values full_values
+  local -A narrow_applied_parameters before_owned_parameters pending_chromas
+  integer compared=0
+
+  fixture_root=$(command mktemp -d "${TMPDIR:-/tmp}/fsyh-accounting.XXXXXXXX") || return 1
+  {
+    zstyle ':fsh:config' work-dir "$fixture_root/work"
+    for name in ${(M)${(k)parameters}:#_fsh_*}; do
+      before_owned_parameters[$name]=1
+    done
+    fpath=( "$plugin_root"/{functions,completions,chroma} \
+      "${(@)fpath:#$plugin_root/(functions|completions|chroma)}" )
+    builtin source "$plugin_path" || {
+      _fsh_test_fail 'accounting fixture load failed'
+      return
+    }
+    typeset -ga preexec_functions=( _fsh_preexec_hook )
+    builtin cd -q -- "$fixture_root" || return
+
+    # Every registered chroma that is still an autoload stub must materialize
+    # once in the loop below, or the comparison proves nothing about it.
+    # A registry value of the form handler%name routes through the shared
+    # handler to the _fsh_chroma_<name> definition; both must materialize.
+    for key in ${(k)_fsh_state}; do
+      [[ $key == chroma-* && ${_fsh_state[$key]} == _fsh_chroma_* ]] || continue
+      for name in ${_fsh_state[$key]%\%*} \
+          ${${(M)_fsh_state[$key]:#*%?*}:+_fsh_chroma_${_fsh_state[$key]#*%}}; do
+        [[ ${functions[$name]-} == *'builtin autoload -X'* ]] &&
+          pending_chromas[$name]=1
+      done
+    done
+    (( $#pending_chromas > 0 )) ||
+      _fsh_test_fail 'no registered chroma is left to materialize'
+
+    for key in ${(ko)_fsh_state}; do
+      [[ $key == chroma-* && ${_fsh_state[$key]} == _fsh_chroma_* ]] || continue
+      command_name=${key#chroma-}
+      _fsh_highlight_process '' "$command_name argument" 0 ||
+        _fsh_test_fail "cannot parse a $command_name command line"
+      (( _fsh_lifecycle_refresh_pending )) || continue
+      (( ++compared ))
+      _fsh_preexec_hook
+      (( ! _fsh_lifecycle_refresh_pending )) ||
+        _fsh_test_fail "the preexec hook left the $command_name accounting pending"
+
+      # Runtime parameters change with every parse, so their declarations
+      # legitimately differ between the two accountings.
+      narrow_applied_parameters=()
+      for name in ${(k)_fsh_lifecycle_applied_parameters}; do
+        (( ${+_fsh_lifecycle_runtime_parameters[$name]} )) ||
+          narrow_applied_parameters[$name]=${_fsh_lifecycle_applied_parameters[$name]}
+      done
+      narrow_values=(
+        "${(@kv)_fsh_lifecycle_applied_function_set}"
+        "${(@kv)_fsh_lifecycle_applied_functions}"
+        "${(@k)_fsh_lifecycle_touched_functions}"
+        "${(@k)_fsh_lifecycle_pending_autoloads}"
+        "${(@kv)_fsh_lifecycle_applied_parameter_set}"
+        "${(@kv)narrow_applied_parameters}"
+        "${(@k)_fsh_lifecycle_touched_parameters}"
+        "${(@k)_fsh_lifecycle_runtime_parameters}"
+        "${(@)_fsh_lifecycle_added_fpath}"
+        "${(@u)_fsh_lifecycle_owned_modules}"
+      )
+      _fsh_lifecycle_finalize || _fsh_test_fail "full accounting failed after $command_name"
+      narrow_applied_parameters=()
+      for name in ${(k)_fsh_lifecycle_applied_parameters}; do
+        (( ${+_fsh_lifecycle_runtime_parameters[$name]} )) ||
+          narrow_applied_parameters[$name]=${_fsh_lifecycle_applied_parameters[$name]}
+      done
+      full_values=(
+        "${(@kv)_fsh_lifecycle_applied_function_set}"
+        "${(@kv)_fsh_lifecycle_applied_functions}"
+        "${(@k)_fsh_lifecycle_touched_functions}"
+        "${(@k)_fsh_lifecycle_pending_autoloads}"
+        "${(@kv)_fsh_lifecycle_applied_parameter_set}"
+        "${(@kv)narrow_applied_parameters}"
+        "${(@k)_fsh_lifecycle_touched_parameters}"
+        "${(@k)_fsh_lifecycle_runtime_parameters}"
+        "${(@)_fsh_lifecycle_added_fpath}"
+        "${(@u)_fsh_lifecycle_owned_modules}"
+      )
+      narrow_values=( "${(@o)narrow_values}" )
+      full_values=( "${(@o)full_values}" )
+      _fsh_test_arrays_equal narrow_values full_values ||
+        _fsh_test_fail "the $command_name chroma changed state the narrow accounting did not record"
+    done
+
+    for name in ${(k)pending_chromas}; do
+      [[ ${functions[$name]-} != *'builtin autoload -X'* ]] ||
+        _fsh_test_fail "the $name chroma never materialized, so it was not compared"
+    done
+    # One parse can materialize several names, so the count is a floor only.
+    (( compared > 0 )) ||
+      _fsh_test_fail "compared no accountings for $#pending_chromas pending chromas"
+
+    preexec_functions=()
+    fsh_plugin_unload || _fsh_test_fail 'accounting fixture unload failed'
+    for name in ${(M)${(k)parameters}:#_fsh_*}; do
+      (( ${+before_owned_parameters[$name]} )) || {
+        _fsh_test_fail "accounting fixture unload left a parameter: $name"
+        break
+      }
+    done
+  } always {
+    builtin cd -q -- "$caller_pwd"
     command rm -rf -- "$fixture_root"
   }
 }
@@ -693,6 +820,7 @@ case $test_case in
     partial_root=$(command mktemp -d "${TMPDIR:-/tmp}/fsyh-partial.XXXXXXXX") || exit 1
     {
       _fsh_test_noninteractive
+      _fsh_test_materialized_accounting
       _fsh_test_partial_failure "$partial_root"
     } always {
       command rm -rf -- "$partial_root"
