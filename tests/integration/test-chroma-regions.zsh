@@ -13,11 +13,14 @@ typeset -gA ZI
 command mkdir -p -- "$ZDOTDIR" "$fixture_root/repo/some"
 command touch -- "$fixture_root/repo/some/file.lua"
 zstyle ':fsh:config' work-dir "$fixture_root/work"
+fpath=( "$plugin_root"/{functions,completions,chroma} \
+  "${(@)fpath:#$plugin_root/(functions|completions|chroma)}" )
 
 docker() { :; }
 npm() { :; }
 hub() { :; }
 lab() { :; }
+scp() { :; }
 zi() { :; }
 ZI[cmd-list]='help|light|status'
 
@@ -34,6 +37,7 @@ _fsh_styles[double-hyphen-option]=fg=5
 _fsh_styles[incorrect-subtle]=fg=6
 _fsh_styles[correct-subtle]=fg=7
 _fsh_styles[unknown-token]=fg=8
+_fsh_styles[path]=fg=7
 
 fsh_assert_exact_regions 'git commit some/file.lua' \
   '0 3 fg=1' \
@@ -64,6 +68,43 @@ fsh_assert_exact_regions 'npm install package' \
   '0 3 fg=1' \
   '4 11 fg=2' \
   '12 19 fg=3'
+
+typeset -ga fsh_test_zle_messages=()
+zle() {
+  builtin emulate -L zsh
+  if [[ $1 == -M ]]; then
+    fsh_test_zle_messages+=( "$2" )
+    return 0
+  fi
+  return 1
+}
+fsh_assert_exact_regions 'scp hostname:123' \
+  '0 3 fg=1' \
+  '4 16 fg=3'
+if (( $#fsh_test_zle_messages )); then
+  builtin print -u2 -r -- \
+    "f-sy-h: unexpected scp message: ${(qqq)fsh_test_zle_messages}"
+  exit 1
+fi
+unfunction zle
+
+fsh_assert_exact_regions 'scp hostname:123 some/file.lua' \
+  '0 3 fg=1' \
+  '4 16 fg=3' \
+  '17 30 fg=7'
+fsh_assert_exact_regions 'scp user@hostname:123 some/file.lua' \
+  '0 3 fg=1' \
+  '4 21 fg=3' \
+  '22 35 fg=7'
+fsh_assert_exact_regions 'scp hostname:1234/path some/file.lua' \
+  '0 3 fg=1' \
+  '4 22 fg=3' \
+  '23 36 fg=7'
+fsh_assert_exact_regions 'scp -P 2222 hostname:file some/file.lua' \
+  '0 3 fg=1' \
+  '4 6 fg=4' \
+  '12 25 fg=3' \
+  '26 39 fg=7'
 
 fsh_assert_exact_regions 'hub issue unknown' \
   '0 3 fg=1' '4 9 fg=2' '10 17 fg=3'

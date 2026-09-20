@@ -230,7 +230,7 @@ reply=()
     assert "$state" same_as "0"
 }
 
-@test 'git, zi, docker, and generic chromas emit exact regions' {
+@test 'git, scp, zi, docker, and generic chromas emit exact regions' {
     run zsh -f ./tests/integration/test-chroma-regions.zsh
 
     assert "$output" is_empty
