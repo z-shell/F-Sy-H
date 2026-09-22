@@ -381,6 +381,7 @@ zsh -f tests/integration/test-passive-safety.zsh
 zsh -f tests/integration/test-hostile-autoloads.zsh
 zsh -f tests/integration/test-highlight-performance.zsh
 zsh -f tests/integration/test-zsh-highlight-compat.zsh
+zsh -f tests/integration/test-autosuggest-compat.zsh
 zsh -f tests/integration/test-theme-persistence.zsh
 zsh -f tests/integration/test-chroma-registry.zsh
 zsh -f tests/integration/test-chroma-regions.zsh

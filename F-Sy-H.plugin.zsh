@@ -167,7 +167,7 @@ _fsh_zle_highlight() {
       _fsh_main_cache=( $reply )
       _fsh_highlight_string_process "$PREBUFFER" "$BUFFER"
     }
-    region_highlight=( $reply )
+    _fsh_region_highlight_replace
   else
     local char="${BUFFER[CURSOR+1]}"
     if [[ "$char" = ["{([])}"] || "${_fsh_state[prev_char]}" = ["{([])}"] ]]; then
@@ -175,7 +175,7 @@ _fsh_zle_highlight() {
       (( _fsh_state[use_brackets] )) && {
         reply=( $_fsh_main_cache )
         _fsh_highlight_string_process "$PREBUFFER" "$BUFFER"
-        region_highlight=( $reply )
+        _fsh_region_highlight_replace
       }
     fi
   fi
@@ -235,6 +235,46 @@ _fsh_zle_highlight() {
 # alone. This is the documented, maintainer-approved namespace exception.
 (( ${+ZSH_HIGHLIGHT_VERSION} )) || _zsh_highlight() { _fsh_zle_highlight "$@" }
 
+# Replace this plugin's region_highlight entries with the contents of $reply.
+#
+# Since builtin widgets stopped being wrapped, the highlighter runs from the
+# zle-line-pre-redraw hook, after every other plugin's widget wrapper has had
+# its turn. Overwriting the whole array there discarded what those plugins had
+# just added: zsh-autosuggestions appends its suggestion style behind the
+# buffer on each keystroke and never saw it painted (#182). Two kinds of
+# foreign entries are kept:
+#
+# - entries carrying a memo= token, which zsh 5.9 documents as the mark of a
+#   plugin that removes its own entries (zsh-history-substring-search does);
+# - entries starting at or past the end of BUFFER, where only POSTDISPLAY
+#   decorations such as a suggestion can live. This plugin never highlights
+#   there, so nothing of its own is mistaken for one.
+#
+# This plugin's own previous entries are removed first, by exact text, from
+# the record _fsh_regions keeps of them: after the buffer shrinks, the old
+# paint past its new end would otherwise pass for a suggestion. Untagged
+# entries inside the buffer are dropped as well: a legacy plugin's leftover
+# that relies on the highlighter clearing it, the contract
+# zsh-history-substring-search keeps on zsh 5.8.
+_fsh_region_highlight_replace() {
+  builtin emulate -L zsh
+  builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc_quotes no_auto_pushd
+
+  local entry
+  local -a kept
+  integer buffer_length=$#BUFFER
+
+  typeset -ga _fsh_regions
+  for entry in "${(@)region_highlight:|_fsh_regions}"; do
+    if [[ $entry == *memo=* ]] ||
+        [[ ${entry%% *} == <-> && ${entry%% *} -ge buffer_length ]]; then
+      kept+=( "$entry" )
+    fi
+  done
+  region_highlight=( "${kept[@]}" "${reply[@]}" )
+  _fsh_regions=( "${reply[@]}" )
+}
+
 # Apply highlighting based on entries in the zle_highlight array.
 # This function takes four arguments:
 # 1. The exact entry (no patterns) in the zle_highlight array:
@@ -272,6 +312,8 @@ _fsh_apply_zle_highlight() {
     start=$second end=$first
   fi
   region_highlight+=("$start $end $region")
+  typeset -ga _fsh_regions
+  _fsh_regions+=("$start $end $region")
 }
 
 
@@ -401,8 +443,9 @@ _fsh_preexec_hook() {
 
   typeset -g _fsh_prior_buffer=
   typeset -gi _fsh_prior_cursor=0
-  typeset -ga _fsh_main_cache
+  typeset -ga _fsh_main_cache _fsh_regions
   _fsh_main_cache=()
+  _fsh_regions=()
 
   if (( ${+parameters[_fsh_lifecycle_refresh_pending]} && _fsh_lifecycle_refresh_pending &&
       ${+functions[_fsh_lifecycle_refresh]} )); then

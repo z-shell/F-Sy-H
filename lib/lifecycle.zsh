@@ -147,6 +147,7 @@ _fsh_lifecycle_begin() {
     _fsh_prior_buffer 1
     _fsh_prior_cursor 1
     _fsh_prior_region_active 1
+    _fsh_regions 1
     _fsh_state 1
     _fsh_style_ranges 1
     _fsh_styles 1
