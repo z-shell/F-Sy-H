@@ -7,7 +7,9 @@
 # appended the suggestion style behind the buffer. Rebuilding region_highlight
 # there used to overwrite the whole array, and the suggestion painted in the
 # default foreground on every keystroke (#182). A rebuild keeps entries this
-# plugin does not own: memo= tagged ones and ones past the end of BUFFER.
+# plugin does not own: ones tagged by another plugin's memo= token and ones
+# past the end of BUFFER. Its own carry memo=F-Sy-H on zsh 5.9 and newer and
+# are matched by recorded text, position and width on zsh 5.8.
 
 builtin emulate -R zsh
 builtin setopt pipe_fail
@@ -27,13 +29,15 @@ _fsh_test_fail() {
 }
 
 # Drive the highlighter the way the pre-redraw hook does, with a suggestion
-# style already appended behind the buffer, and report what survives.
+# style already appended behind the buffer, and report what survives. The
+# suggestion and foreign fields are (I) subscripts: the position of the last
+# matching entry, 0 when there is none.
 typeset -r prelude='
   typeset -g WIDGET=self-insert BUFFER="echo hi" PREBUFFER= KEYS=i
   typeset -gi CURSOR=7 PENDING=0 REGION_ACTIVE=0
   typeset -ga region_highlight=()
   _fsh_test_report() {
-    builtin print -r -- "regions=${#region_highlight} suggestion=${region_highlight[(I)${1:-7 12 fg=8}]} memo=${region_highlight[(I)*memo=*]} stale=${region_highlight[(I)1 2 fg=blue]}"
+    builtin print -r -- "regions=${#region_highlight} suggestion=${region_highlight[(I)${1:-7 12 fg=8}]} foreign=${region_highlight[(I)*memo=history-substring-search*]} stale=${region_highlight[(I)1 2 fg=blue]}"
   }
 '
 
@@ -56,7 +60,7 @@ _fsh_test_case() {
 _fsh_test_case 'buffer change' '
   region_highlight=( "7 12 fg=8" )
   _fsh_zle_highlight
-' 'regions=<2->* suggestion=<1-> memo=0 stale=0'
+' 'regions=<2->* suggestion=<1-> foreign=0 stale=0'
 
 # 2. The async chroma callback invalidates the buffer memo to force a repaint.
 #    That repaint must not drop the suggestion either, nor duplicate the
@@ -68,15 +72,15 @@ _fsh_test_case 'stale buffer memo' '
   region_highlight+=( "7 12 fg=8" )
   _fsh_zle_highlight
   (( $#region_highlight == own + 1 )) || region_highlight=()
-' 'regions=<2->* suggestion=<1-> memo=0 stale=0'
+' 'regions=<2->* suggestion=<1-> foreign=0 stale=0'
 
 # 3. An entry tagged memo= belongs to a plugin that removes it itself (zsh 5.9
 #    contract; zsh-history-substring-search uses it). An untagged entry inside
 #    the buffer is a legacy leftover the highlighter is expected to clear.
 _fsh_test_case 'foreign entries' '
-  region_highlight=( "0 4 fg=red,memo=history-substring-search" "1 2 fg=blue" "7 12 fg=8" )
+  region_highlight=( "0 4 fg=red memo=history-substring-search" "1 2 fg=blue" "7 12 fg=8" )
   _fsh_zle_highlight
-' 'regions=<3->* suggestion=<1-> memo=<1-> stale=0'
+' 'regions=<3->* suggestion=<1-> foreign=<1-> stale=0'
 
 # 4. After the buffer shrinks, the plugin's own previous paint lies past the
 #    new end of BUFFER. It must go, and only the suggestion may remain there.
@@ -89,7 +93,7 @@ _fsh_test_case 'buffer shrink' '
   region_highlight+=( "2 11 fg=8" )
   _fsh_zle_highlight
   region_highlight=( ${(M)region_highlight:#<2->\ *} )
-' 'regions=1 suggestion=1 memo=0 stale=0' '2 11 fg=8'
+' 'regions=1 suggestion=1 foreign=0 stale=0' '2 11 fg=8'
 
 # 5. The bracket repaint path rewrites the array as well.
 _fsh_test_case 'bracket repaint' '
@@ -100,12 +104,54 @@ _fsh_test_case 'bracket repaint' '
   region_highlight+=( "9 12 fg=8" )
   CURSOR=5
   _fsh_zle_highlight
-' 'regions=<2->* suggestion=<1-> memo=0 stale=0' '9 12 fg=8'
+' 'regions=<2->* suggestion=<1-> foreign=0 stale=0' '9 12 fg=8'
+
+# 6. zle_highlight decorations are derived from the editor state on every
+#    pass: one entry while the region stays active, none once it is gone.
+#    The counts are reported through a synthetic entry "<active> <gone> fg=8".
+_fsh_test_case 'decoration repaint' '
+  typeset -gi MARK=0
+  REGION_ACTIVE=1
+  _fsh_zle_highlight
+  _fsh_zle_highlight
+  integer active=${#${(M)region_highlight:#0 7 standout*}}
+  REGION_ACTIVE=0
+  _fsh_zle_highlight
+  integer gone=${#${(M)region_highlight:#0 7 standout*}}
+  region_highlight=( "$active $gone fg=8" )
+' 'regions=1 suggestion=1 foreign=0 stale=0' '1 0 fg=8'
+
+# 7. Killing the whole line leaves an empty buffer. An untagged leftover
+#    starting at 0 is not a POSTDISPLAY decoration and must go with it.
+_fsh_test_case 'empty buffer' '
+  _fsh_zle_highlight
+  BUFFER=
+  CURSOR=0
+  region_highlight+=( "0 5 fg=magenta,bold" )
+  _fsh_zle_highlight
+' 'regions=0 suggestion=0 foreign=0 stale=0'
+
+# Wait until the capture hook reports the expected buffer. Reads the caller's
+# pty_name, fixture_root, chunk and output, and leaves the line in capture.
+_fsh_test_await() {
+  local want=$1
+  integer deadline=$(( SECONDS + 5 ))
+  while (( SECONDS < deadline )); do
+    zpty -r -t "$pty_name" chunk && output+=$chunk
+    if [[ -f $fixture_root/capture ]]; then
+      capture=$(<"$fixture_root/capture")
+      [[ $capture == "$want|"* ]] && return 0
+    fi
+    command sleep 0.02
+  done
+  return 1
+}
 
 _fsh_test_interactive_compat() {
   builtin emulate -L zsh
-  local order=$1 fixture_root suggest_path chunk output= expected capture
-  local -a regions
+  local order=$1 fixture_root suggest_path chunk output= expected capture canonical entry
+  local -a regions fields
+  integer stale
   local pty_name=fsh-suggest-$1
   integer deadline
   fixture_root=$(command mktemp -d "${TMPDIR:-/tmp}/fsh-suggest.XXXXXXXX") || return 1
@@ -121,23 +167,30 @@ _fsh_test_interactive_compat() {
       # POSTDISPLAY. The optional argument exercises the actual source instead.
       command cat > "$suggest_path" <<'FIXTURE'
 typeset -g _compat_last_highlight=
-zle -A .self-insert compat-orig-self-insert
-compat_bound_self_insert() {
-  local history_entry='echo history'
+compat_modify() {
+  local original=$1 history_entry='echo history'
+  shift
   if [[ -n $_compat_last_highlight ]]; then
     region_highlight=( "${(@)region_highlight:#$_compat_last_highlight}" )
     _compat_last_highlight=
   fi
   POSTDISPLAY=
-  zle compat-orig-self-insert -- "$@"
-  if [[ $history_entry == "$BUFFER"?* ]]; then
+  zle "$original" -- "$@"
+  if [[ -n $BUFFER && $history_entry == "$BUFFER"?* ]]; then
     POSTDISPLAY=${history_entry#$BUFFER}
     _compat_last_highlight="$#BUFFER $(( $#BUFFER + $#POSTDISPLAY )) fg=8"
     region_highlight+=( "$_compat_last_highlight" )
   fi
   zle -R
 }
-zle -N self-insert compat_bound_self_insert
+# self-insert and backward-delete-char take the modify action upstream;
+# kill-whole-line takes clear, which the empty buffer reduces modify to.
+local compat_widget
+for compat_widget in self-insert backward-delete-char kill-whole-line; do
+  zle -A ".$compat_widget" "compat-orig-$compat_widget"
+  functions[compat_bound_$compat_widget]="compat_modify compat-orig-$compat_widget \"\$@\""
+  zle -N "$compat_widget" "compat_bound_$compat_widget"
+done
 FIXTURE
     fi
     command cat > "$fixture_root/setup.zsh" <<'SETUP'
@@ -156,6 +209,10 @@ else
   source -- "$2" || return
   source -- "$1" || return
 fi
+# A style the editor rewrites (attribute before colour): what region_highlight
+# reports differs from what the plugin assigned.
+_fsh_styles[single-hyphen-option]='bold,fg=cyan'
+_fsh_styles[${_fsh_theme_name}single-hyphen-option]='bold,fg=cyan'
 # A private name: zsh-autosuggestions wraps every other user widget with its
 # modifying action, which would clear POSTDISPLAY before the capture runs.
 _compat_capture() {
@@ -215,6 +272,42 @@ SETUP
         return
       }
     done
+    # Shrink with a style the editor rewrites. 'ls -la' paints the option as
+    # 'fg=cyan,bold' although 'bold,fg=cyan' was assigned; after deleting back
+    # to 'ls' nothing may remain past the end of the buffer.
+    zpty -w -n "$pty_name" $'\C-U'
+    for expected in l ls 'ls ' 'ls -' 'ls -l' 'ls -la'; do
+      zpty -w -n "$pty_name" "${expected[-1]}"
+      _fsh_test_await "$expected" || {
+        _fsh_test_fail "$order: no redraw captured for: $expected"
+        return
+      }
+    done
+    regions=( ${(s:;:)capture##*|} )
+    # Either attribute order proves the override is in play; zsh 5.8's
+    # canonical order is not pinned here.
+    canonical='3 6 (fg=cyan,bold|bold,fg=cyan)*'
+    (( ${regions[(I)$canonical]} )) || {
+      _fsh_test_fail "$order: option style not painted as the editor reports it ($capture)"
+      return
+    }
+    for expected in 'ls -l' 'ls -' 'ls ' ls; do
+      zpty -w -n "$pty_name" $'\C-?'
+      _fsh_test_await "$expected" || {
+        _fsh_test_fail "$order: no redraw captured for: $expected"
+        return
+      }
+    done
+    regions=( ${(s:;:)capture##*|} )
+    stale=0
+    for entry in "${regions[@]}"; do
+      fields=( ${=entry} )
+      [[ ${fields[1]-} == <-> ]] && (( fields[1] >= 2 )) && (( ++stale ))
+    done
+    (( stale == 0 )) || {
+      _fsh_test_fail "$order: stale paint survived the shrink ($capture)"
+      return
+    }
   } always {
     (( ${+builtins[zpty]} )) && zpty -d "$pty_name" 2>/dev/null
     command rm -rf -- "$fixture_root"
