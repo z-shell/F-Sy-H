@@ -78,6 +78,10 @@ typeset -g _fsh_base_dir=$plugin_dir
 # Default global variables
 typeset -g _fsh_version=1.67.1
 typeset -ga _fsh_main_cache
+# region_highlight entries this plugin added, as the editor reports them: the
+# syntax paint, and the zle_highlight decorations re-derived every pass. Used
+# on zsh 5.8, where entries cannot carry a memo= tag; see _fsh_region_memo.
+typeset -ga _fsh_regions _fsh_decorations
 
 # Holds list of indices pointing at brackets that are complex, i.e. e.g. part of "[[" in [[ ... ]]
 typeset -ga _fsh_complex_brackets
@@ -141,15 +145,17 @@ _fsh_zle_highlight() {
 
   {
 
-  # Remove all highlighting in isearch, so that only the underlining done by zsh itself remains.
-  # For details see FAQ entry 'Why does syntax highlighting not work while searching history?'.
+  local REPLY # don't leak $REPLY into global scope
+  local -a reply rest
+  integer rebuilt=0
+
+  # Remove this plugin's highlighting in isearch, so that only the underlining
+  # done by zsh itself, and whatever other plugins painted, remains.
   if [[ $WIDGET == zle-isearch-update ]] && ! (( $+ISEARCHMATCH_ACTIVE )); then
-    region_highlight=()
+    reply=()
+    _fsh_region_highlight_replace
     return $ret
   fi
-
-  local REPLY # don't leak $REPLY into global scope
-  local -a reply
 
   # Skip highlighting above the configured buffer-length limit. Long buffers
   # are commonly pasted commands or generated lists.
@@ -167,7 +173,8 @@ _fsh_zle_highlight() {
       _fsh_main_cache=( $reply )
       _fsh_highlight_string_process "$PREBUFFER" "$BUFFER"
     }
-    region_highlight=( $reply )
+    _fsh_region_highlight_replace
+    rebuilt=1
   else
     local char="${BUFFER[CURSOR+1]}"
     if [[ "$char" = ["{([])}"] || "${_fsh_state[prev_char]}" = ["{([])}"] ]]; then
@@ -175,7 +182,8 @@ _fsh_zle_highlight() {
       (( _fsh_state[use_brackets] )) && {
         reply=( $_fsh_main_cache )
         _fsh_highlight_string_process "$PREBUFFER" "$BUFFER"
-        region_highlight=( $reply )
+        _fsh_region_highlight_replace
+        rebuilt=1
       }
     fi
   fi
@@ -184,7 +192,14 @@ _fsh_zle_highlight() {
     local cache_place
     local -a region_highlight_copy
 
-    # Re-apply zle_highlight settings
+    # Re-apply zle_highlight settings. They are derived from the editor state
+    # on every pass, so the previous pass's entries go first. A rebuild has
+    # already removed them, and an unchanged array is not written again: a
+    # write makes the editor re-parse every entry.
+    if (( ! rebuilt )); then
+      _fsh_region_highlight_foreign decorations
+      (( $#rest == $#region_highlight )) || region_highlight=( "${rest[@]}" )
+    fi
 
     # region
     if (( REGION_ACTIVE == 1 )); then
@@ -226,6 +241,8 @@ _fsh_zle_highlight() {
   } always {
     if [[ $WIDGET == zle-line-finish ]]; then
       builtin unset _fsh_preview_theme_name _fsh_preview_styles 2>/dev/null || true
+      _fsh_regions=()
+      _fsh_decorations=()
     fi
   }
 }
@@ -234,6 +251,99 @@ _fsh_zle_highlight() {
 # Replace its fallback in either load order, but leave zsh-syntax-highlighting
 # alone. This is the documented, maintainer-approved namespace exception.
 (( ${+ZSH_HIGHLIGHT_VERSION} )) || _zsh_highlight() { _fsh_zle_highlight "$@" }
+
+# Set rest to the region_highlight entries that are not this plugin's own:
+# everything but its paint and decorations, or with an argument everything but
+# the zle_highlight decorations. This is the one definition of "own". On zsh
+# 5.9 and newer own entries carry memo=F-Sy-H (paint) or memo=F-Sy-H-zle
+# (decorations), the token the editor preserves through the offset shifts it
+# applies as the line is edited and through a wholesale BUFFER assignment,
+# which shifts nothing. zsh 5.8 misparses the field, so there the entries are
+# matched by the exact text the editor reports (it canonicalizes attribute
+# order, hex case and memo fields) from the records _fsh_regions and
+# _fsh_decorations. The decorations record is cleared: the caller re-derives
+# them or replaces everything.
+_fsh_region_highlight_foreign() {
+  builtin emulate -L zsh
+  builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc_quotes no_auto_pushd
+
+  if (( _fsh_region_memo )); then
+    if [[ -n ${1-} ]]; then
+      rest=( "${(@)region_highlight:#*memo=F-Sy-H-zle(|[ ,]*)}" )
+    else
+      rest=( "${(@)region_highlight:#*memo=F-Sy-H(|-zle)(|[ ,]*)}" )
+    fi
+  else
+    local -a own=( "${_fsh_decorations[@]}" )
+    [[ -n ${1-} ]] || own+=( "${_fsh_regions[@]}" )
+    rest=( "${(@)region_highlight:|own}" )
+  fi
+  _fsh_decorations=()
+}
+
+# Replace this plugin's region_highlight entries with the contents of $reply.
+#
+# Since builtin widgets stopped being wrapped, the highlighter runs from the
+# zle-line-pre-redraw hook, after every other plugin's widget wrapper has had
+# its turn. Overwriting the whole array there discarded what those plugins had
+# just added: zsh-autosuggestions appends its suggestion style behind the
+# buffer on each keystroke and never saw it painted (#182).
+#
+# On zsh 5.9 and newer every entry that is not this plugin's own is kept, as
+# zsh-syntax-highlighting does. On zsh 5.8 the recorded text cannot identify
+# an own entry the editor has shifted, so only these foreign entries survive
+# a rebuild there:
+#
+# - entries carrying a memo= token, the mark of a plugin that removes its own
+#   entries (zsh-history-substring-search uses it);
+# - entries in the P-prefixed form, which this plugin never emits;
+# - entries of non-zero width starting at or past the end of BUFFER, where
+#   only POSTDISPLAY decorations such as a suggestion can live. An empty
+#   buffer has no such region.
+#
+# Untagged entries inside the buffer and zero-width remnants are dropped
+# there. That is also the legacy contract zsh-history-substring-search keeps
+# on zsh 5.8: its leftovers expect the highlighter to clear them.
+#
+# Kept entries come last: the editor gives later overlapping entries colour
+# precedence, and a plugin that painted over the buffer did so on purpose.
+_fsh_region_highlight_replace() {
+  builtin emulate -L zsh
+  builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc_quotes no_auto_pushd
+
+  local entry
+  local -a kept rest fields
+  integer buffer_length=$#BUFFER
+
+  _fsh_region_highlight_foreign
+  if (( _fsh_region_memo )); then
+    kept=( "${rest[@]}" )
+  else
+    for entry in "${rest[@]}"; do
+      if [[ $entry == (*memo=*|P*) ]]; then
+        kept+=( "$entry" )
+        continue
+      fi
+      (( buffer_length )) || continue
+      fields=( ${=entry} )
+      [[ ${fields[1]-} == <-> && ${fields[2]-} == <-> ]] || continue
+      (( fields[1] >= buffer_length && fields[2] > fields[1] )) && kept+=( "$entry" )
+    done
+  fi
+  if (( _fsh_region_memo )); then
+    region_highlight=( "${(@)reply/%/ memo=F-Sy-H}" "${kept[@]}" )
+  else
+    # One write, then the paint is read back as the editor reports it. The
+    # editor keeps one entry per assigned string, so the slice lines up; the
+    # count is checked in case a build ever drops one.
+    region_highlight=( "${reply[@]}" "${kept[@]}" )
+    if (( $#region_highlight == $#reply + $#kept )); then
+      _fsh_regions=( "${(@)region_highlight[1,$#reply]}" )
+    else
+      _fsh_regions=( "${reply[@]}" )
+    fi
+  fi
+}
 
 # Apply highlighting based on entries in the zle_highlight array.
 # This function takes four arguments:
@@ -271,7 +381,13 @@ _fsh_apply_zle_highlight() {
   else
     start=$second end=$first
   fi
-  region_highlight+=("$start $end $region")
+  if (( _fsh_region_memo )); then
+    region_highlight+=("$start $end $region memo=F-Sy-H-zle")
+  else
+    integer count=$#region_highlight
+    region_highlight+=("$start $end $region")
+    (( $#region_highlight > count )) && _fsh_decorations+=( "${region_highlight[-1]}" )
+  fi
 }
 
 
@@ -403,6 +519,8 @@ _fsh_preexec_hook() {
   typeset -gi _fsh_prior_cursor=0
   typeset -ga _fsh_main_cache
   _fsh_main_cache=()
+  _fsh_regions=()
+  _fsh_decorations=()
 
   if (( ${+parameters[_fsh_lifecycle_refresh_pending]} && _fsh_lifecycle_refresh_pending &&
       ${+functions[_fsh_lifecycle_refresh]} )); then
@@ -448,6 +566,14 @@ builtin autoload -Uz -- is-at-least \
   _fsh_validate_theme _fsh_run_git_command \
   _fsh_make_targets _fsh_run_command _fsh_read_all \
   _fsh_async_command _fsh_async_command_callback
+
+# region_highlight entries accept a memo= token from zsh 5.9 on (zshzle(1)
+# documents it as the way a plugin identifies its own entries); 5.8 misparses
+# the field, so the fallback above matches recorded text instead. Compared
+# inline: is-at-least is only autoloaded, and a missing function file must
+# not cost every shell start an error.
+typeset -gi _fsh_region_memo=0
+[[ $ZSH_VERSION == (5.<9->|<6->)(|.*) ]] && _fsh_region_memo=1
 
 builtin autoload -Uz -- \
   _fsh_chroma_alias \

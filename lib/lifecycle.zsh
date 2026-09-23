@@ -142,11 +142,13 @@ _fsh_lifecycle_begin() {
     _fsh_command_output 1
     _fsh_command_type_cache 1
     _fsh_complex_brackets 1
+    _fsh_decorations 1
     _fsh_last_commands 1
     _fsh_main_cache 1
     _fsh_prior_buffer 1
     _fsh_prior_cursor 1
     _fsh_prior_region_active 1
+    _fsh_regions 1
     _fsh_state 1
     _fsh_style_ranges 1
     _fsh_styles 1

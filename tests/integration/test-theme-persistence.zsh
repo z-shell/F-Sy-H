@@ -260,7 +260,8 @@ zpty -b "$pty_name" \
     command sleep 0.02
   done
   [[ -e $preview_marker ]]
-  [[ $(<$preview_marker) == 'clean:0 4 fg=109' ]]
+  # zsh 5.9 and newer report the plugin's own memo tag behind the style.
+  [[ $(<$preview_marker) == 'clean:0 4 fg=109'(| memo=F-Sy-H) ]]
   [[ ! -e $fixture_root/pty-work ]]
 
   zpty -w -n "$pty_name" $'\C-C'
