@@ -6,10 +6,10 @@
 # zle-line-pre-redraw hook: after zsh-autosuggestions' widget wrapper has
 # appended the suggestion style behind the buffer. Rebuilding region_highlight
 # there used to overwrite the whole array, and the suggestion painted in the
-# default foreground on every keystroke (#182). A rebuild keeps entries this
-# plugin does not own: ones tagged by another plugin's memo= token and ones
-# past the end of BUFFER. Its own carry memo=F-Sy-H on zsh 5.9 and newer and
-# are matched by recorded text, position and width on zsh 5.8.
+# default foreground on every keystroke (#182). On zsh 5.9 and newer the
+# plugin's own entries carry memo=F-Sy-H and a rebuild keeps everything else.
+# On zsh 5.8 they are matched by recorded text, and a rebuild keeps foreign
+# entries that are memo tagged, P-prefixed, or past the end of BUFFER.
 
 builtin emulate -R zsh
 builtin setopt pipe_fail
@@ -27,6 +27,16 @@ _fsh_test_fail() {
   builtin print -u2 -r -- "$1"
   test_status=1
 }
+
+# Which way the plugin identifies its own entries on this zsh: memo tags
+# (5.9 and newer) or recorded text plus position (5.8). Expectations that
+# differ between the two are chosen from this.
+integer memo_path
+memo_path=$(command env -u FPATH HOME="$fixture_home" ZDOTDIR="$fixture_home" zsh -f -c "
+  builtin source ${(q)plugin_root}/F-Sy-H.plugin.zsh || exit 1
+  builtin print -r -- \$_fsh_region_memo
+" 2>/dev/null) || exit 1
+[[ $memo_path == (0|1) ]] || exit 1
 
 # Drive the highlighter the way the pre-redraw hook does, with a suggestion
 # style already appended behind the buffer, and report what survives. The
@@ -74,13 +84,14 @@ _fsh_test_case 'stale buffer memo' '
   (( $#region_highlight == own + 1 )) || region_highlight=()
 ' 'regions=<2->* suggestion=<1-> foreign=0 stale=0'
 
-# 3. An entry tagged memo= belongs to a plugin that removes it itself (zsh 5.9
-#    contract; zsh-history-substring-search uses it). An untagged entry inside
-#    the buffer is a legacy leftover the highlighter is expected to clear.
+# 3. An entry tagged memo= belongs to a plugin that removes it itself
+#    (zsh-history-substring-search uses it). An untagged entry inside the
+#    buffer is another plugin's on zsh 5.9, where own entries are tagged, and
+#    a legacy leftover the highlighter is expected to clear on zsh 5.8.
 _fsh_test_case 'foreign entries' '
   region_highlight=( "0 4 fg=red memo=history-substring-search" "1 2 fg=blue" "7 12 fg=8" )
   _fsh_zle_highlight
-' 'regions=<3->* suggestion=<1-> foreign=<1-> stale=0'
+' "regions=<3->* suggestion=<1-> foreign=<1-> stale=${${memo_path/1/<1->}/0/0}"
 
 # 4. After the buffer shrinks, the plugin's own previous paint lies past the
 #    new end of BUFFER. It must go, and only the suggestion may remain there.
@@ -121,15 +132,24 @@ _fsh_test_case 'decoration repaint' '
   region_highlight=( "$active $gone fg=8" )
 ' 'regions=1 suggestion=1 foreign=0 stale=0' '1 0 fg=8'
 
-# 7. Killing the whole line leaves an empty buffer. An untagged leftover
-#    starting at 0 is not a POSTDISPLAY decoration and must go with it.
+# 7. Killing the whole line leaves an empty buffer. On zsh 5.8 an untagged
+#    leftover starting at 0 is not a POSTDISPLAY decoration and goes with it;
+#    on zsh 5.9 it is another plugin's entry and stays.
 _fsh_test_case 'empty buffer' '
   _fsh_zle_highlight
   BUFFER=
   CURSOR=0
   region_highlight+=( "0 5 fg=magenta,bold" )
   _fsh_zle_highlight
-' 'regions=0 suggestion=0 foreign=0 stale=0'
+' "regions=$memo_path suggestion=0 foreign=0 stale=0"
+
+# 8. The P-prefixed form is relative to PREDISPLAY. This plugin never emits
+#    it, so such an entry is foreign on either path and survives a rebuild.
+_fsh_test_case 'predisplay entry' '
+  region_highlight=( "P0 3 fg=red" "7 12 fg=8" )
+  _fsh_zle_highlight
+  region_highlight=( ${(M)region_highlight:#P*} )
+' 'regions=1 suggestion=0 foreign=0 stale=0'
 
 # Wait until the capture hook reports the expected buffer. Reads the caller's
 # pty_name, fixture_root, chunk and output, and leaves the line in capture.
@@ -147,12 +167,46 @@ _fsh_test_await() {
   return 1
 }
 
+# Assert that every entry in the last capture other than the suggestion
+# carries the plugin's memo tag. Only meaningful when the memo path is on.
+_fsh_test_assert_tagged() {
+  local label=$1 entry
+  (( tagged )) || return 0
+  for entry in ${(s:;:)capture##*|}; do
+    [[ $entry == *' fg=8' ]] && continue
+    [[ $entry == *memo=F-Sy-H* ]] || {
+      _fsh_test_fail "$label: own entry without memo tag: $entry ($capture)"
+      return 1
+    }
+  done
+}
+
+# Assert that no entry in the last capture starts at or past the buffer end.
+_fsh_test_assert_no_stale() {
+  local label=$1 entry
+  integer length=$2 stale=0
+  local -a fields
+  for entry in ${(s:;:)capture##*|}; do
+    fields=( ${=entry} )
+    [[ ${fields[1]-} == <-> ]] && (( fields[1] >= length )) && (( ++stale ))
+  done
+  (( stale == 0 )) || {
+    _fsh_test_fail "$label: stale paint survived: $capture"
+    return 1
+  }
+}
+
+# $1: load order (first or last). $2: "fallback" forces the zsh 5.8 code path
+# so it runs under a real editor on every zsh.
 _fsh_test_interactive_compat() {
   builtin emulate -L zsh
-  local order=$1 fixture_root suggest_path chunk output= expected capture canonical entry
-  local -a regions fields
-  integer stale
-  local pty_name=fsh-suggest-$1
+  local order=$1 mode=${2:-memo} fixture_root suggest_path chunk output= expected capture canonical
+  local -a regions
+  # Own entries carry the memo tag only on the memo path; a string compare,
+  # since inside (( )) the words would be read as parameter names.
+  integer tagged=0
+  (( memo_path )) && [[ $mode != fallback ]] && tagged=1
+  local pty_name=fsh-suggest-$1-$mode
   integer deadline
   fixture_root=$(command mktemp -d "${TMPDIR:-/tmp}/fsh-suggest.XXXXXXXX") || return 1
   {
@@ -209,6 +263,8 @@ else
   source -- "$2" || return
   source -- "$1" || return
 fi
+# Force the zsh 5.8 code path when asked, after the plugin chose its own.
+[[ $4 == fallback ]] && _fsh_region_memo=0
 # A style the editor rewrites (attribute before colour): what region_highlight
 # reports differs from what the plugin assigned.
 _fsh_styles[single-hyphen-option]='bold,fg=cyan'
@@ -226,7 +282,7 @@ SETUP
     zpty -b "$pty_name" \
       "env -u FPATH HOME=${(q)fixture_root}/home ZDOTDIR=${(q)fixture_root}/home TERM=xterm-256color zsh -f -i" || return 1
     zpty -w "$pty_name" \
-      "COMPAT_CAPTURE=${(q)fixture_root}/capture COMPAT_READY=${(q)fixture_root}/ready; source ${(q)fixture_root}/setup.zsh ${(q)plugin_root}/F-Sy-H.plugin.zsh ${(q)suggest_path} ${(q)order}"
+      "COMPAT_CAPTURE=${(q)fixture_root}/capture COMPAT_READY=${(q)fixture_root}/ready; source ${(q)fixture_root}/setup.zsh ${(q)plugin_root}/F-Sy-H.plugin.zsh ${(q)suggest_path} ${(q)order} ${(q)mode}"
     deadline=$(( SECONDS + 10 ))
     while [[ ! -f $fixture_root/ready ]] && (( SECONDS < deadline )); do
       zpty -r -t "$pty_name" chunk && output+=$chunk
@@ -271,6 +327,7 @@ SETUP
         _fsh_test_fail "$order: command styles lost after typing: $expected ($capture)"
         return
       }
+      _fsh_test_assert_tagged "$order/$mode" || return
     done
     # Shrink with a style the editor rewrites. 'ls -la' paints the option as
     # 'fg=cyan,bold' although 'bold,fg=cyan' was assigned; after deleting back
@@ -288,26 +345,20 @@ SETUP
     # canonical order is not pinned here.
     canonical='3 6 (fg=cyan,bold|bold,fg=cyan)*'
     (( ${regions[(I)$canonical]} )) || {
-      _fsh_test_fail "$order: option style not painted as the editor reports it ($capture)"
+      _fsh_test_fail "$order/$mode: option style not painted as the editor reports it ($capture)"
       return
     }
+    _fsh_test_assert_tagged "$order/$mode" || return
+    # Each deletion is a rebuild: nothing may remain past the new end.
     for expected in 'ls -l' 'ls -' 'ls ' ls; do
       zpty -w -n "$pty_name" $'\C-?'
       _fsh_test_await "$expected" || {
-        _fsh_test_fail "$order: no redraw captured for: $expected"
+        _fsh_test_fail "$order/$mode: no redraw captured for: $expected"
         return
       }
+      _fsh_test_assert_no_stale "$order/$mode after deleting to '$expected'" $#expected || return
+      _fsh_test_assert_tagged "$order/$mode" || return
     done
-    regions=( ${(s:;:)capture##*|} )
-    stale=0
-    for entry in "${regions[@]}"; do
-      fields=( ${=entry} )
-      [[ ${fields[1]-} == <-> ]] && (( fields[1] >= 2 )) && (( ++stale ))
-    done
-    (( stale == 0 )) || {
-      _fsh_test_fail "$order: stale paint survived the shrink ($capture)"
-      return
-    }
   } always {
     (( ${+builtins[zpty]} )) && zpty -d "$pty_name" 2>/dev/null
     command rm -rf -- "$fixture_root"
@@ -316,5 +367,6 @@ SETUP
 
 _fsh_test_interactive_compat first || _fsh_test_fail 'F-Sy-H first: PTY setup failed'
 _fsh_test_interactive_compat last || _fsh_test_fail 'F-Sy-H last: PTY setup failed'
+_fsh_test_interactive_compat first fallback || _fsh_test_fail 'F-Sy-H first, 5.8 path: PTY setup failed'
 (( test_status == 0 )) && builtin print -r -- 'autosuggest compat: ok'
 exit $test_status
