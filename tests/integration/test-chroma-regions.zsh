@@ -19,6 +19,7 @@ fpath=( "$plugin_root"/{functions,completions,chroma} \
 docker() { :; }
 deno() { :; }
 gh() { :; }
+ls() { :; }
 kubectl() { :; }
 npm() { :; }
 hub() { :; }
@@ -49,6 +50,8 @@ _fsh_styles[alias]=fg=11
 _fsh_styles[case-input]=fg=12
 _fsh_styles[case-parentheses]=fg=13
 _fsh_styles[case-condition]=fg=14
+_fsh_styles[commandseparator]=fg=15
+_fsh_styles[redirection]=fg=16
 
 fsh_assert_exact_regions 'git commit some/file.lua' \
   '0 3 fg=1' \
@@ -135,6 +138,18 @@ fsh_assert_exact_regions 'case x in a) gh pr list ;; esac' \
   '19 23 fg=3' \
   '24 26 fg=3' \
   '27 31 fg=10'
+# The seed runs before the redirection check, and a separator clears the
+# takeover while it is still armed; both paths must keep working.
+fsh_assert_exact_regions 'gh 2>/dev/null pr list' \
+  '0 2 fg=1' \
+  '3 5 fg=16' \
+  '5 14 fg=7' \
+  '15 17 fg=2' \
+  '18 22 fg=3'
+fsh_assert_exact_regions 'gh && ls' \
+  '0 2 fg=1' \
+  '3 5 fg=15' \
+  '6 8 fg=1'
 
 typeset -ga fsh_test_zle_messages=()
 zle() {

@@ -8,7 +8,8 @@
 # is unambiguous and otherwise paints nothing, which is the same neutral
 # fallback the asynchronous chromas use while knowledge is missing:
 #
-# - `--name=value` options never consume a word: skip and keep looking.
+# - an option with an attached value (`--name=value`, `-n=value`) never
+#   consumes the next word: skip it and keep looking.
 # - the first operand is painted only when it is a plain word
 #   (letter first, then letters, digits, `_` or `-`); a path, a number,
 #   a `+toolchain`, or a `key:value` filter is an operand, not a verb.
@@ -16,22 +17,15 @@
 #   ends the search: paint nothing.
 #
 # Once the decision is made the takeover bit is released, so the rest of
-# the line costs no chroma dispatch. The takeover is armed on the first
-# call only and otherwise carried from the incoming state: the alias
-# expansion loop calls the chroma for every alias word without checking
-# the bit, and re-arming it here would route the user's first typed
-# operand back to this handler after it has already decided. The case-body
-# bit is carried for the same reason: dropping it loses the styling of
-# `;;` and `esac` after a generic command inside a case item.
+# the line costs no chroma dispatch; both dispatch loops in lib/highlight.zsh
+# stop calling a chroma whose bit is clear. The case-body bit is carried
+# through, or `;;` and `esac` lose their styling after a generic command
+# inside a case item.
 
 builtin emulate -L zsh
 builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc_quotes no_auto_pushd no_nomatch
 
-if (( $1 )); then
-    (( next_word = (this_word & BIT_case_code) | 2 | 8192 ))
-else
-    (( next_word = (this_word & (BIT_case_code | 8192)) | 2 ))
-fi
+(( next_word = (this_word & BIT_case_code) | 2 | 8192 ))
 [[ "$__arg_type" = 3 ]] && return 2
 
 local __first_call="$1" __wrd="$2" __start_pos="$3" __end_pos="$4"
@@ -42,14 +36,14 @@ elif (( in_redirection > 0 || this_word & 128 )) || [[ $__wrd == "<<<" ]]; then
     return 1
 elif [[ $__wrd == -*=* ]]; then
     return 1
-elif [[ $__wrd == [[:alpha:]][[:alnum:]_-]# ]]; then
-    (( __start=__start_pos-${#PREBUFFER}, __end=__end_pos-${#PREBUFFER}, __start >= 0 )) \
-        && reply+=("$__start $__end ${_fsh_styles[${_fsh_theme_name}subcommand]}")
-    (( next_word &= ~8192 ))
-else
-    (( next_word &= ~8192 ))
-    return 1
 fi
+
+# First operand reached: decide once and release the takeover either way.
+(( next_word &= ~8192 ))
+[[ $__wrd == [[:alpha:]][[:alnum:]_-]# ]] || return 1
+
+(( __start=__start_pos-${#PREBUFFER}, __end=__end_pos-${#PREBUFFER}, __start >= 0 )) \
+    && reply+=("$__start $__end ${_fsh_styles[${_fsh_theme_name}subcommand]}")
 
 (( this_word = next_word ))
 _start_pos=$_end_pos

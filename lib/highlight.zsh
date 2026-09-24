@@ -666,6 +666,9 @@ _fsh_highlight_process() {
            (( this_word = next_word, next_word = 2 ))
 
          for _mybuf in "${(@)__list[2,-1]}"; do
+           # A chroma that has released the takeover is done with this command;
+           # the remaining alias words need no dispatch, as in the main loop.
+           (( this_word & 8192 )) || break
            (( next_word = next_word | (this_word & (BIT_case_code|8192)) ))
            ${${_fsh_state[chroma-${__list[1]}]}%\%*} ${(M)_fsh_state[chroma-${__list[1]}]%\%*} 0 "$_mybuf" "-100000" $_end_pos 2>/dev/null || \
              (( this_word = next_word, next_word = 2 ))
