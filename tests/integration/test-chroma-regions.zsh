@@ -306,6 +306,8 @@ fsh_assert_exact_regions $'ls -- x\nls -a' \
   '0 2 fg=1' '3 5 fg=5' '6 7 fg=3' '8 10 fg=1' '11 13 fg=4'
 fsh_assert_exact_regions 'command -- ls -a' \
   '0 7 fg=17' '8 10 fg=5' '11 13 fg=1' '14 16 fg=4'
+fsh_assert_exact_regions 'sudo -- ls -a' \
+  '0 4 fg=17' '5 7 fg=5' '8 10 fg=1' '11 13 fg=4'
 
 if [[ $OSTYPE != darwin* ]]; then
   # Availability and cache outcomes are controlled; no manual database is used.
