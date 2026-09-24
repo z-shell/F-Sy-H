@@ -1,5 +1,21 @@
 # -*- mode: zsh; sh-indentation: 2; indent-tabs-mode: nil; sh-basic-offset: 2; -*-
 # vim: ft=zsh sw=2 ts=2 et
+#
+# Shared generic handler: paints the command's subcommand and nothing else.
+#
+# The handler has no option table, so it cannot tell a boolean option from
+# one that consumes the next word. It therefore paints only when the answer
+# is unambiguous and otherwise paints nothing, which is the same neutral
+# fallback the asynchronous chromas use while knowledge is missing:
+#
+# - `--name=value` options never consume a word: skip and keep looking.
+# - any other option might consume the next word: stop, paint nothing.
+# - the first operand is painted only when it is a plain word
+#   (letter first, then letters, digits, `_` or `-`); a path, a number,
+#   a `+toolchain`, or a `key:value` filter is an operand, not a verb.
+#
+# Once the decision is made the takeover bit is released, so the rest of
+# the line costs no chroma dispatch.
 
 builtin emulate -L zsh
 builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc_quotes no_auto_pushd no_nomatch
@@ -14,13 +30,18 @@ if (( __first_call )); then
     return 1
 elif (( in_redirection > 0 || this_word & 128 )) || [[ $__wrd == "<<<" ]]; then
     return 1
-elif [[ "$2" = -* ]]; then
+elif [[ $__wrd == -*=* ]]; then
     return 1
-elif [[ -z "${_fsh_state[chroma-subcommand]}" ]]; then
+elif [[ $__wrd == -* ]]; then
+    (( next_word = 2 ))
+    return 1
+elif [[ $__wrd == [[:alpha:]][[:alnum:]_-]# ]]; then
     _fsh_state[chroma-subcommand]="$__wrd"
     (( __start=__start_pos-${#PREBUFFER}, __end=__end_pos-${#PREBUFFER}, __start >= 0 )) \
         && reply+=("$__start $__end ${_fsh_styles[${_fsh_theme_name}subcommand]}")
+    (( next_word = 2 ))
 else
+    (( next_word = 2 ))
     return 1
 fi
 

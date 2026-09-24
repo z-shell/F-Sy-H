@@ -17,9 +17,10 @@ fpath=( "$plugin_root"/{functions,completions,chroma} \
   "${(@)fpath:#$plugin_root/(functions|completions|chroma)}" )
 
 docker() { :; }
+deno() { :; }
 gh() { :; }
+kubectl() { :; }
 npm() { :; }
-systemd-run() { :; }
 hub() { :; }
 lab() { :; }
 scp() { :; }
@@ -40,7 +41,7 @@ _fsh_styles[incorrect-subtle]=fg=6
 _fsh_styles[correct-subtle]=fg=7
 _fsh_styles[unknown-token]=fg=8
 _fsh_styles[path]=fg=7
-_fsh_styles[precommand]=fg=9
+_fsh_styles[optarg-string]=fg=9
 
 fsh_assert_exact_regions 'git commit some/file.lua' \
   '0 3 fg=1' \
@@ -72,23 +73,40 @@ fsh_assert_exact_regions 'npm install package' \
   '4 11 fg=2' \
   '12 19 fg=3'
 
-# Generic coverage for verb-first developer tools paints only the first
-# non-option word; later words and options fall through to the main parser.
+# The generic handler paints the subcommand only when it is unambiguous and
+# paints nothing otherwise; it never guesses which option consumes a word.
 fsh_assert_exact_regions 'gh pr list --state open' \
   '0 2 fg=1' \
   '3 5 fg=2' \
   '6 10 fg=3' \
   '11 18 fg=5' \
   '19 23 fg=3'
-
-# systemd-run is a precommand: its options are its own and the wrapped
-# command is highlighted by that command's chroma.
-fsh_assert_exact_regions 'systemd-run --user gh pr list' \
-  '0 11 fg=9' \
-  '12 18 fg=5' \
-  '19 21 fg=1' \
-  '22 24 fg=2' \
-  '25 29 fg=3'
+fsh_assert_exact_regions 'kubectl --namespace=x get pods' \
+  '0 7 fg=1' \
+  '8 21 fg=5' \
+  '20 21 fg=9' \
+  '22 25 fg=2' \
+  '26 30 fg=3'
+# An option that might take a value hides the subcommand: neutral, not a guess.
+fsh_assert_exact_regions 'gh --repo o/r pr list' \
+  '0 2 fg=1' \
+  '3 9 fg=5' \
+  '10 13 fg=3' \
+  '14 16 fg=3' \
+  '17 21 fg=3'
+fsh_assert_exact_regions 'npm -g install x' \
+  '0 3 fg=1' \
+  '4 6 fg=4' \
+  '7 14 fg=3' \
+  '15 16 fg=3'
+# A first operand that is not a plain word is not a verb.
+fsh_assert_exact_regions 'deno file.ts' \
+  '0 4 fg=1' \
+  '5 12 fg=3'
+fsh_assert_exact_regions 'deno run file.ts' \
+  '0 4 fg=1' \
+  '5 8 fg=2' \
+  '9 16 fg=3'
 
 typeset -ga fsh_test_zle_messages=()
 zle() {
