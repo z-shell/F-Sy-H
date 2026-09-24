@@ -25,6 +25,8 @@ hub() { :; }
 lab() { :; }
 scp() { :; }
 zi() { :; }
+alias kg='kubectl get --namespace=x'
+alias k='kubectl'
 ZI[cmd-list]='help|light|status'
 
 source "$plugin_root/F-Sy-H.plugin.zsh"
@@ -42,6 +44,11 @@ _fsh_styles[correct-subtle]=fg=7
 _fsh_styles[unknown-token]=fg=8
 _fsh_styles[path]=fg=7
 _fsh_styles[optarg-string]=fg=9
+_fsh_styles[reserved-word]=fg=10
+_fsh_styles[alias]=fg=11
+_fsh_styles[case-input]=fg=12
+_fsh_styles[case-parentheses]=fg=13
+_fsh_styles[case-condition]=fg=14
 
 fsh_assert_exact_regions 'git commit some/file.lua' \
   '0 3 fg=1' \
@@ -107,6 +114,27 @@ fsh_assert_exact_regions 'deno run file.ts' \
   '0 4 fg=1' \
   '5 8 fg=2' \
   '9 16 fg=3'
+# The alias loop dispatches every alias word; a --name=value alias word must
+# not re-arm the released takeover and paint the user's first operand.
+fsh_assert_exact_regions 'kg pods' \
+  '0 2 fg=11' \
+  '3 7 fg=3'
+fsh_assert_exact_regions 'k get pods' \
+  '0 1 fg=11' \
+  '2 5 fg=2' \
+  '6 10 fg=3'
+# The case-body bit survives a generic command inside a case item.
+fsh_assert_exact_regions 'case x in a) gh pr list ;; esac' \
+  '0 4 fg=10' \
+  '5 6 fg=12' \
+  '7 9 fg=10' \
+  '10 11 fg=14' \
+  '11 12 fg=13' \
+  '13 15 fg=1' \
+  '16 18 fg=2' \
+  '19 23 fg=3' \
+  '24 26 fg=3' \
+  '27 31 fg=10'
 
 typeset -ga fsh_test_zle_messages=()
 zle() {

@@ -45,7 +45,10 @@ for generic_command in "${generic_commands[@]}"; do
   }
 done
 for generic_command in rg fd journalctl pacman; do
-  [[ ${_fsh_state[chroma-$generic_command]-} != _fsh_chroma_subcommand ]]
+  [[ ${_fsh_state[chroma-$generic_command]-} != _fsh_chroma_subcommand ]] || {
+    builtin print -u2 -r -- "f-sy-h: $generic_command must not use the generic handler"
+    exit 1
+  }
 done
 
 # The whatis chroma is platform-gated. Autoload state and registry state must
