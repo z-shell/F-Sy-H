@@ -29,6 +29,7 @@ zi() { :; }
 alias kg='kubectl get --namespace=x'
 alias k='kubectl'
 alias g='git'
+alias st='strace -f'
 ZI[cmd-list]='help|light|status'
 
 source "$plugin_root/F-Sy-H.plugin.zsh"
@@ -53,6 +54,7 @@ _fsh_styles[case-parentheses]=fg=13
 _fsh_styles[case-condition]=fg=14
 _fsh_styles[commandseparator]=fg=15
 _fsh_styles[redirection]=fg=16
+_fsh_styles[precommand]=fg=17
 
 fsh_assert_exact_regions 'git commit some/file.lua' \
   '0 3 fg=1' \
@@ -127,6 +129,55 @@ fsh_assert_exact_regions 'k get pods' \
   '0 1 fg=11' \
   '2 5 fg=2' \
   '6 10 fg=3'
+# The precommand handler follows the same rule: the first operand is the
+# command, an option with an attached value or `--` keeps the search going,
+# and any other option might consume the next word, so nothing is painted
+# as the command.
+fsh_assert_exact_regions 'nohup gh pr list' \
+  '0 5 fg=17' \
+  '6 8 fg=1' \
+  '9 11 fg=2' \
+  '12 16 fg=3'
+fsh_assert_exact_regions 'strace -o out.txt gh' \
+  '0 6 fg=17' \
+  '7 9 fg=4' \
+  '10 17 fg=3' \
+  '18 20 fg=3'
+fsh_assert_exact_regions 'strace -f gh' \
+  '0 6 fg=17' \
+  '7 9 fg=4' \
+  '10 12 fg=3'
+# An option value that names a command is still not the command.
+fsh_assert_exact_regions 'xargs -I gh gh' \
+  '0 5 fg=17' \
+  '6 8 fg=4' \
+  '9 11 fg=3' \
+  '12 14 fg=3'
+fsh_assert_exact_regions 'strace -- gh' \
+  '0 6 fg=17' \
+  '7 9 fg=5' \
+  '10 12 fg=1'
+fsh_assert_exact_regions 'systemd-run --unit=x gh' \
+  '0 11 fg=17' \
+  '12 20 fg=5' \
+  '19 20 fg=9' \
+  '21 23 fg=1'
+fsh_assert_exact_regions 'systemd-run -u name gh' \
+  '0 11 fg=17' \
+  '12 14 fg=4' \
+  '15 19 fg=3' \
+  '20 22 fg=3'
+# A redirection keeps the search going and is styled as a redirection.
+fsh_assert_exact_regions 'nohup 2>/dev/null gh' \
+  '0 5 fg=17' \
+  '6 8 fg=16' \
+  '8 17 fg=7' \
+  '18 20 fg=1'
+# The alias loop dispatches every alias word; an option inside the alias
+# releases the takeover like one typed on the line.
+fsh_assert_exact_regions 'st gh' \
+  '0 2 fg=11' \
+  '3 5 fg=3'
 # The case-body bit survives a generic command inside a case item.
 fsh_assert_exact_regions 'case x in a) gh pr list ;; esac' \
   '0 4 fg=10' \
