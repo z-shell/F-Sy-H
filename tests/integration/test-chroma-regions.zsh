@@ -138,6 +138,12 @@ fsh_assert_exact_regions 'nohup gh pr list' \
   '6 8 fg=1' \
   '9 11 fg=2' \
   '12 16 fg=3'
+# The handler records the command it hands back, so `fsh_chroma` sampling
+# still reports that command's handler.
+(( ${_fsh_last_commands[(Ie)gh]} )) || {
+  builtin print -u2 -r -- "f-sy-h: precommand did not record gh: ${(qqq)_fsh_last_commands}"
+  exit 1
+}
 fsh_assert_exact_regions 'strace -o out.txt gh' \
   '0 6 fg=17' \
   '7 9 fg=4' \
@@ -157,6 +163,21 @@ fsh_assert_exact_regions 'strace -- gh' \
   '0 6 fg=17' \
   '7 9 fg=5' \
   '10 12 fg=1'
+# After `--` the next word is the command even when it starts with `-`
+# (no `-x` command exists, so it is an unknown token), and the precommand's
+# `--` does not turn the options of the command it runs into operands.
+fsh_assert_exact_regions 'strace -- -x gh' \
+  '0 6 fg=17' \
+  '7 9 fg=5' \
+  '10 12 fg=8' \
+  '13 15 fg=3'
+fsh_assert_exact_regions 'strace -- gh pr --state x' \
+  '0 6 fg=17' \
+  '7 9 fg=5' \
+  '10 12 fg=1' \
+  '13 15 fg=2' \
+  '16 23 fg=5' \
+  '24 25 fg=3'
 fsh_assert_exact_regions 'systemd-run --unit=x gh' \
   '0 11 fg=17' \
   '12 20 fg=5' \

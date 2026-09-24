@@ -11,7 +11,12 @@
 # generic subcommand handler uses:
 #
 # - an option with an attached value (`--name=value`, `-n=value`) never
-#   consumes the next word, and `--` ends the options: keep looking.
+#   consumes the next word: keep looking.
+# - `--` ends the options, so the next word is the command even when it
+#   starts with `-`. The handler paints `--` itself and carries that in
+#   bit 16384 of `this_word`; the main loop's own `--` handling would
+#   also mark every later option on the line as an operand, including the
+#   options of the command being run.
 # - the first operand is the command, whatever its shape (`nohup ./run`).
 # - any other option might consume the next word: stop, and leave the rest
 #   of the line to the plain argument path.
@@ -37,7 +42,15 @@ if (( __first_call )); then
   return 0
 elif (( in_redirection > 0 || this_word & 128 )) || [[ $__wrd == "<<<" ]]; then
   return 1
-elif [[ $__wrd == (--|-*=*) ]]; then
+elif (( this_word & 16384 )); then
+  : # The word after `--`: the command, handled below.
+elif [[ $__wrd == -- ]]; then
+  (( __start=__start_pos-${#PREBUFFER}, __end=__end_pos-${#PREBUFFER}, __start >= 0 )) \
+    && reply+=("$__start $__end ${_fsh_styles[${_fsh_theme_name}double-hyphen-option]}")
+  (( this_word = next_word | 16384 ))
+  _start_pos=$_end_pos
+  return 0
+elif [[ $__wrd == -*=* ]]; then
   return 1
 elif [[ $__wrd == -* ]]; then
   (( next_word &= ~8192 ))
