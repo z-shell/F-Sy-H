@@ -17,7 +17,9 @@ fpath=( "$plugin_root"/{functions,completions,chroma} \
   "${(@)fpath:#$plugin_root/(functions|completions|chroma)}" )
 
 docker() { :; }
+gh() { :; }
 npm() { :; }
+systemd-run() { :; }
 hub() { :; }
 lab() { :; }
 scp() { :; }
@@ -38,6 +40,7 @@ _fsh_styles[incorrect-subtle]=fg=6
 _fsh_styles[correct-subtle]=fg=7
 _fsh_styles[unknown-token]=fg=8
 _fsh_styles[path]=fg=7
+_fsh_styles[precommand]=fg=9
 
 fsh_assert_exact_regions 'git commit some/file.lua' \
   '0 3 fg=1' \
@@ -68,6 +71,24 @@ fsh_assert_exact_regions 'npm install package' \
   '0 3 fg=1' \
   '4 11 fg=2' \
   '12 19 fg=3'
+
+# Generic coverage for verb-first developer tools paints only the first
+# non-option word; later words and options fall through to the main parser.
+fsh_assert_exact_regions 'gh pr list --state open' \
+  '0 2 fg=1' \
+  '3 5 fg=2' \
+  '6 10 fg=3' \
+  '11 18 fg=5' \
+  '19 23 fg=3'
+
+# systemd-run is a precommand: its options are its own and the wrapped
+# command is highlighted by that command's chroma.
+fsh_assert_exact_regions 'systemd-run --user gh pr list' \
+  '0 11 fg=9' \
+  '12 18 fg=5' \
+  '19 21 fg=1' \
+  '22 24 fg=2' \
+  '25 29 fg=3'
 
 typeset -ga fsh_test_zle_messages=()
 zle() {

@@ -261,19 +261,7 @@ command-specific options. A generic registry entry therefore does not represent
 the same depth of coverage as a dedicated handler. `STATUS` reports whether the
 target is `ready`, `missing`, or intentionally `disabled`.
 
-`hub` and `lab` use generic coverage; their older dedicated sources are retired.
-The unmaintained `zmanage` mapping is removed. Git repository queries and manual
-page lookups use the shared asynchronous worker. Tokens remain neutral until
-valid knowledge arrives and the next key press repaints the line; the worker
-callback never runs a widget between key presses, so `LASTWIDGET` and the kill
-and yank state stay untouched. Failed refreshes preserve the last valid result.
-Makefile variable expansion and static local `include`, `-include`, and
-`sinclude` discovery stay in the current shell without subprocesses. A refresh
-parses at most 16,384 characters across 32 files and eight include levels.
-Dynamic, unsupported, cyclic, missing mandatory, or over-budget input skips
-target validation so highlighting remains responsive and does not report false
-errors. Cache entries are scoped to the selected Makefile and invalidated when
-an included input changes.
+`hub` and `lab` use generic coverage; their older dedicated sources are retired. The unmaintained `zmanage` mapping is removed. Verb-first developer tools such as `gh`, `kubectl`, `cargo`, `uv`, and `terraform` are registered generically. Pattern-first tools (`rg`, `fd`, `journalctl`) and flag-driven `pacman` are intentionally not registered, because the generic handler would paint their first operand as a subcommand. `systemd-run` is a precommand like `nohup` and `xargs`: its wrapped command keeps its own highlighter. Git repository queries and manual page lookups use the shared asynchronous worker. Tokens remain neutral until valid knowledge arrives and the next key press repaints the line; the worker callback never runs a widget between key presses, so `LASTWIDGET` and the kill and yank state stay untouched. Failed refreshes preserve the last valid result. Makefile variable expansion and static local `include`, `-include`, and `sinclude` discovery stay in the current shell without subprocesses. A refresh parses at most 16,384 characters across 32 files and eight include levels. Dynamic, unsupported, cyclic, missing mandatory, or over-budget input skips target validation so highlighting remains responsive and does not report false errors. Cache entries are scoped to the selected Makefile and invalidated when an included input changes.
 
 Check registry reachability, declarative definitions, active theme styles, and
 session-disabled asynchronous lookups:

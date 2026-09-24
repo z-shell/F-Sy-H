@@ -243,6 +243,7 @@ local -a registry=(
   chroma-nohup         _fsh_chroma_precommand
   chroma-strace        _fsh_chroma_precommand
   chroma-ltrace        _fsh_chroma_precommand
+  chroma-systemd-run   _fsh_chroma_precommand
 
   chroma-hg            _fsh_chroma_subcommand
   chroma-cvs           _fsh_chroma_subcommand
@@ -287,6 +288,30 @@ local -a registry=(
   chroma-xdotool       _fsh_chroma_subcommand
   chroma-zsystem       _fsh_chroma_subcommand
   chroma-zypper        _fsh_chroma_subcommand
+
+  chroma-apk           _fsh_chroma_subcommand
+  chroma-asdf          _fsh_chroma_subcommand
+  chroma-bun           _fsh_chroma_subcommand
+  chroma-cargo         _fsh_chroma_subcommand
+  chroma-deno          _fsh_chroma_subcommand
+  chroma-docker-compose _fsh_chroma_subcommand
+  chroma-flatpak       _fsh_chroma_subcommand
+  chroma-gh            _fsh_chroma_subcommand
+  chroma-glab          _fsh_chroma_subcommand
+  chroma-go            _fsh_chroma_subcommand
+  chroma-helm          _fsh_chroma_subcommand
+  chroma-just          _fsh_chroma_subcommand
+  chroma-kubectl       _fsh_chroma_subcommand
+  chroma-mise          _fsh_chroma_subcommand
+  chroma-nix           _fsh_chroma_subcommand
+  chroma-pipx          _fsh_chroma_subcommand
+  chroma-podman        _fsh_chroma_subcommand
+  chroma-poetry        _fsh_chroma_subcommand
+  chroma-rustup        _fsh_chroma_subcommand
+  chroma-snap          _fsh_chroma_subcommand
+  chroma-task          _fsh_chroma_subcommand
+  chroma-terraform     _fsh_chroma_subcommand
+  chroma-uv            _fsh_chroma_subcommand
 
   chroma-zi            _fsh_chroma_main%zi
 
