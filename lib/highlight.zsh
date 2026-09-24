@@ -449,6 +449,8 @@ _fsh_highlight_process() {
   # for this_word and next_word look below at commented integers and at state machine description
   integer __arg_type=0 MBEGIN MEND in_redirection __len=${#__buf} __PBUFLEN=${#1} already_added offset __idx _end_idx this_word=1 next_word=0 __pos  __asize __delimited=0 itmp iitmp
   integer chroma_global_alias chroma_reply_count chroma_start_pos chroma_already_added chroma_status __color_lum
+  # Chroma dispatch for the current command, resolved once per command word.
+  local chroma_command=$'\0' chroma_handler chroma_handler_arg
   local -a match mbegin mend __inputs __list __color_regions
 
   # This comment explains the numbers:
@@ -634,14 +636,21 @@ _fsh_highlight_process() {
    fi
 
    if (( this_word & 8192 )); then
-     __list=( ${(z@)${aliases[$active_command]:-${active_command##*/}}##[[:space:]]#(command|builtin|exec|noglob|nocorrect|pkexec)[[:space:]]#} )
+     # The alias split and registry lookup depend only on active_command, so
+     # they run when it changes rather than for every word of the command.
+     if [[ $active_command != "$chroma_command" ]]; then
+       __list=( ${(z@)${aliases[$active_command]:-${active_command##*/}}##[[:space:]]#(command|builtin|exec|noglob|nocorrect|pkexec)[[:space:]]#} )
+       chroma_handler=${${_fsh_state[chroma-${__list[1]}]}%\%*}
+       chroma_handler_arg=${(M)_fsh_state[chroma-${__list[1]}]%\%*}
+       chroma_command=$active_command
+     fi
      (( chroma_global_alias = ${+galiases[(e)${(Q)__arg}]} ))
      if (( chroma_global_alias )); then
        # Preserve chroma parser state, but let the generic path style global aliases.
        (( chroma_reply_count = ${#reply}, chroma_start_pos = _start_pos,
           chroma_already_added = already_added ))
      fi
-     ${${_fsh_state[chroma-${__list[1]}]}%\%*} ${(M)_fsh_state[chroma-${__list[1]}]%\%*} 0 "$__arg" $_start_pos $_end_pos 2>/dev/null
+     $chroma_handler ${chroma_handler_arg:+$chroma_handler_arg} 0 "$__arg" $_start_pos $_end_pos 2>/dev/null
      chroma_status=$?
      if (( chroma_global_alias )); then
        (( ${#reply} > chroma_reply_count )) && reply[$(( chroma_reply_count + 1 )),-1]=()
