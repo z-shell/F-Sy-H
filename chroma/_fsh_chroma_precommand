@@ -1,22 +1,67 @@
 # -*- mode: zsh; sh-indentation: 2; indent-tabs-mode: nil; sh-basic-offset: 2; -*-
 # vim: ft=zsh sw=2 ts=2 et
-
+#
+# Shared precommand handler: paints the precommand word, then hands the
+# command it runs back to the main highlighter.
+#
+# The handler has no option table, so it cannot tell a boolean option from
+# one that consumes the next word (`strace -f cmd` against `strace -o file
+# cmd`). It therefore marks a word as the command only when the answer is
+# unambiguous and otherwise paints nothing, the same neutral fallback the
+# generic subcommand handler uses:
+#
+# - an option with an attached value (`--name=value`, `-n=value`) never
+#   consumes the next word: keep looking.
+# - `--` ends the options, so the next word is the command even when it
+#   starts with `-`. The handler paints `--` itself and carries that in
+#   bit 16384 of `this_word`; the main loop's own `--` handling would
+#   also mark every later option on the line as an operand, including the
+#   options of the command being run.
+# - the first operand is the command, whatever its shape (`nohup ./run`).
+# - any other option might consume the next word: stop, and leave the rest
+#   of the line to the plain argument path.
+#
+# Once the decision is made the takeover bit is released, so the rest of
+# the line costs no chroma dispatch. The case-body bit is carried through,
+# or `;;` and `esac` lose their styling after a precommand inside a case
+# item.
 
 builtin emulate -L zsh
 builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc_quotes no_auto_pushd no_nomatch
 
-local __first_call="$1" __start_pos="$3" __end_pos="$4"
-
+(( next_word = (this_word & BIT_case_code) | 2 | 8192 ))
 [[ "$__arg_type" = 3 ]] && return 2
 
-(( __first_call )) && {
+local __first_call="$1" __wrd="$2" __start_pos="$3" __end_pos="$4"
+
+if (( __first_call )); then
   (( __start=__start_pos-${#PREBUFFER}, __end=__end_pos-${#PREBUFFER}, __start >= 0 )) \
     && reply+=("$__start $__end ${_fsh_styles[${_fsh_theme_name}precommand]}")
-  (( next_word = (next_word & ~2) | 4 | 1 ))
-} || {
+  (( this_word = next_word ))
+  _start_pos=$_end_pos
+  return 0
+elif (( in_redirection > 0 || this_word & 128 )) || [[ $__wrd == "<<<" ]]; then
   return 1
-}
+elif (( this_word & 16384 )); then
+  : # The word after `--`: the command, handled below.
+elif [[ $__wrd == -- ]]; then
+  (( __start=__start_pos-${#PREBUFFER}, __end=__end_pos-${#PREBUFFER}, __start >= 0 )) \
+    && reply+=("$__start $__end ${_fsh_styles[${_fsh_theme_name}double-hyphen-option]}")
+  (( this_word = next_word | 16384 ))
+  _start_pos=$_end_pos
+  return 0
+elif [[ $__wrd == -*=* ]]; then
+  return 1
+elif [[ $__wrd == -* ]]; then
+  (( next_word &= ~8192 ))
+  return 1
+fi
 
-(( this_word = next_word ))
-_start_pos=$_end_pos
-return 0
+# First operand: it is the command. Setting the command bit lets the main
+# loop resolve it and dispatch its own chroma. The loop records command
+# words before the chroma runs, when this word did not yet carry the bit,
+# so record it here.
+_fsh_last_commands+=( $__wrd )
+(( this_word = (this_word & BIT_case_code) | 1, next_word &= ~8192 ))
+
+return 1

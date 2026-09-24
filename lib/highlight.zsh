@@ -243,6 +243,7 @@ local -a registry=(
   chroma-nohup         _fsh_chroma_precommand
   chroma-strace        _fsh_chroma_precommand
   chroma-ltrace        _fsh_chroma_precommand
+  chroma-systemd-run   _fsh_chroma_precommand
 
   chroma-hg            _fsh_chroma_subcommand
   chroma-cvs           _fsh_chroma_subcommand

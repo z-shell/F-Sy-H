@@ -28,6 +28,7 @@ source "$plugin_root/F-Sy-H.plugin.zsh"
 [[ ${_fsh_state[chroma-hub]} == _fsh_chroma_subcommand ]]
 [[ ${_fsh_state[chroma-lab]} == _fsh_chroma_subcommand ]]
 [[ ${_fsh_state[chroma-svnadmin]} == _fsh_chroma_subversion ]]
+[[ ${_fsh_state[chroma-systemd-run]} == _fsh_chroma_precommand ]]
 
 # Verb-first developer tools use the generic handler. Pattern-first tools
 # (rg, fd, journalctl) and flag-driven pacman must not use it, because it
