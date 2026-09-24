@@ -541,7 +541,10 @@ _fsh_highlight_process() {
     # Reset state of working variables
     already_added=0
     __style=${_fsh_theme_name}unknown-token
-    (( this_word & 1 )) && { in_array_assignment=0; [[ $__arg == 'noglob' ]] && highlight_glob=0; }
+    # A word in command position starts a new command, so an end-of-options
+    # `--` seen earlier belongs to a previous command (or to a precommand
+    # such as sudo) and must not turn this command's options into operands.
+    (( this_word & 1 )) && { in_array_assignment=0; _was_double_hyphen=0; [[ $__arg == 'noglob' ]] && highlight_glob=0; }
 
     # Compute the new $_start_pos and $_end_pos, skipping over whitespace in $__buf.
     if [[ $__arg == ';' ]] ; then

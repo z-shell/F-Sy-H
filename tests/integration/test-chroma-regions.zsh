@@ -288,6 +288,27 @@ fsh_assert_exact_regions 'kubectl get pods; git log some/file.lua' \
   '0 7 fg=1' '8 11 fg=2' '12 16 fg=3' '16 17 fg=15' '18 21 fg=1' '22 25 fg=2' \
   '26 39 fg=7'
 
+# An end-of-options `--` makes later option-shaped words operands only for
+# the command that owns it. Every separator, and a command taken after a
+# precommand's `--`, starts a command whose options are options again (#189).
+fsh_assert_exact_regions 'gh -- x; ls --all' \
+  '0 2 fg=1' '3 5 fg=5' '6 7 fg=3' '7 8 fg=15' '9 11 fg=1' '12 17 fg=5'
+fsh_assert_exact_regions 'gh -- --x' \
+  '0 2 fg=1' '3 5 fg=5' '6 9 fg=3'
+fsh_assert_exact_regions 'ls -- x -a > f --b' \
+  '0 2 fg=1' '3 5 fg=5' '6 7 fg=3' '8 10 fg=3' '11 12 fg=16' '13 14 fg=3' \
+  '15 18 fg=3'
+fsh_assert_exact_regions 'ls -- x && ls -a' \
+  '0 2 fg=1' '3 5 fg=5' '6 7 fg=3' '8 10 fg=15' '11 13 fg=1' '14 16 fg=4'
+fsh_assert_exact_regions 'ls -- x | ls -a' \
+  '0 2 fg=1' '3 5 fg=5' '6 7 fg=3' '8 9 fg=15' '10 12 fg=1' '13 15 fg=4'
+fsh_assert_exact_regions $'ls -- x\nls -a' \
+  '0 2 fg=1' '3 5 fg=5' '6 7 fg=3' '8 10 fg=1' '11 13 fg=4'
+fsh_assert_exact_regions 'command -- ls -a' \
+  '0 7 fg=17' '8 10 fg=5' '11 13 fg=1' '14 16 fg=4'
+fsh_assert_exact_regions 'sudo -- ls -a' \
+  '0 4 fg=17' '5 7 fg=5' '8 10 fg=1' '11 13 fg=4'
+
 if [[ $OSTYPE != darwin* ]]; then
   # Availability and cache outcomes are controlled; no manual database is used.
   command mkdir -p -- "$fixture_root/bin"
