@@ -288,6 +288,30 @@ local -a registry=(
   chroma-zsystem       _fsh_chroma_subcommand
   chroma-zypper        _fsh_chroma_subcommand
 
+  chroma-apk           _fsh_chroma_subcommand
+  chroma-asdf          _fsh_chroma_subcommand
+  chroma-bun           _fsh_chroma_subcommand
+  chroma-cargo         _fsh_chroma_subcommand
+  chroma-deno          _fsh_chroma_subcommand
+  chroma-docker-compose _fsh_chroma_subcommand
+  chroma-flatpak       _fsh_chroma_subcommand
+  chroma-gh            _fsh_chroma_subcommand
+  chroma-glab          _fsh_chroma_subcommand
+  chroma-go            _fsh_chroma_subcommand
+  chroma-helm          _fsh_chroma_subcommand
+  chroma-just          _fsh_chroma_subcommand
+  chroma-kubectl       _fsh_chroma_subcommand
+  chroma-mise          _fsh_chroma_subcommand
+  chroma-nix           _fsh_chroma_subcommand
+  chroma-pipx          _fsh_chroma_subcommand
+  chroma-podman        _fsh_chroma_subcommand
+  chroma-poetry        _fsh_chroma_subcommand
+  chroma-rustup        _fsh_chroma_subcommand
+  chroma-snap          _fsh_chroma_subcommand
+  chroma-task          _fsh_chroma_subcommand
+  chroma-terraform     _fsh_chroma_subcommand
+  chroma-uv            _fsh_chroma_subcommand
+
   chroma-zi            _fsh_chroma_main%zi
 
   chroma-fpath+=\(     _fsh_chroma_fpath_assignment
@@ -642,6 +666,9 @@ _fsh_highlight_process() {
            (( this_word = next_word, next_word = 2 ))
 
          for _mybuf in "${(@)__list[2,-1]}"; do
+           # A chroma that has released the takeover is done with this command;
+           # the remaining alias words need no dispatch, as in the main loop.
+           (( this_word & 8192 )) || break
            (( next_word = next_word | (this_word & (BIT_case_code|8192)) ))
            ${${_fsh_state[chroma-${__list[1]}]}%\%*} ${(M)_fsh_state[chroma-${__list[1]}]%\%*} 0 "$_mybuf" "-100000" $_end_pos 2>/dev/null || \
              (( this_word = next_word, next_word = 2 ))

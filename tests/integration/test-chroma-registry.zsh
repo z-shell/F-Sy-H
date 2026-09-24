@@ -29,6 +29,28 @@ source "$plugin_root/F-Sy-H.plugin.zsh"
 [[ ${_fsh_state[chroma-lab]} == _fsh_chroma_subcommand ]]
 [[ ${_fsh_state[chroma-svnadmin]} == _fsh_chroma_subversion ]]
 
+# Verb-first developer tools use the generic handler. Pattern-first tools
+# (rg, fd, journalctl) and flag-driven pacman must not use it, because it
+# would paint their first operand as a subcommand; a dedicated handler for
+# one of them is a separate change and updates this guard.
+typeset generic_command
+typeset -a generic_commands=(
+  apk asdf bun cargo deno docker-compose flatpak gh glab go helm just kubectl
+  mise nix pipx podman poetry rustup snap task terraform uv
+)
+for generic_command in "${generic_commands[@]}"; do
+  [[ ${_fsh_state[chroma-$generic_command]} == _fsh_chroma_subcommand ]] || {
+    builtin print -u2 -r -- "f-sy-h: missing generic registry entry: $generic_command"
+    exit 1
+  }
+done
+for generic_command in rg fd journalctl pacman; do
+  [[ ${_fsh_state[chroma-$generic_command]-} != _fsh_chroma_subcommand ]] || {
+    builtin print -u2 -r -- "f-sy-h: $generic_command must not use the generic handler"
+    exit 1
+  }
+done
+
 # The whatis chroma is platform-gated. Autoload state and registry state must
 # agree on every platform, otherwise the reachability sweep below is a lie.
 if [[ $OSTYPE == darwin* ]]; then

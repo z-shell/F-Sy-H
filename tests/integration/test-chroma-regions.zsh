@@ -17,11 +17,17 @@ fpath=( "$plugin_root"/{functions,completions,chroma} \
   "${(@)fpath:#$plugin_root/(functions|completions|chroma)}" )
 
 docker() { :; }
+deno() { :; }
+gh() { :; }
+ls() { :; }
+kubectl() { :; }
 npm() { :; }
 hub() { :; }
 lab() { :; }
 scp() { :; }
 zi() { :; }
+alias kg='kubectl get --namespace=x'
+alias k='kubectl'
 ZI[cmd-list]='help|light|status'
 
 source "$plugin_root/F-Sy-H.plugin.zsh"
@@ -38,6 +44,14 @@ _fsh_styles[incorrect-subtle]=fg=6
 _fsh_styles[correct-subtle]=fg=7
 _fsh_styles[unknown-token]=fg=8
 _fsh_styles[path]=fg=7
+_fsh_styles[optarg-string]=fg=9
+_fsh_styles[reserved-word]=fg=10
+_fsh_styles[alias]=fg=11
+_fsh_styles[case-input]=fg=12
+_fsh_styles[case-parentheses]=fg=13
+_fsh_styles[case-condition]=fg=14
+_fsh_styles[commandseparator]=fg=15
+_fsh_styles[redirection]=fg=16
 
 fsh_assert_exact_regions 'git commit some/file.lua' \
   '0 3 fg=1' \
@@ -68,6 +82,74 @@ fsh_assert_exact_regions 'npm install package' \
   '0 3 fg=1' \
   '4 11 fg=2' \
   '12 19 fg=3'
+
+# The generic handler paints the subcommand only when it is unambiguous and
+# paints nothing otherwise; it never guesses which option consumes a word.
+fsh_assert_exact_regions 'gh pr list --state open' \
+  '0 2 fg=1' \
+  '3 5 fg=2' \
+  '6 10 fg=3' \
+  '11 18 fg=5' \
+  '19 23 fg=3'
+fsh_assert_exact_regions 'kubectl --namespace=x get pods' \
+  '0 7 fg=1' \
+  '8 21 fg=5' \
+  '20 21 fg=9' \
+  '22 25 fg=2' \
+  '26 30 fg=3'
+# An option that might take a value hides the subcommand: neutral, not a guess.
+fsh_assert_exact_regions 'gh --repo o/r pr list' \
+  '0 2 fg=1' \
+  '3 9 fg=5' \
+  '10 13 fg=3' \
+  '14 16 fg=3' \
+  '17 21 fg=3'
+fsh_assert_exact_regions 'npm -g install x' \
+  '0 3 fg=1' \
+  '4 6 fg=4' \
+  '7 14 fg=3' \
+  '15 16 fg=3'
+# A first operand that is not a plain word is not a verb.
+fsh_assert_exact_regions 'deno file.ts' \
+  '0 4 fg=1' \
+  '5 12 fg=3'
+fsh_assert_exact_regions 'deno run file.ts' \
+  '0 4 fg=1' \
+  '5 8 fg=2' \
+  '9 16 fg=3'
+# The alias loop dispatches every alias word; a --name=value alias word must
+# not re-arm the released takeover and paint the user's first operand.
+fsh_assert_exact_regions 'kg pods' \
+  '0 2 fg=11' \
+  '3 7 fg=3'
+fsh_assert_exact_regions 'k get pods' \
+  '0 1 fg=11' \
+  '2 5 fg=2' \
+  '6 10 fg=3'
+# The case-body bit survives a generic command inside a case item.
+fsh_assert_exact_regions 'case x in a) gh pr list ;; esac' \
+  '0 4 fg=10' \
+  '5 6 fg=12' \
+  '7 9 fg=10' \
+  '10 11 fg=14' \
+  '11 12 fg=13' \
+  '13 15 fg=1' \
+  '16 18 fg=2' \
+  '19 23 fg=3' \
+  '24 26 fg=3' \
+  '27 31 fg=10'
+# The seed runs before the redirection check, and a separator clears the
+# takeover while it is still armed; both paths must keep working.
+fsh_assert_exact_regions 'gh 2>/dev/null pr list' \
+  '0 2 fg=1' \
+  '3 5 fg=16' \
+  '5 14 fg=7' \
+  '15 17 fg=2' \
+  '18 22 fg=3'
+fsh_assert_exact_regions 'gh && ls' \
+  '0 2 fg=1' \
+  '3 5 fg=15' \
+  '6 8 fg=1'
 
 typeset -ga fsh_test_zle_messages=()
 zle() {

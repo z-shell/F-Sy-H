@@ -1,28 +1,49 @@
 # -*- mode: zsh; sh-indentation: 2; indent-tabs-mode: nil; sh-basic-offset: 2; -*-
 # vim: ft=zsh sw=2 ts=2 et
+#
+# Shared generic handler: paints the command's subcommand and nothing else.
+#
+# The handler has no option table, so it cannot tell a boolean option from
+# one that consumes the next word. It therefore paints only when the answer
+# is unambiguous and otherwise paints nothing, which is the same neutral
+# fallback the asynchronous chromas use while knowledge is missing:
+#
+# - an option with an attached value (`--name=value`, `-n=value`) never
+#   consumes the next word: skip it and keep looking.
+# - the first operand is painted only when it is a plain word
+#   (letter first, then letters, digits, `_` or `-`); a path, a number,
+#   a `+toolchain`, or a `key:value` filter is an operand, not a verb.
+# - anything else, including an option that might consume the next word,
+#   ends the search: paint nothing.
+#
+# Once the decision is made the takeover bit is released, so the rest of
+# the line costs no chroma dispatch; both dispatch loops in lib/highlight.zsh
+# stop calling a chroma whose bit is clear. The case-body bit is carried
+# through, or `;;` and `esac` lose their styling after a generic command
+# inside a case item.
 
 builtin emulate -L zsh
 builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc_quotes no_auto_pushd no_nomatch
 
-(( next_word = 2 | 8192 ))
+(( next_word = (this_word & BIT_case_code) | 2 | 8192 ))
 [[ "$__arg_type" = 3 ]] && return 2
 
 local __first_call="$1" __wrd="$2" __start_pos="$3" __end_pos="$4"
 
 if (( __first_call )); then
-    _fsh_state[chroma-subcommand]=""
     return 1
 elif (( in_redirection > 0 || this_word & 128 )) || [[ $__wrd == "<<<" ]]; then
     return 1
-elif [[ "$2" = -* ]]; then
-    return 1
-elif [[ -z "${_fsh_state[chroma-subcommand]}" ]]; then
-    _fsh_state[chroma-subcommand]="$__wrd"
-    (( __start=__start_pos-${#PREBUFFER}, __end=__end_pos-${#PREBUFFER}, __start >= 0 )) \
-        && reply+=("$__start $__end ${_fsh_styles[${_fsh_theme_name}subcommand]}")
-else
+elif [[ $__wrd == -*=* ]]; then
     return 1
 fi
+
+# First operand reached: decide once and release the takeover either way.
+(( next_word &= ~8192 ))
+[[ $__wrd == [[:alpha:]][[:alnum:]_-]# ]] || return 1
+
+(( __start=__start_pos-${#PREBUFFER}, __end=__end_pos-${#PREBUFFER}, __start >= 0 )) \
+    && reply+=("$__start $__end ${_fsh_styles[${_fsh_theme_name}subcommand]}")
 
 (( this_word = next_word ))
 _start_pos=$_end_pos
