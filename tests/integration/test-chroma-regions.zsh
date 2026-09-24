@@ -28,6 +28,7 @@ scp() { :; }
 zi() { :; }
 alias kg='kubectl get --namespace=x'
 alias k='kubectl'
+alias g='git'
 ZI[cmd-list]='help|light|status'
 
 source "$plugin_root/F-Sy-H.plugin.zsh"
@@ -193,8 +194,11 @@ fsh_assert_exact_regions 'hub issue unknown' \
 fsh_assert_exact_regions 'lab mr unknown' \
   '0 3 fg=1' '4 6 fg=2' '7 14 fg=3'
 
-# The dispatcher resolves the chroma once per command word; a later command
-# in the same buffer must switch handler, alias target, and handler argument.
+# The dispatcher resolves the chroma once per command word, so a later
+# command in the same buffer must resolve it again. `zi help; gh pr list`
+# switches handler and handler argument, `kubectl ...; git log` switches
+# handler, and `k ...; g log` switches through two alias targets; the other
+# lines pin buffers whose commands share one handler.
 fsh_assert_exact_regions 'git commit some/file.lua; zi help' \
   '0 3 fg=1' '4 10 fg=2' '11 24 fg=7' '24 25 fg=15' '26 28 fg=1' '29 33 fg=2'
 fsh_assert_exact_regions 'zi help; gh pr list' \
@@ -202,8 +206,9 @@ fsh_assert_exact_regions 'zi help; gh pr list' \
 fsh_assert_exact_regions 'gh pr list | kubectl get pods' \
   '0 2 fg=1' '3 5 fg=2' '6 10 fg=3' '11 12 fg=15' '13 20 fg=1' '21 24 fg=2' \
   '25 29 fg=3'
-fsh_assert_exact_regions 'k get pods; kg pods' \
-  '0 1 fg=11' '2 5 fg=2' '6 10 fg=3' '10 11 fg=15' '12 14 fg=11' '15 19 fg=3'
+fsh_assert_exact_regions 'k get pods; g log some/file.lua' \
+  '0 1 fg=11' '2 5 fg=2' '6 10 fg=3' '10 11 fg=15' '12 13 fg=11' '14 17 fg=2' \
+  '18 31 fg=7'
 fsh_assert_exact_regions 'gh pr list && gh issue list' \
   '0 2 fg=1' '3 5 fg=2' '6 10 fg=3' '11 13 fg=15' '14 16 fg=1' '17 22 fg=2' \
   '23 27 fg=3'
