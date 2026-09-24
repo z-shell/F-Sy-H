@@ -1,0 +1,54 @@
+round 1
+unreg    9w p10 1.393 med 1.444 | 13w p10 1.762 med 1.837
+generic  9w p10 1.550 med 1.620 | 13w p10 1.931 med 2.006
+claim    9w p10 1.370 med 1.417 | 13w p10 1.694 med 1.749
+derived  9w p10 1.715 med 1.770 | 13w p10 2.202 med 2.264
+derived2 9w p10 1.610 med 1.641 | 13w p10 2.064 med 2.110
+round 2
+unreg    9w p10 1.419 med 1.476 | 13w p10 1.793 med 1.863
+generic  9w p10 1.479 med 1.532 | 13w p10 1.843 med 1.919
+claim    9w p10 1.318 med 1.365 | 13w p10 1.629 med 1.692
+derived  9w p10 1.709 med 1.807 | 13w p10 2.193 med 2.303
+derived2 9w p10 1.729 med 1.893 | 13w p10 2.212 med 2.413
+round 3
+unreg    9w p10 1.367 med 1.445 | 13w p10 1.732 med 1.819
+generic  9w p10 1.478 med 1.550 | 13w p10 1.848 med 1.928
+claim    9w p10 1.317 med 1.379 | 13w p10 1.631 med 1.710
+derived  9w p10 1.658 med 1.728 | 13w p10 2.131 med 2.198
+derived2 9w p10 1.641 med 1.731 | 13w p10 2.092 med 2.197
+round 4
+unreg    9w p10 1.485 med 1.531 | 13w p10 1.878 med 1.954
+generic  9w p10 1.612 med 1.653 | 13w p10 2.005 med 2.064
+claim    9w p10 1.440 med 1.476 | 13w p10 1.778 med 1.841
+derived  9w p10 1.797 med 1.850 | 13w p10 2.300 med 2.372
+derived2 9w p10 1.745 med 1.804 | 13w p10 2.218 med 2.297
+round 5
+unreg    9w p10 1.488 med 1.530 | 13w p10 1.877 med 1.935
+generic  9w p10 1.616 med 1.699 | 13w p10 2.015 med 2.161
+claim    9w p10 1.429 med 1.476 | 13w p10 1.765 med 1.828
+derived  9w p10 1.757 med 1.850 | 13w p10 2.253 med 2.370
+derived2 9w p10 1.760 med 1.806 | 13w p10 2.247 med 2.317
+round 6
+unreg    9w p10 1.492 med 1.525 | 13w p10 1.885 med 1.920
+generic  9w p10 1.603 med 1.679 | 13w p10 1.994 med 2.126
+claim    9w p10 1.401 med 1.455 | 13w p10 1.733 med 1.799
+derived  9w p10 1.802 med 1.840 | 13w p10 2.302 med 2.356
+derived2 9w p10 1.766 med 1.815 | 13w p10 2.253 med 2.329
+round 7
+unreg    9w p10 1.429 med 1.489 | 13w p10 1.809 med 1.877
+generic  9w p10 1.568 med 1.622 | 13w p10 1.944 med 2.014
+claim    9w p10 1.433 med 1.471 | 13w p10 1.773 med 1.819
+derived  9w p10 1.842 med 1.888 | 13w p10 2.364 med 2.421
+derived2 9w p10 1.764 med 1.821 | 13w p10 2.251 med 2.368
+round 8
+unreg    9w p10 1.499 med 1.617 | 13w p10 1.891 med 2.097
+generic  9w p10 1.607 med 1.660 | 13w p10 2.001 med 2.078
+claim    9w p10 1.429 med 1.460 | 13w p10 1.771 med 1.801
+derived  9w p10 1.817 med 1.874 | 13w p10 2.322 med 2.429
+derived2 9w p10 1.777 med 1.832 | 13w p10 2.273 med 2.338
+round 9
+unreg    9w p10 1.472 med 1.519 | 13w p10 1.856 med 1.911
+generic  9w p10 1.602 med 1.684 | 13w p10 1.996 med 2.110
+claim    9w p10 1.459 med 1.502 | 13w p10 1.805 med 1.858
+derived  9w p10 1.805 med 1.850 | 13w p10 2.308 med 2.363
+derived2 9w p10 1.764 med 1.806 | 13w p10 2.246 med 2.293

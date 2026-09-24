@@ -1,0 +1,87 @@
+# -*- mode: zsh; sh-indentation: 2; indent-tabs-mode: nil; sh-basic-offset: 2; -*-
+# vim: ft=zsh sw=2 ts=2 et
+#
+# Spike for #186, not for landing: a derived per-word handler over the flat
+# gh records in _fsh_spike_gh (see gen-gh-table.zsh). Keys are
+# "<path>|<word>": s subcommand, v valued option, b boolean option, and
+# "<path>|>" when <path> has subcommands.
+#
+# It claims every word it recognises, marks unknown options and unknown
+# subcommands incorrect, paints option values, and declines plain
+# positionals and values that start with `$`, a quote, or a glob character,
+# so the generic path styles those.
+
+builtin emulate -L zsh
+builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc_quotes no_auto_pushd no_nomatch
+
+(( next_word = (this_word & BIT_case_code) | 2 | 8192 ))
+[[ "$__arg_type" = 3 ]] && return 2
+
+local __first_call="$1" __wrd="$2" __start_pos="$3" __end_pos="$4"
+local __style __key __name __kind
+
+if (( __first_call )); then
+  _fsh_state[chroma-ghd-path]=
+  _fsh_state[chroma-ghd-want]=0
+  _fsh_state[chroma-ghd-dashdash]=0
+  return 1
+elif (( in_redirection > 0 || this_word & 128 )) || [[ $__wrd == "<<<" ]]; then
+  return 1
+fi
+
+if (( _fsh_state[chroma-ghd-dashdash] )); then
+  return 1
+elif (( _fsh_state[chroma-ghd-want] )); then
+  _fsh_state[chroma-ghd-want]=0
+  [[ $__wrd == [\$\"\'\*\?\[\~\<\{\(]* ]] && return 1
+  __style=${_fsh_theme_name}optarg-string
+elif [[ $__wrd == -- ]]; then
+  _fsh_state[chroma-ghd-dashdash]=1
+  return 1
+elif [[ $__wrd == -* ]]; then
+  __name=${__wrd%%=*}
+  __key="${_fsh_state[chroma-ghd-path]}|$__name"
+  __kind=${_fsh_spike_gh[$__key]-}
+  if [[ -z $__kind && $__wrd == -[^-]?* ]]; then
+    # A short cluster: booleans (-dw), optionally ending in a valued option
+    # that takes the next word (-dL) or the rest of the cluster (-L5, -dL5).
+    local -i __i
+    __kind=attached
+    for (( __i = 2; __i <= $#__wrd; ++__i )); do
+      __key="${_fsh_state[chroma-ghd-path]}|-${__wrd[__i]}"
+      case ${_fsh_spike_gh[$__key]-} in
+        (b) ;;
+        (v) (( __i == $#__wrd )) && __kind=v; break ;;
+        (*) __kind=; break ;;
+      esac
+    done
+    [[ $__kind == v ]] && _fsh_state[chroma-ghd-want]=1 && __kind=attached
+  fi
+  case $__kind in
+    (v) [[ $__wrd == *=* ]] || _fsh_state[chroma-ghd-want]=1 ;|
+    (v|b|attached)
+      [[ $__wrd == --* ]] && __style=${_fsh_theme_name}double-hyphen-option \
+                          || __style=${_fsh_theme_name}single-hyphen-option ;;
+    (*) __style=${_fsh_theme_name}incorrect-subtle ;;
+  esac
+else
+  __key="${_fsh_state[chroma-ghd-path]}|>"
+  (( ${+_fsh_spike_gh[$__key]} )) || return 1
+  __key="${_fsh_state[chroma-ghd-path]}|$__wrd"
+  if [[ ${_fsh_spike_gh[$__key]-} == s ]]; then
+    _fsh_state[chroma-ghd-path]=${_fsh_state[chroma-ghd-path]:+${_fsh_state[chroma-ghd-path]} }$__wrd
+    __style=${_fsh_theme_name}subcommand
+  elif [[ $__wrd == [[:alpha:]][[:alnum:]_-]# ]]; then
+    __style=${_fsh_theme_name}incorrect-subtle
+  else
+    return 1
+  fi
+fi
+
+(( __start=__start_pos-${#PREBUFFER}, __end=__end_pos-${#PREBUFFER}, __start >= 0 )) \
+  && reply+=("$__start $__end ${_fsh_styles[$__style]}")
+
+(( this_word = next_word ))
+_start_pos=$_end_pos
+
+return 0

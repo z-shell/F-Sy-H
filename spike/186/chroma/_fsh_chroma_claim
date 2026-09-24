@@ -1,0 +1,9 @@
+# Spike floor for #186: claims every word, paints nothing.
+builtin emulate -L zsh
+builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc_quotes no_auto_pushd no_nomatch
+(( next_word = (this_word & BIT_case_code) | 2 | 8192 ))
+[[ "$__arg_type" = 3 ]] && return 2
+(( $1 )) && return 1
+(( this_word = next_word ))
+_start_pos=$_end_pos
+return 0
