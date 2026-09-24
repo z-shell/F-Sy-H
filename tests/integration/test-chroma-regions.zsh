@@ -197,8 +197,8 @@ fsh_assert_exact_regions 'lab mr unknown' \
 # The dispatcher resolves the chroma once per command word, so a later
 # command in the same buffer must resolve it again. `zi help; gh pr list`
 # switches handler and handler argument, `kubectl ...; git log` switches
-# handler, and `k ...; g log` switches through two alias targets; the other
-# lines pin buffers whose commands share one handler.
+# handler, and `k ...; g log` switches through two alias targets. The other
+# lines are regression baselines that a stale cache does not change.
 fsh_assert_exact_regions 'git commit some/file.lua; zi help' \
   '0 3 fg=1' '4 10 fg=2' '11 24 fg=7' '24 25 fg=15' '26 28 fg=1' '29 33 fg=2'
 fsh_assert_exact_regions 'zi help; gh pr list' \
