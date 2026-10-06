@@ -80,7 +80,7 @@ user-facing verification guidance. Do not duplicate those contracts here.
 ## Validation
 
 Before changing Zsh, classify the execution profile and follow the
-[organization Zsh instructions](https://github.com/z-shell/.github/blob/main/.github/instructions/zsh-scripting.instructions.md).
+[organization Zsh instructions](https://github.com/z-shell/.github/blob/main/.github/instructions/zsh/scripting.instructions.md).
 Zsh itself is the syntax authority; do not use ShellCheck for Zsh sources.
 
 Run native syntax checks and the integration profiles affected by the change.
@@ -113,6 +113,6 @@ Never weaken a check to make a change pass.
 Cross-repository idioms belong in
 [`PATTERNS.md`](https://github.com/z-shell/.github/blob/main/PATTERNS.md), not
 in a local duplicate. Use the organization
-[test guidance](https://github.com/z-shell/.github/blob/main/.github/instructions/testing.instructions.md)
+[test guidance](https://github.com/z-shell/.github/blob/main/.github/instructions/quality/testing.instructions.md)
 and [handoff format](https://github.com/z-shell/.github/blob/main/.github/AGENT_MEMORY.md)
 when they apply.
