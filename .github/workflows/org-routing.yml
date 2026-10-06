@@ -17,4 +17,4 @@ jobs:
     name: Org Routing
     permissions:
       contents: read
-    uses: z-shell/.github/.github/workflows/org-routing.yml@1becebb7b98dab717d82897428afafd792d4fb97 # main
+    uses: z-shell/.github/.github/workflows/org-routing.yml@893749ca2ed33b9cd229d3bac12e8524f9fc322b # main
