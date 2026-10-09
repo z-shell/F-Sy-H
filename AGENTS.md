@@ -22,6 +22,8 @@ After the form's fields, add these headings, writing `Not applicable` and the re
 - `### Chroma diagnostics`: When a command's highlighting is wrong, the output of `fsh_chroma doctor`.
 - `### Terminal and other plugins`: `$TERM`, the terminal emulator, and every other ZLE plugin in load order, such as zsh-autosuggestions or zsh-history-substring-search.
 
+These facts come from this repository's [project profile](https://github.com/z-shell/.github/blob/main/knowledge/domains/governance/data/project-profiles.json) under [decision 0040](https://github.com/z-shell/.github/blob/main/decisions/0040-central-project-profiles-for-issue-intake.md); change them there, not here.
+
 Organization-wide surfaces are routed by the [organization manifest](https://github.com/z-shell/.github/blob/main/.github/instruction-surfaces.json). This block is delivered and verified under [decision 0031](https://github.com/z-shell/.github/blob/main/decisions/0031-per-repository-instruction-routing-delivery.md).
 
 <!-- END org-routing -->
