@@ -15,16 +15,16 @@ on:
 permissions:
   contents: read
 
-# No concurrency block here: the called workflow declares its own group from
-# github.workflow and github.ref, which resolve to the caller's values, so a
-# second declaration at this level deadlocks against it.
+# No concurrency group, here or in the called workflow (z-shell/zi#597): these
+# required checks finish in seconds, and a cancelled run for a required context
+# can keep a pull request blocked.
 
 jobs:
   policy:
     name: Policy
     permissions:
       contents: read
-    uses: z-shell/.github/.github/workflows/commit-lint.yml@64a427d8ac33c9ef1dc89af35920eb0d3de9fa9c # main
+    uses: z-shell/.github/.github/workflows/commit-lint.yml@6fac3d47a61b27db54e50a0519c1e79b2935eda4 # main
     with:
       # This repository keeps the narrower issue-only shape it always used.
       branch-pattern: "^(feature|bug|hotfix)-[1-9][0-9]*$"
