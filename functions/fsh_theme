@@ -513,6 +513,7 @@ if [[ -n "$OPT_TEST" && -z ${_fsh_theme_gallery_mode-} ]]; then
       git checkout -m --ours /etc/shells && git status-X
       gem install asciidoctor
       cat <<<$PATH | tr : \\n > /dev/null 2>/usr/local
+      awk '"'"'{print $1}'"'"'
       man -a fopen fopen-X
       CFLAGS="-g -Wall -O0" ./configure
     }
