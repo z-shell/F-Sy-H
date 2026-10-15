@@ -1,6 +1,8 @@
 #!/usr/bin/env zsh
 
 builtin emulate -R zsh
+# Child shells load their own Zsh's functions, not an exported FPATH (#205).
+typeset +x FPATH
 builtin setopt pipe_fail
 
 typeset -r plugin_root=${${(%):-%N}:A:h:h:h}
