@@ -354,7 +354,7 @@ deliberately ignored and never sourced.
 From the repository root:
 
 ```bash
-zsh -f -n F-Sy-H.plugin.zsh lib/*.zsh functions/* completions/* chroma/*
+for f in F-Sy-H.plugin.zsh lib/*.zsh functions/* completions/* chroma/*; do zsh -f -n "$f" || echo "syntax error: $f"; done
 zsh -f tests/integration/test-plugin-entrypoint.zsh
 zsh -f tests/integration/test-plugin-lifecycle.zsh noninteractive
 zsh -f -i tests/integration/test-plugin-lifecycle.zsh interactive
