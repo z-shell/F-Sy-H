@@ -1,6 +1,8 @@
 #!/usr/bin/env zsh
 
 emulate -R zsh
+# Child shells load their own Zsh's functions, not an exported FPATH (#205).
+typeset +x FPATH
 setopt err_exit no_unset no_function_argzero posix_argzero extended_glob
 
 typeset -g _fsh_test_file=${${(%):-%N}:A}
