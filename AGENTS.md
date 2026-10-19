@@ -99,6 +99,16 @@ Run native syntax checks and the integration profiles affected by the change.
 The baseline local command list is under `README.md` section `Verification`;
 `.github/workflows/zsh-n.yml` is the exact CI matrix for Zsh 5.8 and 5.9.2.
 
+An ad hoc harness must test the copy it sources. Pin `fpath` right after
+`source`, as `tests/unit/main.zunit` does:
+`fpath=( "$_fsh_base_dir"/{functions,completions,chroma} "${(@)fpath:#$_fsh_base_dir/(functions|completions|chroma)}" )`;
+otherwise an installed F-Sy-H listed in an exported `FPATH`, which Zsh
+imports even under `zsh -f`, supplies the autoloaded `_fsh_chroma_*`
+functions. For the same reason, unexport `FPATH` before starting child
+shells (`typeset +x FPATH`, as the integration tests do since #206), or a
+locally built Zsh 5.8 loads the system Zsh's functions; put that 5.8 `bin`
+first on `PATH`.
+
 ZUnit uses `.zunit.yml` and the exact released ZUnit 0.8.2 commit
 `15061c83373be80b523988121b7ba12c6b2d82dc`, built as shown in
 `.github/workflows/zunit.yml`. With that binary in `bin/`, run:
