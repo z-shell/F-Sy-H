@@ -1,0 +1,20 @@
+{
+  "version": 2,
+  "project": {
+    "kind": "plugin",
+    "minimum_zsh": "5.8",
+    "identifier": "fsh"
+  },
+  "sources": [
+    { "root": "F-Sy-H.plugin.zsh", "profile": "sourced-library" },
+    { "root": "lib", "profile": "sourced-library" },
+    { "root": "functions", "profile": "autoload-function" },
+    { "root": "chroma", "profile": "autoload-function" },
+    {
+      "root": "completions",
+      "profile": "autoload-function",
+      "role": "completion"
+    },
+    { "root": "tools", "profile": "standalone-executable" }
+  ]
+}
